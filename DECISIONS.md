@@ -5,6 +5,71 @@ or when a significant tradeoff was made. Newest first.
 
 ---
 
+## D6 — 2026-04-16 · Phase 1.8 · Responsive toolbar — "overflow into More" over bottom-nav
+
+**Context.** Phase 1.8 requires the top toolbar to work at three widths we
+explicitly care about:
+
+- **1024 × 768** — landscape iPad (primary target, already works).
+- **768 × 1024** — portrait iPad (second-class citizen, minor reflow).
+- **414 × 896** — iPhone 11 / XR-class (first time we actually care about phones).
+
+At 414px, the current toolbar (9+ buttons + workspace dropdown + search) wraps
+to three rows. The wrap is legible but the toolbar consumes 40% of the
+viewport vertically — unusable.
+
+**Two approaches considered:**
+
+1. **Overflow into secondary menu ("More")** — keep a small set of primary
+   actions in the top toolbar (+ WS, Hebrew, + Add, Search, Fit, ⋯ More). At
+   narrow widths, the secondary icon-only buttons (+ Zone, undo, dim-edges,
+   paste-patch ⇲, import ⇅) are hidden via CSS — users reach them through
+   the More menu which already contains the same actions textually.
+2. **Bottom nav bar pattern** — mirror iOS app UX by pinning primary actions
+   to a bottom bar. Requires reworking the tabs (currently the bottom strip)
+   and adds a new surface-bearing element.
+
+**Decision — (1) overflow into More.** Reasons:
+
+- Already have the machinery. More menu exists, already contains paste-patch
+  and import paths with proper iOS `<label for="imp">` user-gesture
+  forwarding. No new surface required.
+- Bottom nav would collide with the tabs bar (current Phase 0 design) and
+  the hint strip (Phase 1 `.hint`). Moving tabs somewhere else is a larger
+  UX decision that belongs with the "make NodeZ shareable" conversation
+  (auth, per-user tabs, landing screen redesign), explicitly out-of-scope
+  for tonight per the user's CONTEXT SHIFT note.
+- The More menu is itself becoming a better-designed popover (Phase 1.8
+  item #1, smart positioning via `placePopover`) so funneling more actions
+  through it is an orthogonal investment.
+
+**Implementation notes.**
+
+- `#tb` uses `flex-wrap:wrap` up to 767px as today. Below 767px, the
+  existing `@media(max-width:767px)` rule already hides `#sb`, `#bc`,
+  `#lg`; extend it to hide the icon-only secondary buttons (`#zoneBtn`,
+  undo, `#dimEdgesBtn`, `#patchBtn`, `#importBtn`). They remain reachable
+  via the More menu which continues to render full-text variants.
+- Primary buttons that survive on the narrowest viewport: WS dropdown,
+  + WS, Hebrew toggle, + Add, Search, Fit, ⋯ More. That's 7 items, fits
+  two rows on 414px, one row on 768px+.
+- `#backBtn` is conditionally visible only when current canvas has a
+  parent; when visible it counts as primary and stays on narrow widths.
+
+**Consequences.**
+
+- A small amount of duplication between toolbar and More — intentional.
+  The More menu items render text labels; the toolbar items render icons.
+  Same callsite functions either way.
+- Future bottom-nav is not blocked by this decision — if we revisit after
+  shareable/landing work, the overflow-into-More pattern can be retained
+  while a new bottom bar holds primary nav.
+- Responsive audit spec in `tests/phase18_toolbar.spec.ts` freezes the set
+  of visible toolbar controls at the three target widths so regressions
+  from future button additions are caught in CI.
+
+---
+
 ## D5 — 2026-04-15 · Phase 1.6 · Per-node overlay slices to fix cross-layer z-stacking
 
 **Context.** D3 validated on real iPad (formula overlay paints correctly, tracks

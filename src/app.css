@@ -68,8 +68,12 @@ body.he .node text{direction:rtl}
 .zr.locked{cursor:default}
 button,input,select,textarea{font:inherit;color:inherit}
 #tb{position:fixed;top:12px;left:12px;z-index:30;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;gap:3px;flex-wrap:wrap;max-width:calc(100vw - 24px);box-shadow:0 2px 12px rgba(0,0,0,.3)}
-#tb button,#tb input{background:transparent;border:1px solid transparent;border-radius:7px;padding:6px 10px;font-size:13px;cursor:pointer;color:var(--text2)}
-#tb button:hover{background:var(--panel2);color:var(--text)}
+#tb button,#tb input,#tb .tbLabel{background:transparent;border:1px solid transparent;border-radius:7px;padding:6px 10px;font-size:13px;cursor:pointer;color:var(--text2);display:inline-flex;align-items:center;justify-content:center}
+#tb button:hover,#tb .tbLabel:hover{background:var(--panel2);color:var(--text)}
+/* tbLabel is a <label for="..."> that behaves like a button. The native
+   label element forwards clicks to its hidden file input, preserving the
+   iOS user-gesture chain that synthetic .click() would lose. */
+#tb .tbLabel{user-select:none;-webkit-user-select:none;min-width:32px}
 #tb .ac{background:var(--accent);color:#1a1815;font-weight:600}
 #tb input{border-color:var(--border);background:var(--bg2);cursor:text;min-width:130px}
 .sep{width:1px;background:var(--border);margin:3px 4px}
@@ -221,7 +225,7 @@ input,textarea,select,button{touch-action:manipulation}
 }
 /* Touch-friendly button targets */
 @media(pointer:coarse){
-  #tb button,#tb select,#tb input{min-height:44px;min-width:44px;padding:8px 12px;font-size:14px}
+  #tb button,#tb select,#tb input,#tb .tbLabel{min-height:44px;min-width:44px;padding:8px 12px;font-size:14px}
   #tabs .tab{min-height:44px;padding:8px 16px;font-size:13px}
   #tabs .newtab{min-height:44px;min-width:44px;padding:8px 12px}
   #ctx button,#ep button,#more button,#more label{min-height:44px;padding:10px 14px;font-size:14px}
@@ -230,7 +234,9 @@ input,textarea,select,button{touch-action:manipulation}
   #pn input,#pn textarea,#pn select{min-height:44px;font-size:14px;padding:10px 12px}
   .hint{display:none}
 }
-/* Responsive: narrow screens (<768px) */
+/* Responsive: narrow screens (<768px) · Phase 1.8 D6 — "overflow into More".
+   Hide icon-only secondary buttons at phone widths; users reach the same
+   actions through the More menu which renders full text labels. */
 @media(max-width:767px){
   #sb{display:none}
   #fl{max-width:calc(100vw - 24px);left:8px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
@@ -238,6 +244,8 @@ input,textarea,select,button{touch-action:manipulation}
   #fl .pill{flex-shrink:0}
   #tb{left:8px;right:8px;max-width:none;flex-wrap:wrap;gap:4px;padding:4px}
   #tb .sep{display:none}
+  /* Secondary icon buttons collapse into the More menu at phone widths. */
+  #tb #zoneBtn,#tb #dimEdgesBtn,#tb #patchBtn,#tb #importBtn,#tb #undoBtn{display:none}
   #bc{display:none}
   #lg,#lgBtn{display:none}
   /* Property panel: fullscreen overlay on mobile */
