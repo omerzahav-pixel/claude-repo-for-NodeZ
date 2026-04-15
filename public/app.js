@@ -7,6 +7,51 @@ let S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:
 let view={x:0,y:0,k:.5},hist=[],sel=null,drag=null,edgeHover=null,selSet=new Set(),marquee=null;
 const cv=document.getElementById('cv'),pn=document.getElementById('pn'),ctx=document.getElementById('ctx'),ep=document.getElementById('ep'),bc=document.getElementById('bc'),modal=document.getElementById('modal');
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+// Minimal Markdown processor for note bodies. Expects HTML-ESCAPED input so
+// nothing user-supplied can synthesize tags. Supported:
+//   # / ## / ### / …       headings
+//   **bold**  __bold__     strong
+//   *italic*               em
+//   `code`                 code
+//   - item                 ul/li (contiguous run)
+//   1. item                ol/li (contiguous run)
+// Math ($…$ and $$…$$) is stashed to placeholders BEFORE Markdown so _, *, #
+// inside LaTeX are never mangled, then re-injected so KaTeX auto-render can
+// process it downstream. XSS invariant: because input is already escaped,
+// no Markdown transform can emit a tag that wasn't hardcoded here.
+function mdProcess(escapedText){
+  const math=[];
+  let s=String(escapedText||'');
+  s=s.replace(/\$\$[\s\S]+?\$\$/g,m=>{math.push(m);return '\x00M'+(math.length-1)+'\x00'});
+  s=s.replace(/\$[^\n$]+?\$/g,m=>{math.push(m);return '\x00M'+(math.length-1)+'\x00'});
+  const inline=t=>t
+    .replace(/\*\*([^*\n]+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/__([^_\n]+?)__/g,'<strong>$1</strong>')
+    .replace(/\*([^*\n]+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`\n]+?)`/g,'<code>$1</code>');
+  const lines=s.split('\n');
+  const out=[];
+  let i=0;
+  while(i<lines.length){
+    const l=lines[i];
+    const h=/^(#{1,6})\s+(.+)$/.exec(l);
+    if(h){out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`);i++;continue}
+    if(/^- /.test(l)){
+      const g=[];
+      while(i<lines.length&&/^- /.test(lines[i])){g.push(`<li>${inline(lines[i].slice(2))}</li>`);i++}
+      out.push(`<ul>${g.join('')}</ul>`);continue;
+    }
+    if(/^\d+\. /.test(l)){
+      const g=[];
+      while(i<lines.length&&/^\d+\. /.test(lines[i])){g.push(`<li>${inline(lines[i].replace(/^\d+\. /,''))}</li>`);i++}
+      out.push(`<ol>${g.join('')}</ol>`);continue;
+    }
+    out.push(inline(l));i++;
+  }
+  let result=out.join('\n');
+  result=result.replace(/\x00M(\d+)\x00/g,(_,idx)=>math[+idx]);
+  return result;
+}
 const s2w=(x,y)=>({x:(x-innerWidth/2)/view.k-view.x,y:(y-innerHeight/2)/view.k-view.y});
 const C=()=>S.canvases[S.current],zs=()=>C().zones,ns=()=>C().nodes,es=()=>C().edges;
 const zoneAt=(x,y)=>{for(const z of zs())if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h)return z.id;return zs()[0].id};
@@ -180,7 +225,7 @@ function render(){
         if(se||tg)ring=`<rect class="ring" x="${n.x-fw-4}" y="${n.y-fh-4}" width="${fw*2+8}" height="${fh*2+8}" rx="12"/>`;
       }
     }
-    else if(n.shape==='note'){const body=(n.notes||n.label||'');const lines=body.split('\n');const maxLine=Math.max(...lines.map(l=>l.length),(n.label||'').length);const lineCount=lines.length+(n.label?2:0);const autoW=Math.max(140,Math.min(280,maxLine*3.5+30));const autoH=Math.max(70,Math.min(280,lineCount*9+24));const nw=n.userW||autoW;const nh=n.userH||autoH;n._w=nw;n._h=nh;const noteRtl=/[\u0590-\u05FF]/.test(body);const noteStroke=n.color||c;const safeBody=String(body).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');sh=`<rect x="${n.x-nw}" y="${n.y-nh}" width="${nw*2}" height="${nh*2}" rx="6" fill="var(--panel)" stroke="${noteStroke}" stroke-width="2"/><foreignObject x="${n.x-nw+10}" y="${n.y-nh+10}" width="${nw*2-20}" height="${nh*2-20}" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" class="note-body" style="direction:${noteRtl?'rtl':'ltr'};text-align:${noteRtl?'right':'left'};color:var(--text);font-family:'Inter','Assistant',system-ui,sans-serif;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-wrap:break-word;width:100%;height:100%">${n.label?`<div style="font-weight:700;font-size:13px;margin-bottom:5px;color:${noteStroke};white-space:normal">${esc(n.label)}</div>`:''}<div data-mathbody="1">${safeBody}</div></div></foreignObject><rect class="nrz" data-nrz="${n.id}" x="${n.x+nw-12}" y="${n.y+nh-12}" width="14" height="14" rx="3" fill="${noteStroke}" opacity="0.4" style="cursor:nwse-resize"/>`;if(se||tg)ring=`<rect class="ring" x="${n.x-nw-4}" y="${n.y-nh-4}" width="${nw*2+8}" height="${nh*2+8}" rx="8"/>`}
+    else if(n.shape==='note'){const body=(n.notes||n.label||'');const lines=body.split('\n');const maxLine=Math.max(...lines.map(l=>l.length),(n.label||'').length);const lineCount=lines.length+(n.label?2:0);const autoW=Math.max(140,Math.min(280,maxLine*3.5+30));const autoH=Math.max(70,Math.min(280,lineCount*9+24));const nw=n.userW||autoW;const nh=n.userH||autoH;n._w=nw;n._h=nh;const noteRtl=/[\u0590-\u05FF]/.test(body);const noteStroke=n.color||c;const safeBody=String(body).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');const mdBody=mdProcess(safeBody);sh=`<rect x="${n.x-nw}" y="${n.y-nh}" width="${nw*2}" height="${nh*2}" rx="6" fill="var(--panel)" stroke="${noteStroke}" stroke-width="2"/><foreignObject x="${n.x-nw+10}" y="${n.y-nh+10}" width="${nw*2-20}" height="${nh*2-20}" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" class="note-body" style="direction:${noteRtl?'rtl':'ltr'};text-align:${noteRtl?'right':'left'};color:var(--text);font-family:'Inter','Assistant',system-ui,sans-serif;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-wrap:break-word;width:100%;height:100%">${n.label?`<div style="font-weight:700;font-size:13px;margin-bottom:5px;color:${noteStroke};white-space:normal">${esc(n.label)}</div>`:''}<div data-mathbody="1">${mdBody}</div></div></foreignObject><rect class="nrz" data-nrz="${n.id}" x="${n.x+nw-12}" y="${n.y+nh-12}" width="14" height="14" rx="3" fill="${noteStroke}" opacity="0.4" style="cursor:nwse-resize"/>`;if(se||tg)ring=`<rect class="ring" x="${n.x-nw-4}" y="${n.y-nh-4}" width="${nw*2+8}" height="${nh*2+8}" rx="8"/>`}
     else{sh=`<circle cx="${n.x}" cy="${n.y}" r="${s*.75}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="${s*.75+4}"/>`}
     const lbl=(n.label||'').length>26?n.label.slice(0,24)+'…':(n.label||'');
     const portal=n.childCanvas?` <text x="${n.x+s-6}" y="${n.y-s*.45}" font-size="14" fill="var(--accent)">↗</text>`:'';

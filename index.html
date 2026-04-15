@@ -8,7 +8,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<!-- When auto-render (the dependent KaTeX module) finishes, re-run the app's
+     render() so formula nodes + inline math inside note bodies get typeset.
+     Non-deferred app.js at end of body runs before these defer scripts,
+     so the very first render() paints with window.katex still undefined. -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="if(window.render){try{window.render()}catch(e){}}"></script>
 <link rel="stylesheet" href="./src/app.css">
 </head>
 <body>

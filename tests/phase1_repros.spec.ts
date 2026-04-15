@@ -235,7 +235,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
   // -- Bug #3: LaTeX does not render on canvas --------------------------------
 
-  test("1.3 Formula node on canvas renders KaTeX on first paint after import", async ({
+  test("1.3 Non-compact formula node on canvas renders KaTeX after import", async ({
     page,
   }) => {
     await openCleanApp(page);
@@ -245,12 +245,14 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
       .poll(() => canvasCount(page), { timeout: 10_000 })
       .toBe(17);
 
-    // Navigate to a canvas that contains at least one formula node with latex.
+    // Compact formula nodes render as a "ƒ" glyph (no `.fnode[data-latex]`).
+    // Only non-compact formulas go through the KaTeX render path, so filter
+    // explicitly.
     const switched = await page.evaluate(() => {
       const s = window.__E2E!.state();
       for (const k of Object.keys(s.canvases)) {
         const hasFormula = (s.canvases[k].nodes || []).some(
-          (n: any) => n.shape === "formula" && n.latex
+          (n: any) => n.shape === "formula" && n.latex && !n.compact
         );
         if (hasFormula) {
           return window.__E2E!.setCurrentCanvas(k) ? k : null;
@@ -261,16 +263,50 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
     expect(
       switched,
-      "disc_math fixture is expected to contain at least one formula node with latex"
+      "disc_math fixture is expected to contain at least one non-compact formula node"
     ).not.toBeNull();
 
-    // Wait for KaTeX to render inside the canvas svg.
     await expect
       .poll(() => page.locator("svg#cv .fnode .katex").count(), {
         message:
           "Expected at least one .katex element inside a .fnode on the canvas",
         timeout: 5_000,
       })
+      .toBeGreaterThan(0);
+  });
+
+  test("1.3 Inline math ($x^2$) in a note body renders KaTeX on the canvas", async ({
+    page,
+  }) => {
+    await openCleanApp(page);
+
+    await page.evaluate(() => {
+      const cur = window.__E2E!.current();
+      const zoneId = cur.zones[0]?.id ?? "ideas";
+      window.__E2E!.addNodeRaw({
+        id: 9995,
+        x: 0,
+        y: 0,
+        zone: zoneId,
+        shape: "note",
+        status: "idea",
+        label: "Math note",
+        notes: "Pythagoras: $x^2 + y^2 = r^2$ and a display: $$\\int f\\,dx$$",
+      });
+    });
+
+    await expect
+      .poll(
+        () =>
+          page
+            .locator('g.node[data-id="9995"] .note-body .katex')
+            .count(),
+        {
+          message:
+            "Expected inline math in note body to be rendered by KaTeX auto-render",
+          timeout: 5_000,
+        }
+      )
       .toBeGreaterThan(0);
   });
 
