@@ -316,6 +316,55 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
     }
   });
 
+  test("1.2 After import, the viewport auto-fits so current-canvas content is visible", async ({
+    page,
+  }) => {
+    // Per the user's clarification on bug #2: the imported positions are
+    // fine in the data model; what looks like "scattered" nodes is actually
+    // the viewport staying at its pre-import origin/zoom while the imported
+    // content lives far outside the visible region. Fix: after a successful
+    // import, call zF() so the view auto-fits the current canvas.
+    await openCleanApp(page);
+
+    await page.setInputFiles("#imp", discMathJson);
+    await expect
+      .poll(() => canvasCount(page), { timeout: 10_000 })
+      .toBe(17);
+
+    // Read the current canvas' data-model node count, then count how many
+    // <g.node> elements in the DOM have a bounding rect that intersects the
+    // viewport (inner window). On a correctly auto-fitted view, most nodes
+    // on the current canvas should be visible; with no fit, the view sits
+    // at {x:0, y:0, k:.5} which rarely intersects the imported cluster.
+    const stats = await page.evaluate(() => {
+      const s = window.__E2E!.state();
+      const cur = s.canvases[s.current];
+      const total = cur?.nodes?.length ?? 0;
+      const W = window.innerWidth,
+        H = window.innerHeight;
+      const nodes = Array.from(document.querySelectorAll<SVGGElement>("svg#cv g.node"));
+      let inside = 0;
+      for (const g of nodes) {
+        const r = g.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) continue;
+        if (r.right < 0 || r.left > W || r.bottom < 0 || r.top > H) continue;
+        inside++;
+      }
+      return { total, rendered: nodes.length, inside, view: window.__E2E!.view() };
+    });
+
+    expect(stats.total, "current canvas should contain imported nodes").toBeGreaterThan(0);
+    // Require "most" — at least half — of current-canvas nodes to be inside
+    // the viewport. Being strict (all of them) is brittle for canvases with
+    // wide spreads; the auto-fit's job is to make the bulk visible.
+    expect(
+      stats.inside,
+      `Expected most current-canvas nodes inside viewport after auto-fit. stats=${JSON.stringify(
+        stats
+      )}`
+    ).toBeGreaterThanOrEqual(Math.max(1, Math.floor(stats.rendered / 2)));
+  });
+
   // -- Bug #3: LaTeX does not render on canvas --------------------------------
 
   test("1.3 Non-compact formula node on canvas renders KaTeX after import", async ({
