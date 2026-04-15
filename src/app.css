@@ -279,3 +279,13 @@ input,textarea,select,button{touch-action:manipulation}
 @media(max-width:767px){.pn-close{display:flex}}
 /* Apple Pencil: treat as precise pointer */
 @media(pointer:fine)and(hover:none){#cv{cursor:crosshair}}
+/* Phase 5 P1 — press-and-hold drag on touch. When the 350ms hold gate
+   opens, both the SVG hit-group AND the overlay slice gain `.holding`.
+   We apply a warm accent-color glow to the slice so the user sees "drag
+   armed" without anything else moving (the node must stay where it is —
+   if we translated it, subsequent motion would feel off-by-the-translate).
+   The glow fades out naturally when the finger lifts or the node begins
+   to drag (at which point `.dragging` on body takes over the styling). */
+.nslice.holding{filter:drop-shadow(0 0 10px rgba(217,119,87,.7)) drop-shadow(0 0 2px rgba(217,119,87,.9));transition:filter 140ms ease-out}
+g.node.holding>.th{opacity:.18;fill:var(--accent);transition:opacity 140ms ease-out,fill 140ms ease-out}
+body.holding{cursor:grabbing}

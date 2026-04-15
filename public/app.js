@@ -830,6 +830,14 @@ const activePtrs=new Map();
 let pinchState=null;
 let longPressTimer=null;
 let lastTapTime=0,lastTapX=0,lastTapY=0;
+/* Phase 5 P1 — press-and-hold to drag a node on touch. `holdTimer` gates
+   node dragging on touch only: users must hold for HOLD_MS (no motion)
+   before their finger can move the node. Motion before the gate opens
+   converts the interaction to a pan, so a light swipe pans the canvas
+   instead of yanking a node around. Mouse gets immediate drag (no gate). */
+const HOLD_MS=350;
+let holdTimer=null;
+function clearHoldFeedback(){document.body.classList.remove('holding');const hs=document.querySelector('.nslice.holding');if(hs)hs.classList.remove('holding');const hh=document.querySelector('g.node.holding');if(hh)hh.classList.remove('holding')}
 
 function beginInteraction(e){
   const nrz=e.target.closest('.nrz');const nE=e.target.closest('.node'),zH=e.target.closest('.zh'),zE=e.target.closest('.zd'),w=s2w(e.clientX,e.clientY);const mod=e.ctrlKey||e.metaKey;
@@ -856,6 +864,8 @@ cv.addEventListener('pointerdown',e=>{
     if(drag?.snap){hist.pop()}
     drag=null;cv.classList.remove('gr');
     if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
+    if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+    clearHoldFeedback();
     const [p1,p2]=[...activePtrs.values()];
     pinchState={dist:Math.hypot(p2.x-p1.x,p2.y-p1.y)||1,cx:(p1.x+p2.x)/2,cy:(p1.y+p2.y)/2,k:view.k};
     e.preventDefault();return;
@@ -863,6 +873,26 @@ cv.addEventListener('pointerdown',e=>{
   if(activePtrs.size>2)return;
 
   beginInteraction(e);
+
+  // Phase 5 P1 — press-and-hold gate for node drag on touch. Arm only when
+  // beginInteraction() decided this is a node drag (drag.k==='node'); pan,
+  // resize, edge-create, marquee, zone move are unchanged — they react to
+  // motion immediately as before. Mouse also unchanged: node drag instant.
+  if(e.pointerType==='touch'&&drag?.k==='node'){
+    drag.holdPending=true;
+    if(holdTimer)clearTimeout(holdTimer);
+    const nid=drag.n.id;
+    holdTimer=setTimeout(()=>{
+      holdTimer=null;
+      if(!drag||drag.k!=='node'||!drag.holdPending)return;
+      drag.holdPending=false;
+      // Visual + haptic cue so the user knows the gate opened.
+      document.body.classList.add('holding');
+      const slice=document.querySelector(`.nslice[data-nid="${nid}"]`);if(slice)slice.classList.add('holding');
+      const hitG=document.querySelector(`g.node[data-id="${nid}"]`);if(hitG)hitG.classList.add('holding');
+      if(navigator.vibrate)navigator.vibrate(12);
+    },HOLD_MS);
+  }
 
   // Long-press for context menu (touch only — mouse uses right-click)
   if(e.pointerType==='touch'){
@@ -874,6 +904,8 @@ cv.addEventListener('pointerdown',e=>{
       // Cancel drag, fire contextmenu
       if(drag.k==='pan'){view.x=drag.vx;view.y=drag.vy}
       if(drag.snap){hist.pop()}
+      if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+      clearHoldFeedback();
       drag=null;cv.classList.remove('gr');
       const fakeEv=new MouseEvent('contextmenu',{clientX:sx,clientY:sy,bubbles:true,cancelable:true});
       Object.defineProperty(fakeEv,'target',{value:tgt});
@@ -906,6 +938,16 @@ document.addEventListener('pointermove',e=>{
   if(!drag)return;
   const w=s2w(e.clientX,e.clientY);
   if(!drag.moved&&(Math.abs(e.clientX-drag.sx)>TH||Math.abs(e.clientY-drag.sy)>TH)){
+    // Phase 5 P1 — motion on touch BEFORE the hold gate opened: user swiped,
+    // didn't hold. Convert the node-drag intent into a pan so the swipe
+    // scrolls the canvas instead of yanking the node.
+    if(drag.holdPending&&drag.k==='node'){
+      if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+      if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
+      clearHoldFeedback();
+      drag={k:'pan',sx:drag.sx,sy:drag.sy,vx:view.x,vy:view.y};
+      cv.classList.add('gr');
+    }
     drag.moved=true;document.body.classList.add('dragging');
     if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
   }
@@ -922,6 +964,8 @@ function drawMarquee(a,b){const x1=Math.min(a.x,b.x),y1=Math.min(a.y,b.y),x2=Mat
 document.addEventListener('pointerup',e=>{
   activePtrs.delete(e.pointerId);
   if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
+  if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+  clearHoldFeedback();
   if(pinchState){if(activePtrs.size<2){pinchState=null}return}
 
   // Double-tap detection (touch only) — if this was a tap that didn't move
@@ -957,6 +1001,8 @@ cv.addEventListener('pointercancel',e=>{
   activePtrs.delete(e.pointerId);
   if(activePtrs.size<2)pinchState=null;
   if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
+  if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+  clearHoldFeedback();
   if(drag?.k==='pan'){view.x=drag.vx;view.y=drag.vy}
   if(drag?.snap){hist.pop()}
   drag=null;cv.classList.remove('gr');document.body.classList.remove('dragging');render();
@@ -983,6 +1029,8 @@ cv.addEventListener('pointercancel',e=>{
     activePtrs.delete(e.pointerId);
     if(activePtrs.size<2)pinchState=null;
     if(drag?.snap){hist.pop()}
+    if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+    clearHoldFeedback();
     drag=null;document.body.classList.remove('dragging');render();
   });
 })();
