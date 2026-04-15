@@ -129,7 +129,11 @@ body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spaci
 #ep button:hover{background:var(--panel2)}#ep .sw{display:inline-block;width:22px;height:3px;margin-right:8px;vertical-align:middle;border-radius:2px}
 .hint{position:fixed;bottom:12px;left:12px;color:var(--muted);font-size:11px;background:var(--panel);padding:6px 11px;border-radius:8px;border:1px solid var(--border)}
 /* === Mobile / iPad enhancements === */
-html,body{overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:manipulation}
+/* iPad hardening (Phase 1 · 1.6a): lock the app shell to the visual viewport
+   so iOS rubber-band, pull-to-refresh, and scroll-chaining can't yank the
+   canvas around. height:100% + overflow:hidden (line 62) covers most cases;
+   position:fixed + inset:0 is the nuclear lock for iOS Safari specifically. */
+html,body{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:manipulation}
 #cv{touch-action:none!important;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 body.dragging,body.dragging *{-webkit-user-select:none!important;user-select:none!important}
 /* Inputs + scrollable panels still need native touch handling */

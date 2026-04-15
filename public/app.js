@@ -176,6 +176,33 @@ function render(){
   if(window.dlog&&location.search.includes('debug')&&!window._renderLogged){window._renderLogged=true;dlog('render W='+W+' H='+H+' zones='+(zs()?.length||0)+' nodes='+(ns()?.length||0))}
   cv.setAttribute('viewBox',`${-W/2/view.k-view.x} ${-H/2/view.k-view.y} ${W/view.k} ${H/view.k}`);
   cv.setAttribute('width',W);cv.setAttribute('height',H);
+  // Phase 1 · 1.6c — viewport culling via rbush (bootstrap.ts loads it on
+  // window.RBush). Only activates when the canvas has enough nodes that
+  // DOM append cost can actually pay off (>=100). Edges are not culled —
+  // they're cheap (single <path> each) and may cross the viewport even
+  // when both endpoints are off-screen in the node list. The 200px margin
+  // (in screen px, converted to world px by /view.k) ensures nodes that
+  // are partially visible or about to scroll into view stay in the DOM.
+  let visIds=null;
+  if(window.RBush&&ns().length>=100){
+    const margin=200/view.k;
+    const vx1=-W/2/view.k-view.x-margin,vy1=-H/2/view.k-view.y-margin;
+    const vx2=vx1+W/view.k+margin*2,vy2=vy1+H/view.k+margin*2;
+    const tree=new window.RBush();
+    tree.load(ns().map(n=>{
+      // Use the userW/userH sizing for formula/note nodes; fall back to a
+      // generous ±80 for glyph nodes (project/library/principle/etc.).
+      const w=n.userW||80,h=n.userH||80;
+      return{minX:n.x-w,minY:n.y-h,maxX:n.x+w,maxY:n.y+h,id:n.id};
+    }));
+    const hits=tree.search({minX:vx1,minY:vy1,maxX:vx2,maxY:vy2});
+    visIds=new Set(hits.map(x=>x.id));
+    // Always keep the selection + edge-hovered node mounted even if off-
+    // screen so the selection chrome/edit chain stays stable during pan.
+    if(sel)visIds.add(sel.id);
+    for(const id of selSet)visIds.add(id);
+    if(edgeHover)visIds.add(edgeHover.id);
+  }
   let h=`<defs>${Object.entries(ET).map(([k,v])=>`<marker id="a-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="${v.c}"/></marker>`).join('')}</defs>`;
   const isHe=document.body.classList.contains('he');
   // Focus mode: if a node is selected, dim everything not related (same zone or edge-connected)
@@ -200,7 +227,7 @@ function render(){
     const showEdgeLabel=!dimE&&view.k>0.4&&(!focusMode||edgeFocus);
     h+=`<path class="edge ${e.dim?'dim':''}" data-edge="${e.id}" d="M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}" fill="none" stroke="${et.c}" stroke-width="2.5" marker-end="url(#a-${e.type||'feeds'})" opacity="${edgeOpacity}"/>`;
     if(showEdgeLabel){const lbl=e.customLabel||t(e.type||'feeds');const mx=(ax+3*c1x+3*c2x+bx)/8,my=(ay+3*c1y+3*c2y+by)/8;const labelRtl=/[\u0590-\u05FF]/.test(lbl);const fsize=labelRtl?12:10;h+=`<foreignObject x="${mx-60}" y="${my-11}" width="120" height="22" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:'Inter','Assistant',system-ui,sans-serif;font-size:${fsize}px;color:${et.c};background:var(--bg);border:1px solid ${et.c};border-radius:3px;padding:2px 5px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">${esc(lbl)}</div></foreignObject>`}}
-  for(const n of ns()){const c=SC[n.status]||SC.idea,s=42,se=sel?.id===n.id||selSet.has(n.id),tg=edgeHover?.id===n.id;const focusDim=focusMode&&!related.has(n.id);let sh='',ring='';
+  for(const n of ns()){if(visIds&&!visIds.has(n.id))continue;const c=SC[n.status]||SC.idea,s=42,se=sel?.id===n.id||selSet.has(n.id),tg=edgeHover?.id===n.id;const focusDim=focusMode&&!related.has(n.id);let sh='',ring='';
     if(n.shape==='project'){const pts=[];for(let i=0;i<10;i++){const ang=-Math.PI/2+i*Math.PI/5;const r=i%2===0?s:s*.5;pts.push((n.x+r*Math.cos(ang))+','+(n.y+r*Math.sin(ang)))}sh=`<polygon points="${pts.join(' ')}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="${s+6}"/>`}
     else if(n.shape==='library'){sh=`<rect x="${n.x-s}" y="${n.y-s*.65}" width="${s*2}" height="${s*1.3}" rx="3" fill="${c}" stroke="rgba(255,255,255,.18)"/><line x1="${n.x-s*.5}" y1="${n.y-s*.55}" x2="${n.x-s*.5}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/><line x1="${n.x}" y1="${n.y-s*.55}" x2="${n.x}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/><line x1="${n.x+s*.5}" y1="${n.y-s*.55}" x2="${n.x+s*.5}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/>`;if(se||tg)ring=`<rect class="ring" x="${n.x-s-4}" y="${n.y-s*.65-4}" width="${s*2+8}" height="${s*1.3+8}" rx="5"/>`}
     else if(n.shape==='principle'){sh=`<polygon points="${n.x},${n.y-s*.9} ${n.x+s*.9},${n.y} ${n.x},${n.y+s*.9} ${n.x-s*.9},${n.y}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<polygon class="ring" points="${n.x},${n.y-s*.9-5} ${n.x+s*.9+5},${n.y} ${n.x},${n.y+s*.9+5} ${n.x-s*.9-5},${n.y}"/>`}
@@ -506,7 +533,14 @@ function renameZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const n=p
 function toggleLock(zid){const z=zs().find(x=>x.id===zid);if(!z)return;sn();z.locked=z.locked===false?true:false;sv();render();hideCtx()}
 function deleteZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const nodesInZone=ns().filter(n=>n.zone===zid).length;if(nodesInZone>0){if(!confirm(`${nodesInZone} nodes are in "${z.name}". They'll be reassigned to another zone. Continue?`)){hideCtx();return}}if(zs().length<=1){alert('Cannot delete the last zone');hideCtx();return}sn();const fallback=zs().find(x=>x.id!==zid).id;ns().forEach(n=>{if(n.zone===zid)n.zone=fallback});C().zones=zs().filter(x=>x.id!==zid);sv();render();bF();hideCtx()}
 cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clientY),d=e.deltaY<0?1.12:.89;view.k=Math.max(.08,Math.min(3,view.k*d));const a=s2w(e.clientX,e.clientY);view.x+=a.x-b.x;view.y+=a.y-b.y;render()},{passive:false});
-/* old duplicate touch handlers removed — using enhanced touch support below */
+/* Phase 1 · 1.6b — defense-in-depth for iPad Safari / Apple Pencil / Scribble.
+   touch-action:none on #cv (CSS) already tells the browser we own the canvas
+   gesture; these non-passive touchstart/move listeners claim the legacy touch
+   event path too so iOS can't route a pencil touch to Scribble or kick in
+   Safari's own pinch-zoom / pull-to-refresh. Node editing happens in the side
+   panel (not inline on the canvas), so blocking touch defaults here is safe. */
+cv.addEventListener('touchstart',e=>{e.preventDefault()},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
 window.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(confirm(`Delete ${selSet.size} selected nodes?`)){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';render()}});
 function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h})),...ns().map(n=>({x1:n.x-60,y1:n.y-60,x2:n.x+60,y2:n.y+60}))];if(!items.length){view={x:0,y:0,k:.5};render();return}const x1=Math.min(...items.map(i=>i.x1)),y1=Math.min(...items.map(i=>i.y1)),x2=Math.max(...items.map(i=>i.x2)),y2=Math.max(...items.map(i=>i.y2)),pad=80;view.k=Math.min(innerWidth/(x2-x1+pad*2),innerHeight/(y2-y1+pad*2),.7);view.x=-(x1+x2)/2;view.y=-(y1+y2)/2;render()}
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}

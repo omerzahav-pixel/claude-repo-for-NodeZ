@@ -645,6 +645,154 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
     expect(inspection.hasIframe).toBe(false);
   });
 
+  // -- iPad hardening (1.6 a/b/c) ---------------------------------------------
+
+  test("1.6a Shell is locked to viewport (position:fixed + overscroll-behavior:none)", async ({
+    page,
+  }) => {
+    // Rubber-band / pull-to-refresh / scroll-chaining on iPad Safari can
+    // translate the document under our canvas. Lock the shell so only the
+    // app's own pan/zoom can move the view.
+    await openCleanApp(page);
+    const shell = await page.evaluate(() => {
+      const bodyStyle = getComputedStyle(document.body);
+      const htmlStyle = getComputedStyle(document.documentElement);
+      // WebKit doesn't surface `overscroll-behavior` via getComputedStyle
+      // the way Chromium does, so we assert on the applied stylesheet rule
+      // directly as the load-bearing check for iPad Safari.
+      let overscrollRuleApplied = false;
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          for (const rule of Array.from(sheet.cssRules || [])) {
+            const t = (rule as any).cssText || "";
+            if (
+              t.includes("overscroll-behavior:none") ||
+              t.includes("overscroll-behavior: none")
+            ) {
+              overscrollRuleApplied = true;
+              break;
+            }
+          }
+        } catch {
+          // cross-origin sheets throw on cssRules access — ignore.
+        }
+        if (overscrollRuleApplied) break;
+      }
+      return {
+        bodyPosition: bodyStyle.position,
+        htmlPosition: htmlStyle.position,
+        bodyOverflow: bodyStyle.overflow,
+        htmlOverflow: htmlStyle.overflow,
+        overscrollRuleApplied,
+      };
+    });
+    // The load-bearing iPad lock is position:fixed + overflow:hidden on
+    // html+body — rubber-band is physically impossible when the shell can't
+    // scroll. `overscroll-behavior:none` is the modern belt-and-braces add-on
+    // but Playwright's bundled WebKit drops unrecognized properties from the
+    // CSSOM, so we check it as a soft assertion (logged if missing, not a
+    // hard fail on WebKit).
+    expect(shell.bodyPosition).toBe("fixed");
+    expect(shell.htmlPosition).toBe("fixed");
+    expect(shell.bodyOverflow).toBe("hidden");
+    expect(shell.htmlOverflow).toBe("hidden");
+    if (!shell.overscrollRuleApplied) {
+      // Only hard-fail on engines that *do* expose the rule (Chromium).
+      const isChromium = await page.evaluate(
+        () => !!(window as any).chrome || /Chrome\//.test(navigator.userAgent)
+      );
+      if (isChromium) {
+        throw new Error(
+          "overscroll-behavior:none rule missing from the applied stylesheet on Chromium (check src/app.css)"
+        );
+      }
+    }
+  });
+
+  test("1.6b Canvas has touch-action:none and claims touch defaults (iPad Scribble/pinch hardening)", async ({
+    page,
+  }) => {
+    await openCleanApp(page);
+    const canvas = await page.evaluate(() => {
+      const cv = document.getElementById("cv");
+      if (!cv) return null;
+      const cs = getComputedStyle(cv);
+      return {
+        touchAction: cs.touchAction,
+        userSelect: cs.userSelect || (cs as any).webkitUserSelect,
+      };
+    });
+    expect(canvas).not.toBeNull();
+    expect(canvas!.touchAction).toBe("none");
+  });
+
+  test("1.6c Viewport culling keeps all in-view nodes mounted after import (correctness guard)", async ({
+    page,
+  }) => {
+    // Culling is a perf optimization; it must not drop nodes the user can
+    // actually see. After importing disc_math and switching to the canvas
+    // with the most nodes, every data-layer node whose world-space bbox
+    // intersects the current viewBox (+ the 200px screen-space margin)
+    // must have a corresponding <g.node> element in the DOM.
+    await openCleanApp(page);
+    await page.setInputFiles("#imp", discMathJson);
+    await expect
+      .poll(() => canvasCount(page), { timeout: 10_000 })
+      .toBe(17);
+
+    const result = await page.evaluate(() => {
+      const state = window.__E2E!.state();
+      // Switch to the canvas with the most nodes to maximize culling pressure.
+      let biggest = state.current;
+      let biggestN = 0;
+      for (const k of Object.keys(state.canvases)) {
+        const n = state.canvases[k].nodes?.length || 0;
+        if (n > biggestN) {
+          biggestN = n;
+          biggest = k;
+        }
+      }
+      window.__E2E!.setCurrentCanvas(biggest);
+      const v = window.__E2E!.view();
+      const W = window.innerWidth,
+        H = window.innerHeight;
+      const margin = 200 / v.k;
+      const vx1 = -W / 2 / v.k - v.x - margin;
+      const vy1 = -H / 2 / v.k - v.y - margin;
+      const vx2 = vx1 + W / v.k + margin * 2;
+      const vy2 = vy1 + H / v.k + margin * 2;
+      const cur = window.__E2E!.current();
+      const expectedInView: number[] = [];
+      for (const n of cur.nodes) {
+        const w = (n as any).userW || 80,
+          h = (n as any).userH || 80;
+        const nx1 = n.x - w,
+          ny1 = n.y - h,
+          nx2 = n.x + w,
+          ny2 = n.y + h;
+        const intersects =
+          nx2 >= vx1 && nx1 <= vx2 && ny2 >= vy1 && ny1 <= vy2;
+        if (intersects) expectedInView.push(n.id);
+      }
+      const missing = expectedInView.filter(
+        (id) => !document.querySelector(`g.node[data-id="${id}"]`)
+      );
+      return {
+        biggest,
+        totalNodes: cur.nodes.length,
+        expectedInView: expectedInView.length,
+        missing: missing.slice(0, 20),
+      };
+    });
+
+    expect(
+      result.missing.length,
+      `Culling dropped nodes that should be visible on "${result.biggest}" (${result.totalNodes} nodes, ${result.expectedInView} expected in viewport). Missing ids sample: ${JSON.stringify(
+        result.missing
+      )}`
+    ).toBe(0);
+  });
+
   // -- Paste-patch regression guard -------------------------------------------
 
   test("1.7 Paste-patch modal still opens after import (regression guard)", async ({

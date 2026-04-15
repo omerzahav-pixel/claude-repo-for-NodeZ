@@ -14,6 +14,10 @@
      so the very first render() paints with window.katex still undefined. -->
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="if(window.render){try{window.render()}catch(e){}}"></script>
 <link rel="stylesheet" href="./src/app.css">
+<!-- Phase 1 · 1.6c — bootstrap.ts loads rbush as a module and exposes it
+     on window.RBush so the non-module app.js can use it for viewport
+     culling without breaking the D2 non-module pivot. -->
+<script type="module" src="./src/bootstrap.ts"></script>
 </head>
 <body>
 <div id="tb">
