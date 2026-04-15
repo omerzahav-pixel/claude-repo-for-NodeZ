@@ -112,6 +112,27 @@ button,input,select,textarea{font:inherit;color:inherit}
 #modal .plist{max-height:50vh;overflow-y:auto}
 #modal .pitem{padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer;font-size:12px}
 #modal .pitem:hover{border-color:var(--accent);background:var(--bg2)}
+/* Phase 1.7 · dark-themed dialog — replaces native prompt/confirm/alert.
+   z-index 70 so it stacks above #modal (60) when e.g. applyPatch needs to
+   confirm a missing parent node from inside the paste-patch modal. */
+#dlg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+#dlg.on{display:flex}
+#dlg .dc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;width:420px;max-width:90vw;box-shadow:0 12px 36px rgba(0,0,0,.55);font-family:'Inter','Assistant',system-ui,sans-serif;box-sizing:border-box}
+body.he #dlg .dc{direction:rtl;font-family:'Assistant','Inter',system-ui,sans-serif}
+#dlg h3{font:600 17px var(--serif);margin:0 0 8px;color:var(--text)}
+body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
+#dlg p.dmsg{color:var(--text);font-size:13px;margin:0 0 14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+#dlg p{color:var(--muted);font-size:12px;margin:0 0 12px;line-height:1.45}
+#dlg .dbody{margin:0 0 14px}
+#dlg input[type="text"],#dlg textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:9px 11px;font:13px/1.4 'Inter','Assistant',system-ui,sans-serif;color:var(--text);box-sizing:border-box;-webkit-appearance:none;appearance:none}
+#dlg textarea{font-family:'Inter','Assistant',system-ui,sans-serif;resize:vertical}
+#dlg input[type="text"]:focus,#dlg textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+#dlg .drow{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#dlg button{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:7px;cursor:pointer;font:500 12px 'Inter','Assistant',system-ui,sans-serif;min-width:72px}
+#dlg button.pr{background:var(--accent);color:#1a1815;font-weight:600;border:1px solid var(--accent)}
+#dlg button.dn{background:var(--block);color:#fff;border:1px solid var(--block);font-weight:600}
+#dlg button:hover{filter:brightness(1.12)}
+#dlg button:focus{outline:2px solid var(--accent);outline-offset:2px}
 #cv{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;cursor:grab;display:block;touch-action:none;background:var(--bg);z-index:0}
 #cv.gr{cursor:grabbing}
 /* D3 / Phase 1.6 — HTML overlay for rich content that iOS WebKit refuses

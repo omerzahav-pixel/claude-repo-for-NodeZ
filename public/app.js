@@ -77,6 +77,112 @@ let S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:
 let view={x:0,y:0,k:.5},hist=[],sel=null,drag=null,edgeHover=null,selSet=new Set(),marquee=null;
 const cv=document.getElementById('cv'),pn=document.getElementById('pn'),ctx=document.getElementById('ctx'),ep=document.getElementById('ep'),bc=document.getElementById('bc'),modal=document.getElementById('modal');
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+
+/* =========================================================================
+ * Phase 1.7 · In-app dialog component — replaces native prompt/confirm/alert.
+ *
+ * iOS Safari renders native system dialogs in light mode even when the host
+ * app is dark, which looks off-brand. These three promise-based helpers
+ * emit a dark-themed modal (#dlg) that matches the rest of the UI.
+ *
+ *   await uiPrompt(title, defaultValue, {hint, placeholder, multiline})
+ *       → string | null   (null on Esc / Cancel / outside-click)
+ *   await uiConfirm(message, {title, okLabel, cancelLabel, danger})
+ *       → boolean         (false on Esc / Cancel / outside-click)
+ *   await uiNotice(message, {title})
+ *       → undefined       (resolved on OK / Esc / outside-click)
+ *
+ * Layering: #dlg sits at z-index 70, above #modal (60) so a confirm can
+ * appear on top of the paste-patch modal ("parent node not found…").
+ *
+ * XSS: every caller-supplied title/message/default goes through esc() before
+ * interpolation, same as every other user-content path in the app.
+ * ========================================================================= */
+function _uiDlgEl(){
+  let el=document.getElementById('dlg');
+  if(el)return el;
+  el=document.createElement('div');
+  el.id='dlg';
+  el.innerHTML='<div class="dc"></div>';
+  document.body.appendChild(el);
+  return el;
+}
+function _uiOpenDlg(innerHtml,opts){
+  return new Promise(resolve=>{
+    const el=_uiDlgEl();
+    const box=el.firstChild;
+    box.innerHTML=innerHtml;
+    el.classList.add('on');
+    let done=false;
+    const finish=v=>{
+      if(done)return;done=true;
+      el.classList.remove('on');
+      el.removeEventListener('pointerdown',onOverlay);
+      document.removeEventListener('keydown',onKey,true);
+      resolve(v);
+    };
+    const onOverlay=e=>{if(e.target===el)finish(opts.cancelValue)};
+    const onKey=e=>{
+      if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(opts.cancelValue)}
+      else if(e.key==='Enter'&&opts.enterSubmits&&document.activeElement?.tagName!=='TEXTAREA'){
+        e.preventDefault();finish(opts.getSubmitValue?opts.getSubmitValue():undefined);
+      }
+    };
+    el.addEventListener('pointerdown',onOverlay);
+    document.addEventListener('keydown',onKey,true);
+    if(opts.bind)opts.bind(box,finish);
+    requestAnimationFrame(()=>{
+      const f=opts.focusSelector?box.querySelector(opts.focusSelector):box.querySelector('button.pr')||box.querySelector('button');
+      if(f){try{f.focus()}catch(e){}if(opts.selectOnFocus&&'select'in f){try{f.select()}catch(e){}}}
+    });
+  });
+}
+function uiPrompt(title,defaultValue='',opts={}){
+  const {hint='',placeholder='',multiline=false,submitLabel='OK',cancelLabel='Cancel'}=opts;
+  const id='_uii_'+Math.random().toString(36).slice(2,9);
+  const input=multiline
+    ?`<textarea id="${id}" placeholder="${esc(placeholder)}" style="min-height:96px">${esc(defaultValue)}</textarea>`
+    :`<input id="${id}" type="text" value="${esc(defaultValue)}" placeholder="${esc(placeholder)}" autocomplete="off" autocapitalize="off" spellcheck="false"/>`;
+  const html=`<h3>${esc(title)}</h3>${hint?`<p>${esc(hint)}</p>`:''}<div class="dbody">${input}</div><div class="drow"><button data-ui-cancel>${esc(cancelLabel)}</button><button class="pr" data-ui-ok>${esc(submitLabel)}</button></div>`;
+  return _uiOpenDlg(html,{
+    focusSelector:'#'+id,
+    selectOnFocus:!multiline,
+    enterSubmits:!multiline,
+    cancelValue:null,
+    getSubmitValue:()=>document.getElementById(id)?.value??'',
+    bind(box,finish){
+      box.querySelector('[data-ui-ok]').onclick=()=>finish(document.getElementById(id)?.value??'');
+      box.querySelector('[data-ui-cancel]').onclick=()=>finish(null);
+    }
+  });
+}
+function uiConfirm(message,opts={}){
+  const {title='Confirm',okLabel='OK',cancelLabel='Cancel',danger=false}=opts;
+  const okCls=danger?'dn':'pr';
+  const html=`<h3>${esc(title)}</h3><p class="dmsg">${esc(message)}</p><div class="drow"><button data-ui-cancel>${esc(cancelLabel)}</button><button class="${okCls}" data-ui-ok>${esc(okLabel)}</button></div>`;
+  return _uiOpenDlg(html,{
+    enterSubmits:true,
+    cancelValue:false,
+    getSubmitValue:()=>true,
+    bind(box,finish){
+      box.querySelector('[data-ui-ok]').onclick=()=>finish(true);
+      box.querySelector('[data-ui-cancel]').onclick=()=>finish(false);
+    }
+  });
+}
+function uiNotice(message,opts={}){
+  const {title='Notice',okLabel='OK'}=opts;
+  const html=`<h3>${esc(title)}</h3><p class="dmsg">${esc(message)}</p><div class="drow"><button class="pr" data-ui-ok>${esc(okLabel)}</button></div>`;
+  return _uiOpenDlg(html,{
+    enterSubmits:true,
+    cancelValue:undefined,
+    getSubmitValue:()=>undefined,
+    bind(box,finish){
+      box.querySelector('[data-ui-ok]').onclick=()=>finish();
+    }
+  });
+}
+
 // Minimal Markdown processor for note bodies. Expects HTML-ESCAPED input so
 // nothing user-supplied can synthesize tags. Supported:
 //   # / ## / ### / …       headings
@@ -144,7 +250,7 @@ async function getCurrentWs(){const v=await storageGet('vault3-current-ws');retu
 async function setCurrentWs(ws){await storageSet('vault3-current-ws',ws);currentWs=ws}
 async function rebuildWsDropdown(){const list=await listWorkspaces();const sel=document.getElementById('wsSel');if(!sel)return;sel.innerHTML=list.map(w=>`<option value="${esc(w)}" ${w===currentWs?'selected':''}>${esc(w)}</option>`).join('')}
 async function switchWorkspace(ws){await sv();await setCurrentWs(ws);S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:{vault:{name:'Vault',parentNodeId:null}},nextId:1,hebrewMode:false};hist=[];selSet.clear();sel=null;await loadState();rebuildWsDropdown()}
-async function newWorkspace(){const name=prompt('New workspace name (e.g. university, life):','university');if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean)return;const list=await listWorkspaces();if(list.includes(clean)){alert('Already exists');return}list.push(clean);await saveWorkspaces(list);await switchWorkspace(clean)}
+async function newWorkspace(){const name=await uiPrompt('New workspace name','university',{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}list.push(clean);await saveWorkspaces(list);await switchWorkspace(clean)}
 async function loadState(){try{const v=await storageGet(KEY());if(v){const o=JSON.parse(v);S={...S,...o}}}catch(e){console.error('load',e)}reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB()}
 async function load(){
   const dbg=document.getElementById('bootLog')||(()=>{const d=document.createElement('div');d.id='bootLog';d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#22201c;color:#7db36a;font:11px/1.4 monospace;padding:8px;max-height:50vh;overflow-y:auto;border-bottom:2px solid #d97757;white-space:pre-wrap';d.onclick=()=>d.remove();document.body.appendChild(d);return d})();
@@ -192,14 +298,14 @@ function refreshUiText(){
   const sr=document.getElementById('sr');if(sr)sr.placeholder=t('searchCanvas');
   const sbq=document.getElementById('sbq');if(sbq)sbq.placeholder=t('filterList');
   const sbn=document.getElementById('sbName');if(sbn)sbn.textContent=t('nodes');
-  const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="window.dbg&&window.dbg('IMPORT','label[for=imp] tapped — browser should now forward click to #imp');hideMore()">${t('importAll')}</label><label for="impC" onclick="window.dbg&&window.dbg('IMPORT','label[for=impC] tapped');hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="if(confirm('Clear current canvas?')){sn();clr()}hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
+  const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="window.dbg&&window.dbg('IMPORT','label[for=imp] tapped — browser should now forward click to #imp');hideMore()">${t('importAll')}</label><label for="impC" onclick="window.dbg&&window.dbg('IMPORT','label[for=impC] tapped');hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="clearCanvasConfirm();hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
   bF();renderSB();renderLegend();
 }
 async function toggleHebrew(){const on=!(S.hebrewMode);S.hebrewMode=on;document.body.classList.toggle('he',on);const btn=document.getElementById('heBtn');if(btn){btn.style.background=on?'var(--accent)':'';btn.style.color=on?'#1a1815':''}refreshUiText();sv();render()}
 function applyHebrewState(){const on=!!S.hebrewMode;document.body.classList.toggle('he',on);const btn=document.getElementById('heBtn');if(btn){btn.style.background=on?'var(--accent)':'';btn.style.color=on?'#1a1815':''}refreshUiText();applyDimBtn()}
 function toggleDimEdges(){S.dimEdges=!S.dimEdges;sv();applyDimBtn();render()}
 function applyDimBtn(){const btn=document.getElementById('dimEdgesBtn');if(btn){btn.style.background=S.dimEdges?'var(--accent)':'';btn.style.color=S.dimEdges?'#1a1815':''}}
-async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){alert('Cannot delete the last workspace');return}if(!confirm(`Delete workspace "${currentWs}" and ALL its data? Cannot be undone.`))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
+async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){await uiNotice('Cannot delete the last workspace.');return}if(!await uiConfirm(`Delete workspace "${currentWs}" and ALL its data? This cannot be undone.`,{title:'Delete workspace',danger:true,okLabel:'Delete'}))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
 function flashInd(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
 function hideMore(){window.dbg&&window.dbg('IMPORT','hideMore() — removing .on from #more (may break iOS label→input chain)');document.getElementById('more').classList.remove('on')}
 document.addEventListener('click',e=>{if(!document.getElementById('more').contains(e.target)&&!e.target.matches('[onclick*="more"]'))hideMore()});
@@ -230,18 +336,23 @@ function positionCtx(x,y){ctx.style.left='-9999px';ctx.style.top='-9999px';ctx.s
 function showTabCtx(e,cid){const m=S.canvasMeta[cid]||{};
   const isLinked=!!m.parentNodeId;const linkLabel=isLinked?(S.hebrewMode?'חבר לפרויקט אחר':'Reconnect to project'):(S.hebrewMode?'חבר לפרויקט':'Connect to project');
   ctx.innerHTML=`<div class="csub">${esc(m.name||cid)}</div><button onclick="renameCanvas('${cid}');hideCtx()">${S.hebrewMode?'שנה שם':'Rename'}</button><button onclick="showProjectPicker('${cid}');hideCtx()">${esc(linkLabel)}</button>${isLinked?`<button onclick="unlinkCanvas('${cid}');hideCtx()">${S.hebrewMode?'נתק מפרויקט':'Unlink from project'}</button>`:''}${cid!=='vault'?`<div class="csep"></div><button onclick="hideCtx();closeCanvas('${cid}')" style="color:var(--block)">${S.hebrewMode?'מחק קנבס':'Delete canvas'}</button>`:''}`;positionCtx(e.clientX,e.clientY)}
-function renameCanvas(cid){const m=S.canvasMeta[cid];if(!m)return;const newName=prompt(S.hebrewMode?'שם חדש לקנבס:':'New canvas name:',m.name||cid);if(!newName)return;sn();m.name=newName.trim();sv();renderTabs();bB()}
+async function renameCanvas(cid){const m=S.canvasMeta[cid];if(!m)return;const newName=await uiPrompt(S.hebrewMode?'שם חדש לקנבס':'Rename canvas',m.name||cid);if(!newName)return;sn();m.name=newName.trim();sv();renderTabs();bB()}
 function unlinkCanvas(cid){const m=S.canvasMeta[cid];if(!m||!m.parentNodeId)return;sn();const pn=S.canvases[m.parentCanvas||'vault']?.nodes.find(n=>n.id===m.parentNodeId);if(pn)pn.childCanvas=null;m.parentNodeId=null;sv();render();renderTabs()}
 function showProjectPicker(cid){modal.classList.add('on');const projectNodes=[];for(const[ck,cv2]of Object.entries(S.canvases)){if(ck===cid)continue;for(const n of cv2.nodes||[]){if(n.shape==='project')projectNodes.push({n,canvasId:ck,canvasName:S.canvasMeta[ck]?.name||ck})}}
   document.getElementById('mcbody').innerHTML=`<h3>${S.hebrewMode?'בחר צומת פרויקט להתחבר אליו':'Choose project node to connect to'}</h3><input id="ppQ" placeholder="${esc(S.hebrewMode?'חיפוש…':'Search…')}" oninput="renderProjectPicker('${cid}')" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);margin-bottom:10px"/><div class="plist" id="ppL"></div><div class="brow"><button onclick="closeModal()">${t('close')}</button></div>`;
   window._projectNodes=projectNodes;renderProjectPicker(cid)}
 function renderProjectPicker(cid){const q=(document.getElementById('ppQ')?.value||'').toLowerCase();const items=window._projectNodes.filter(p=>!q||(p.n.label||'').toLowerCase().includes(q)||(p.canvasName||'').toLowerCase().includes(q));document.getElementById('ppL').innerHTML=items.map(p=>`<div class="pitem" onclick="connectCanvasToProject('${cid}',${p.n.id},'${p.canvasId}');closeModal()"><b>${esc(p.n.label)}</b><span style="color:var(--muted);font-size:11px"> · ${esc(p.canvasName)}</span></div>`).join('')||`<div style="color:var(--muted);font-size:12px">${S.hebrewMode?'אין צמתי פרויקט':'No project nodes'}</div>`}
 function connectCanvasToProject(cid,nodeId,parentCanvas){sn();const m=S.canvasMeta[cid];if(!m)return;if(m.parentNodeId){const oldPn=S.canvases[m.parentCanvas||'vault']?.nodes.find(n=>n.id===m.parentNodeId);if(oldPn)oldPn.childCanvas=null}m.parentNodeId=nodeId;m.parentCanvas=parentCanvas;const newPn=S.canvases[parentCanvas]?.nodes.find(n=>n.id===nodeId);if(newPn)newPn.childCanvas=cid;sv();render();renderTabs();bB()}
-function newTab(){const name=prompt('New canvas name:','New Canvas');if(!name)return;sn();const cid='c-'+Date.now();S.canvases[cid]={nodes:[],edges:[],zones:[]};S.canvasMeta[cid]={name,parentNodeId:null,parentCanvas:null};sv();switchTo(cid)}
-function closeCanvas(cid){if(cid==='vault')return;const m=S.canvasMeta[cid];if(!confirm(`Delete canvas "${m?.name||cid}" and all its nodes? This cannot be undone with ↶.`))return;sn();if(m?.parentNodeId){const pc=m.parentCanvas||'vault';const pn=S.canvases[pc]?.nodes.find(n=>n.id===m.parentNodeId);if(pn)pn.childCanvas=null}delete S.canvases[cid];delete S.canvasMeta[cid];if(S.current===cid)S.current='vault';sv();render();renderTabs();renderSB();bB()}
+async function newTab(){const name=await uiPrompt('New canvas','New Canvas');if(!name)return;sn();const cid='c-'+Date.now();S.canvases[cid]={nodes:[],edges:[],zones:[]};S.canvasMeta[cid]={name,parentNodeId:null,parentCanvas:null};sv();switchTo(cid)}
+async function closeCanvas(cid){if(cid==='vault')return;const m=S.canvasMeta[cid];if(!await uiConfirm(`Delete canvas "${m?.name||cid}" and all its nodes? This cannot be undone with ↶.`,{title:'Delete canvas',danger:true,okLabel:'Delete'}))return;sn();if(m?.parentNodeId){const pc=m.parentCanvas||'vault';const pn=S.canvases[pc]?.nodes.find(n=>n.id===m.parentNodeId);if(pn)pn.childCanvas=null}delete S.canvases[cid];delete S.canvasMeta[cid];if(S.current===cid)S.current='vault';sv();render();renderTabs();renderSB();bB()}
 function exCanvas(){const c=C();const meta=S.canvasMeta[S.current]||{};const out={canvasId:S.current,createCanvas:true,canvasName:meta.name,parentCanvas:meta.parentCanvas,parentNodeId:meta.parentNodeId,replaceZones:true,zones:c.zones,nodes:c.nodes.map(n=>({...n,id:undefined})),edges:c.edges.map(e=>{const fn=c.nodes.find(x=>x.id===e.from)?.label,tn=c.nodes.find(x=>x.id===e.to)?.label;return{from:fn,to:tn,type:e.type}}).filter(e=>e.from&&e.to)};const b=new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(meta.name||'canvas').replace(/[^a-z0-9]+/gi,'-')+'.json';a.click()}
-function imFCanvas(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const parsed=JSON.parse(r.result);parsed.useCurrentCanvas=true;parsed.canvasId=S.current;delete parsed.createCanvas;showPatch();document.getElementById('pt').value=JSON.stringify(parsed,null,2)}catch(err){alert('Parse error: '+err.message)}};r.readAsText(f)}
-function quickLink(){const u=prompt('Paste URL to add as resource node:');if(!u)return;let lbl=u,z=zs()[zs().length-1].id;try{const p=new URL(u),seg=p.pathname.split('/').filter(Boolean);lbl=(seg[seg.length-1]||p.hostname).replace(/[-_]/g,' ').slice(0,40)}catch(e){}const w=s2w(innerWidth/2,innerHeight/2);const n=addNode(w.x,w.y,{label:lbl,url:u,shape:'resource',zone:z});sel=n;op(n)}
+function imFCanvas(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const parsed=JSON.parse(r.result);parsed.useCurrentCanvas=true;parsed.canvasId=S.current;delete parsed.createCanvas;showPatch();document.getElementById('pt').value=JSON.stringify(parsed,null,2)}catch(err){uiNotice('Parse error: '+err.message,{title:'Import failed'})}};r.readAsText(f)}
+async function quickLink(){const u=await uiPrompt('Add resource link','',{placeholder:'https://…',hint:'Paste any URL — it becomes a resource node.'});if(!u)return;let lbl=u,z=zs()[zs().length-1].id;try{const p=new URL(u),seg=p.pathname.split('/').filter(Boolean);lbl=(seg[seg.length-1]||p.hostname).replace(/[-_]/g,' ').slice(0,40)}catch(e){}const w=s2w(innerWidth/2,innerHeight/2);const n=addNode(w.x,w.y,{label:lbl,url:u,shape:'resource',zone:z});sel=n;op(n)}
+// Phase 1.7 · inline onclick in the More menu used to read
+//   if(confirm('Clear current canvas?')){sn();clr()}
+// but that blocked wiring the new dark-themed dialog. Extracted to a named
+// async fn so the menu item can just call clearCanvasConfirm().
+async function clearCanvasConfirm(){if(!await uiConfirm('Clear current canvas?',{title:'Clear canvas',danger:true,okLabel:'Clear'}))return;sn();clr()}
 function sn(){hist.push(JSON.stringify(S));if(hist.length>40)hist.shift()}
 function un(){if(!hist.length)return;S=JSON.parse(hist.pop());const sid=sel?.id;sel=sid?ns().find(n=>n.id===sid):null;sv();render();bF();bB();sel?op(sel):cp()}
 function bB(){const chain=[];let c2=S.current;while(c2){chain.unshift({id:c2,name:S.canvasMeta[c2]?.name||c2});const p=S.canvasMeta[c2]?.parentCanvas;c2=p||null}
@@ -511,23 +622,23 @@ function sP(){if(!sel)return;sn();const n=sel;n.label=document.getElementById('f
   n.tags=document.getElementById('f_tags').value;n.shape=document.getElementById('f_shape').value;n.status=document.getElementById('f_status').value;n.zone=document.getElementById('f_zone').value;n.confidence=document.getElementById('f_conf').value?parseInt(document.getElementById('f_conf').value):null;sv();render();renderSB();op(n)}
 function cp(){sel=null;pn.style.display='none';render()}
 function createRoadmap(nid){const n=ns().find(x=>x.id===nid);if(!n)return;const cid='rm-'+nid;if(S.canvases[cid])return switchTo(cid);sn();S.canvases[cid]={nodes:[],edges:[],zones:JSON.parse(JSON.stringify(RMZ))};S.canvasMeta[cid]={name:n.label+' › Roadmap',parentNodeId:n.id,parentCanvas:S.current};n.childCanvas=cid;sv();switchTo(cid)}
-function copyBackToVault(nid){const n=ns().find(x=>x.id===nid);if(!n)return;sn();const fromCanvas=S.current;S.current='vault';const w=s2w(innerWidth/2,innerHeight/2);addNode(w.x,w.y,{...n,id:undefined,originId:n.id,childCanvas:null},true);S.current=fromCanvas;sv();alert('Copied to vault')}
+function copyBackToVault(nid){const n=ns().find(x=>x.id===nid);if(!n)return;sn();const fromCanvas=S.current;S.current='vault';const w=s2w(innerWidth/2,innerHeight/2);addNode(w.x,w.y,{...n,id:undefined,originId:n.id,childCanvas:null},true);S.current=fromCanvas;sv();uiNotice('Copied to vault.')}
 function copyToCanvas(nid,cid){const vn=S.canvases.vault.nodes.find(x=>x.id===nid);if(!vn)return;sn();const prev=S.current;S.current=cid;const z=zs()[0];const x=z.x+60+Math.random()*(z.w-140),y=z.y+70+Math.random()*(z.h-140);addNode(x,y,{...vn,id:undefined,originId:vn.id,zone:z.id,childCanvas:null},true);S.current=prev;sv();render()}
 function showPullPicker(){const cid=S.current;const items=S.canvases.vault.nodes;modal.classList.add('on');document.getElementById('mcbody').innerHTML=`<h3>Pull from vault</h3><p>Pick a node to copy into this roadmap</p><input id="pq" placeholder="Filter…" oninput="renderPull('${cid}')" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);margin-bottom:10px"/><div class="plist" id="pl"></div><div class="brow"><button onclick="closeModal()">Close</button></div>`;renderPull(cid)}
 function renderPull(cid){const q=(document.getElementById('pq')?.value||'').toLowerCase();const items=S.canvases.vault.nodes.filter(n=>!q||(n.label||'').toLowerCase().includes(q));document.getElementById('pl').innerHTML=items.map(n=>`<div class="pitem" onclick="copyToCanvas(${n.id},'${cid}');closeModal()"><b>${esc(n.label)}</b><span style="color:var(--muted);font-size:11px"> · ${S.canvases.vault.zones.find(z=>z.id===n.zone)?.name||''}</span></div>`).join('')||'<div style="color:var(--muted);font-size:12px">No matches</div>'}
 function closeModal(){modal.classList.remove('on')}
 function showPatch(){modal.classList.add('on');document.getElementById('mcbody').innerHTML=`<h3>Paste patch</h3><p>Paste JSON from Claude: <code style="background:var(--bg2);padding:1px 4px;border-radius:3px">{"canvasId":"vault","nodes":[...],"edges":[...]}</code>. Nodes need label; other fields optional. Edges use label references (from/to = label) or IDs.</p><textarea id="pt" placeholder='{"canvasId":"vault","nodes":[{"label":"Example","zone":"inbox","shape":"idea","status":"idea","rationale":"why it is here"}],"edges":[]}'></textarea><div class="brow"><button class="pr" onclick="applyPatch()">Apply</button><button onclick="closeModal()">Cancel</button></div>`}
-function applyPatch(){try{const raw=JSON.parse(document.getElementById('pt').value);if(raw.patches&&Array.isArray(raw.patches)){sn();let ok=0;for(const p of raw.patches){try{document.getElementById('pt').value=JSON.stringify(p);applyPatchSingle(p);ok++}catch(e){console.error('patch failed:',p.canvasId,e)}}closeModal();alert('Applied '+ok+'/'+raw.patches.length+' patches');return}sn();applyPatchSingle(raw);closeModal()}catch(err){alert('Parse error: '+err.message)}}
-function applyPatchSingle(p){
+async function applyPatch(){try{const raw=JSON.parse(document.getElementById('pt').value);if(raw.patches&&Array.isArray(raw.patches)){sn();let ok=0;for(const p of raw.patches){try{document.getElementById('pt').value=JSON.stringify(p);await applyPatchSingle(p);ok++}catch(e){console.error('patch failed:',p.canvasId,e)}}closeModal();await uiNotice('Applied '+ok+'/'+raw.patches.length+' patches.');return}sn();await applyPatchSingle(raw);closeModal()}catch(err){await uiNotice('Parse error: '+err.message,{title:'Patch failed'})}}
+async function applyPatchSingle(p){
   // Resolve parent node: prefer explicit parentNodeId, else look up by parentNodeLabel in parent canvas
   let resolvedParentId=p.parentNodeId||null;const parentCanvas=p.parentCanvas||'vault';
-  if(!resolvedParentId&&p.parentNodeLabel){const pn=S.canvases[parentCanvas]?.nodes.find(n=>(n.label||'').trim()===p.parentNodeLabel.trim());if(pn)resolvedParentId=pn.id;else{if(!confirm(`No node labeled "${p.parentNodeLabel}" found in ${parentCanvas}. Apply patch as standalone canvas?`))return}}
+  if(!resolvedParentId&&p.parentNodeLabel){const pn=S.canvases[parentCanvas]?.nodes.find(n=>(n.label||'').trim()===p.parentNodeLabel.trim());if(pn)resolvedParentId=pn.id;else{if(!await uiConfirm(`No node labeled "${p.parentNodeLabel}" found in ${parentCanvas}. Apply patch as standalone canvas?`,{title:'Parent node not found',okLabel:'Apply standalone'}))return}}
   // Resolve target canvas: if parent node already has a childCanvas, use THAT (avoids duplicate canvases)
   let cid=p.canvasId||S.current;
   if(resolvedParentId){const pn=S.canvases[parentCanvas].nodes.find(n=>n.id===resolvedParentId);if(pn&&pn.childCanvas&&S.canvases[pn.childCanvas]){cid=pn.childCanvas}}
   // Force use current canvas if explicitly requested
   if(p.useCurrentCanvas)cid=S.current;
-  if(!S.canvases[cid]){if(p.createCanvas){S.canvases[cid]={nodes:[],edges:[],zones:[]};S.canvasMeta[cid]={name:p.canvasName||cid,parentNodeId:resolvedParentId,parentCanvas};if(resolvedParentId){const pn=S.canvases[parentCanvas].nodes.find(n=>n.id===resolvedParentId);if(pn)pn.childCanvas=cid}}else{alert('Unknown canvas: '+cid+'. Add "createCanvas":true to create it.');return}}
+  if(!S.canvases[cid]){if(p.createCanvas){S.canvases[cid]={nodes:[],edges:[],zones:[]};S.canvasMeta[cid]={name:p.canvasName||cid,parentNodeId:resolvedParentId,parentCanvas};if(resolvedParentId){const pn=S.canvases[parentCanvas].nodes.find(n=>n.id===resolvedParentId);if(pn)pn.childCanvas=cid}}else{await uiNotice('Unknown canvas: '+cid+'. Add "createCanvas":true to create it.');return}}
   const prev=S.current;S.current=cid;if(p.zones){if(p.replaceZones)C().zones=[];for(const z of p.zones){if(!C().zones.find(x=>x.id===z.id))C().zones.push(z)}}
   const added={};for(const nd of(p.nodes||[])){const z=zs().find(x=>x.id===nd.zone)||zs()[0];const x=nd.x!==undefined?nd.x:z.x+60+Math.random()*(z.w-140),y=nd.y!==undefined?nd.y:z.y+70+Math.random()*(z.h-140);const n=addNode(x,y,nd,true);added[nd.label]=n.id}
   for(const e of(p.edges||[])){const fi=typeof e.from==='number'?e.from:added[e.from]||ns().find(n=>n.label===e.from)?.id;const ti=typeof e.to==='number'?e.to:added[e.to]||ns().find(n=>n.label===e.to)?.id;if(fi&&ti)es().push({id:S.nextId++,from:fi,to:ti,type:e.type||'feeds',customLabel:e.customLabel||null})}
@@ -542,7 +653,7 @@ function sF(id,f,v){sn();const n=ns().find(x=>x.id===id);if(n){n[f]=v;sv();rende
 document.addEventListener('click',e=>{if(!ctx.contains(e.target))hideCtx();if(!ep.contains(e.target))ep.style.display='none'});
 function etLabel(k){return t(k)||(ET[k]?.l)||k}
 function showEdgePicker(sx,sy,fromId,toId){ep.style.display='block';ep.style.left=sx+'px';ep.style.top=sy+'px';ep.innerHTML=Object.entries(ET).map(([k,v])=>`<button onclick="${k==='custom'?`createCustomEdge(${fromId},${toId})`:`createEdge(${fromId},${toId},'${k}')`}"><span class="sw" style="background:${v.c}"></span>${esc(etLabel(k))}</button>`).join('')}
-function createCustomEdge(f,toId){const lbl=prompt(t('customLabel'),'');if(!lbl)return;sn();es().push({id:S.nextId++,from:f,to:toId,type:'custom',customLabel:lbl});ep.style.display='none';sv();render()}
+async function createCustomEdge(f,toId){const lbl=await uiPrompt(t('customLabel'),'');if(!lbl)return;sn();es().push({id:S.nextId++,from:f,to:toId,type:'custom',customLabel:lbl});ep.style.display='none';sv();render()}
 function createEdge(f,t,ty){sn();es().push({id:S.nextId++,from:f,to:t,type:ty});ep.style.display='none';sv();render()}
 const TH=4;
 /* === UNIFIED POINTER INPUT (mouse + finger + Apple Pencil) === */
@@ -707,7 +818,7 @@ cv.addEventListener('pointercancel',e=>{
   });
 })();
 
-cv.addEventListener('dblclick',e=>{const nE=e.target.closest?.('.node');if(nE){const n=ns().find(x=>x.id===+nE.dataset.id);if(n.shape==='project'&&S.current==='vault'){if(n.childCanvas)switchTo(n.childCanvas);else if(confirm('Create roadmap for "'+n.label+'"?'))createRoadmap(n.id);return}sel=n;op(n);return}const w=s2w(e.clientX,e.clientY);const n=addNode(w.x,w.y);sel=n;op(n)});
+cv.addEventListener('dblclick',async e=>{const nE=e.target.closest?.('.node');if(nE){const n=ns().find(x=>x.id===+nE.dataset.id);if(n.shape==='project'&&S.current==='vault'){if(n.childCanvas)switchTo(n.childCanvas);else if(await uiConfirm('Create roadmap for "'+n.label+'"?',{title:'New roadmap',okLabel:'Create'}))createRoadmap(n.id);return}sel=n;op(n);return}const w=s2w(e.clientX,e.clientY);const n=addNode(w.x,w.y);sel=n;op(n)});
 
 /* Re-render on resize / orientation change (iPad URL bar collapse, rotation) */
 window.addEventListener('resize',()=>{try{render()}catch(e){}});
@@ -722,7 +833,7 @@ let lastTouchEnd=0;
 document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<=300)e.preventDefault();lastTouchEnd=now},{passive:false});
 function changeEdgeType(id,k){sn();const e=es().find(x=>x.id===id);if(e){e.type=k;e.customLabel=null}sv();render();hideCtx()}
 function reverseEdge(id){sn();const e=es().find(x=>x.id===id);if(e){const tmp=e.from;e.from=e.to;e.to=tmp}sv();render();hideCtx()}
-function changeEdgeToCustom(id){const lbl=prompt(t('customLabel'),'');if(!lbl)return;sn();const e=es().find(x=>x.id===id);if(e){e.type='custom';e.customLabel=lbl}sv();render();hideCtx()}
+async function changeEdgeToCustom(id){const lbl=await uiPrompt(t('customLabel'),'');if(!lbl)return;sn();const e=es().find(x=>x.id===id);if(e){e.type='custom';e.customLabel=lbl}sv();render();hideCtx()}
 cv.addEventListener('contextmenu',e=>{const nE=e.target.closest('.node'),eE=e.target.closest('.edge'),zE=e.target.closest('.zr');
   if(nE){e.preventDefault();const n=ns().find(x=>x.id===+nE.dataset.id);showCtx(e.clientX,e.clientY,n)}
   else if(eE){e.preventDefault();const id=+eE.dataset.edge;const ed=es().find(x=>x.id===id);
@@ -731,13 +842,13 @@ cv.addEventListener('contextmenu',e=>{const nE=e.target.closest('.node'),eE=e.ta
     ctx.innerHTML=`<div class="csub">${t('ctxZone')}: ${esc(z.name)}</div><button onclick="toggleLock('${zid}')">${lk?t('unlockZ'):t('lockZ')}</button><button onclick="renameZone('${zid}')">${t('renameZ')}</button><button onclick="recolorZone('${zid}')">${t('recolorZ')}</button><button onclick="deleteZone('${zid}')" style="color:var(--block)">${t('deleteZ')}</button>`;positionCtx(e.clientX,e.clientY)}
   else{e.preventDefault();showCanvasCtx(e.clientX,e.clientY,s2w(e.clientX,e.clientY))}});
 function showCanvasCtx(x,y,w){ctx.innerHTML=`<button onclick="hideCtx();addNodeAt(${w.x},${w.y})">${t('addNodeHere')}</button><button onclick="hideCtx();addZoneAt(${w.x},${w.y})">${t('addZoneHere')}</button>`;positionCtx(x,y)}
-function recolorZone(zid){const c=prompt(S.hebrewMode?'צבע (hex, למשל #d97757):':'Color (hex, e.g. #d97757):');if(!c)return;sn();const z=zs().find(x=>x.id===zid);if(z)z.color=c;sv();render();bF()}
+async function recolorZone(zid){const c=await uiPrompt(S.hebrewMode?'צבע (hex)':'Zone color','',{placeholder:'#d97757',hint:'Hex color, e.g. #d97757'});if(!c)return;sn();const z=zs().find(x=>x.id===zid);if(z)z.color=c;sv();render();bF()}
 function addNodeAt(x,y){const n=addNode(x,y);sel=n;op(n)}
-function addZoneAt(x,y){sn();const id='z-'+Date.now();const colors=['#8b7ba8','#6b8cb0','#5fa3a8','#7aa882','#c48a9b','#c9896a','#7d7569','#b07ba8','#6ba8a0'];const c=colors[zs().length%colors.length];const name=prompt('Zone name:','New Zone');if(!name){hist.pop();return}zs().push({id,name,x:x-250,y:y-180,w:500,h:360,color:c});sv();render();bF()}
+async function addZoneAt(x,y){const name=await uiPrompt('New zone','New Zone');if(!name)return;sn();const id='z-'+Date.now();const colors=['#8b7ba8','#6b8cb0','#5fa3a8','#7aa882','#c48a9b','#c9896a','#7d7569','#b07ba8','#6ba8a0'];const c=colors[zs().length%colors.length];zs().push({id,name,x:x-250,y:y-180,w:500,h:360,color:c});sv();render();bF()}
 function addZoneCenter(){const w=s2w(innerWidth/2,innerHeight/2);addZoneAt(w.x,w.y)}
-function renameZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const n=prompt('Rename zone:',z.name);if(n){sn();z.name=n;sv();render();bF()}hideCtx()}
+async function renameZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const n=await uiPrompt('Rename zone',z.name);if(n){sn();z.name=n;sv();render();bF()}hideCtx()}
 function toggleLock(zid){const z=zs().find(x=>x.id===zid);if(!z)return;sn();z.locked=z.locked===false?true:false;sv();render();hideCtx()}
-function deleteZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const nodesInZone=ns().filter(n=>n.zone===zid).length;if(nodesInZone>0){if(!confirm(`${nodesInZone} nodes are in "${z.name}". They'll be reassigned to another zone. Continue?`)){hideCtx();return}}if(zs().length<=1){alert('Cannot delete the last zone');hideCtx();return}sn();const fallback=zs().find(x=>x.id!==zid).id;ns().forEach(n=>{if(n.zone===zid)n.zone=fallback});C().zones=zs().filter(x=>x.id!==zid);sv();render();bF();hideCtx()}
+async function deleteZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const nodesInZone=ns().filter(n=>n.zone===zid).length;if(nodesInZone>0){if(!await uiConfirm(`${nodesInZone} nodes are in "${z.name}". They'll be reassigned to another zone. Continue?`,{title:'Delete zone',danger:true,okLabel:'Delete'})){hideCtx();return}}if(zs().length<=1){await uiNotice('Cannot delete the last zone.');hideCtx();return}sn();const fallback=zs().find(x=>x.id!==zid).id;ns().forEach(n=>{if(n.zone===zid)n.zone=fallback});C().zones=zs().filter(x=>x.id!==zid);sv();render();bF();hideCtx()}
 cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clientY),d=e.deltaY<0?1.12:.89;view.k=Math.max(.08,Math.min(3,view.k*d));const a=s2w(e.clientX,e.clientY);view.x+=a.x-b.x;view.y+=a.y-b.y;render()},{passive:false});
 /* Phase 1 · 1.6b — defense-in-depth for iPad Safari / Apple Pencil / Scribble.
    touch-action:none on #cv (CSS) already tells the browser we own the canvas
@@ -747,7 +858,7 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clien
    panel (not inline on the canvas), so blocking touch defaults here is safe. */
 cv.addEventListener('touchstart',e=>{e.preventDefault()},{passive:false});
 cv.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
-window.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(confirm(`Delete ${selSet.size} selected nodes?`)){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';render()}});
+window.addEventListener('keydown',async e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(await uiConfirm(`Delete ${selSet.size} selected nodes?`,{title:'Bulk delete',danger:true,okLabel:'Delete'})){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';render()}});
 function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h})),...ns().map(n=>({x1:n.x-60,y1:n.y-60,x2:n.x+60,y2:n.y+60}))];if(!items.length){view={x:0,y:0,k:.5};render();return}const x1=Math.min(...items.map(i=>i.x1)),y1=Math.min(...items.map(i=>i.y1)),x2=Math.max(...items.map(i=>i.x2)),y2=Math.max(...items.map(i=>i.y2)),pad=80;view.k=Math.min(innerWidth/(x2-x1+pad*2),innerHeight/(y2-y1+pad*2),.7);view.x=-(x1+x2)/2;view.y=-(y1+y2)/2;render()}
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}
 function imF(e){
@@ -802,11 +913,11 @@ function reconcileCanvases(){
   for(const cid of Object.keys(S.canvases)){for(const n of S.canvases[cid].nodes||[]){if(n.childCanvas&&!S.canvases[n.childCanvas]){n.childCanvas=null}}}
   for(const [cid,m] of Object.entries(S.canvasMeta)){if(m.parentNodeId){const pc=m.parentCanvas||'vault';const pn=S.canvases[pc]?.nodes.find(n=>n.id===m.parentNodeId);if(pn&&!pn.childCanvas)pn.childCanvas=cid}}
 }
-function cleanOrphanCanvases(){const orphans=[];for(const cid of Object.keys(S.canvases)){if(cid==='vault')continue;const m=S.canvasMeta[cid];const empty=(S.canvases[cid].nodes||[]).length===0;const noParentRef=!m?.parentNodeId||!S.canvases[m.parentCanvas||'vault']?.nodes.find(n=>n.id===m.parentNodeId&&n.childCanvas===cid);if(empty&&noParentRef)orphans.push(cid)}
-  if(!orphans.length){alert('No orphan canvases found.');return}
-  if(!confirm(`Found ${orphans.length} orphan canvas(es) (empty + not linked to any node):\n\n${orphans.map(c=>'• '+(S.canvasMeta[c]?.name||c)).join('\n')}\n\nDelete them?`))return;
+async function cleanOrphanCanvases(){const orphans=[];for(const cid of Object.keys(S.canvases)){if(cid==='vault')continue;const m=S.canvasMeta[cid];const empty=(S.canvases[cid].nodes||[]).length===0;const noParentRef=!m?.parentNodeId||!S.canvases[m.parentCanvas||'vault']?.nodes.find(n=>n.id===m.parentNodeId&&n.childCanvas===cid);if(empty&&noParentRef)orphans.push(cid)}
+  if(!orphans.length){await uiNotice('No orphan canvases found.');return}
+  if(!await uiConfirm(`Found ${orphans.length} orphan canvas(es) (empty + not linked to any node):\n\n${orphans.map(c=>'• '+(S.canvasMeta[c]?.name||c)).join('\n')}\n\nDelete them?`,{title:'Clean orphans',danger:true,okLabel:'Delete'}))return;
   sn();for(const cid of orphans){delete S.canvases[cid];delete S.canvasMeta[cid]}sv();render();renderTabs();renderSB();bB()}
-function ts(k){if(ns().length&&!confirm(`Current canvas has ${ns().length} nodes. Seed anyway?`))return;sn();seedDemo();zF()}
+async function ts(k){if(ns().length&&!await uiConfirm(`Current canvas has ${ns().length} nodes. Seed anyway?`,{title:'Seed demo',okLabel:'Seed'}))return;sn();seedDemo();zF()}
 function placeIn(zid){const Z=zs().find(x=>x.id===zid)||zs()[0];return{x:Z.x+60+Math.random()*(Z.w-140),y:Z.y+70+Math.random()*(Z.h-140)}}
 function seedDemo(){
   const prev=S.current;S.current='vault';
