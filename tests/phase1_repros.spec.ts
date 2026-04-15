@@ -398,10 +398,14 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
       "disc_math fixture is expected to contain at least one non-compact formula node"
     ).not.toBeNull();
 
+    // D3 · Phase 1.6 — formula content moved to #canvasOverlay (HTML layer)
+    // because iOS WebKit won't paint HTML inside <foreignObject>. The DOM
+    // selector updates accordingly; the invariant (KaTeX renders inside a
+    // .fnode box after a formula-bearing canvas is visible) is unchanged.
     await expect
-      .poll(() => page.locator("svg#cv .fnode .katex").count(), {
+      .poll(() => page.locator("#canvasOverlay .fnode .katex").count(), {
         message:
-          "Expected at least one .katex element inside a .fnode on the canvas",
+          "Expected at least one .katex element inside an overlay .fnode",
         timeout: 5_000,
       })
       .toBeGreaterThan(0);

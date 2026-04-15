@@ -289,6 +289,11 @@ function render(){
     if(edgeHover)visIds.add(edgeHover.id);
   }
   let h=`<defs>${Object.entries(ET).map(([k,v])=>`<marker id="a-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="${v.c}"/></marker>`).join('')}</defs>`;
+  // D3 · Phase 1.6 — overlay HTML accumulator for content (formula headers +
+  // KaTeX bodies, note bodies, zone labels, edge labels) that moves off of
+  // <foreignObject> to survive iOS WebKit paint. Flushed into
+  // #canvasOverlay after SVG innerHTML is applied.
+  let oh='';
   const isHe=document.body.classList.contains('he');
   // Focus mode: if a node is selected, dim everything not related (same zone or edge-connected)
   const focusMode=!!sel&&!drag;
@@ -333,8 +338,19 @@ function render(){
         n._w=fw;n._h=fh;
         const fillColor=n.color||'var(--bg2)';
         const labelRtl=/[\u0590-\u05FF]/.test(n.label||'');
-        sh=`<rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="${fh*2}" rx="10" fill="${fillColor}" stroke="${c}" stroke-width="2"/><rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="32" rx="10" fill="${c}" opacity="0.18"/><foreignObject x="${n.x-fw+10}" y="${n.y-fh+5}" width="${fw*2-20}" height="24" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" style="direction:${labelRtl?'rtl':'ltr'};text-align:center;color:${c};font-family:'Inter','Assistant',system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.label||'')}</div></foreignObject><foreignObject x="${n.x-fw+10}" y="${n.y-fh+38}" width="${fw*2-20}" height="${fh*2-46}" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" class="fnode" data-latex="${esc(n.latex||'')}" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text);font-size:13px;text-align:center;overflow:auto">${n.latex?'':'<span style=\"color:var(--muted);font-size:11px\">(אין נוסחה)</span>'}</div></foreignObject><rect class="nrz" data-nrz="${n.id}" x="${n.x+fw-12}" y="${n.y+fh-12}" width="14" height="14" rx="3" fill="${c}" opacity="0.4" style="cursor:nwse-resize"/>`;
+        // D3 · Phase 1.6 — SVG part is now frame + header stripe + resize
+        // handle only. The label text and the KaTeX body move to overlay
+        // divs below (oh += …) because iOS WebKit won't paint HTML inside
+        // <foreignObject>. See DECISIONS.md D3 for the full rationale.
+        sh=`<rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="${fh*2}" rx="10" fill="${fillColor}" stroke="${c}" stroke-width="2"/><rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="32" rx="10" fill="${c}" opacity="0.18"/><rect class="nrz" data-nrz="${n.id}" x="${n.x+fw-12}" y="${n.y+fh-12}" width="14" height="14" rx="3" fill="${c}" opacity="0.4" style="cursor:nwse-resize"/>`;
         if(se||tg)ring=`<rect class="ring" x="${n.x-fw-4}" y="${n.y-fh-4}" width="${fw*2+8}" height="${fh*2+8}" rx="12"/>`;
+        // Overlay: header label at (x-fw+10, y-fh+5) size (fw*2-20)×24
+        //         body at (x-fw+10, y-fh+38) size (fw*2-20)×(fh*2-46)
+        // Dimensions match the previous <foreignObject> rects 1:1 so the
+        // visual outcome is pixel-identical on engines that did paint it.
+        const fDim=(n.dim||focusDim)?' dim':'';
+        oh+=`<div class="nov fnode-label${fDim}" data-nid="${n.id}" style="left:${n.x-fw+10}px;top:${n.y-fh+5}px;width:${fw*2-20}px;height:24px;color:${c};direction:${labelRtl?'rtl':'ltr'}">${esc(n.label||'')}</div>`;
+        oh+=`<div class="nov fnode${fDim}" data-latex="${esc(n.latex||'')}" data-nid="${n.id}" style="left:${n.x-fw+10}px;top:${n.y-fh+38}px;width:${fw*2-20}px;height:${fh*2-46}px">${n.latex?'':'<span style=\"color:var(--muted);font-size:11px\">(אין נוסחה)</span>'}</div>`;
       }
     }
     else if(n.shape==='note'){const body=(n.notes||n.label||'');const lines=body.split('\n');const maxLine=Math.max(...lines.map(l=>l.length),(n.label||'').length);const lineCount=lines.length+(n.label?2:0);const autoW=Math.max(140,Math.min(280,maxLine*3.5+30));const autoH=Math.max(70,Math.min(280,lineCount*9+24));const nw=n.userW||autoW;const nh=n.userH||autoH;n._w=nw;n._h=nh;const noteRtl=/[\u0590-\u05FF]/.test(body);const noteStroke=n.color||c;const safeBody=String(body).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');const mdBody=mdProcess(safeBody);sh=`<rect x="${n.x-nw}" y="${n.y-nh}" width="${nw*2}" height="${nh*2}" rx="6" fill="var(--panel)" stroke="${noteStroke}" stroke-width="2"/><foreignObject x="${n.x-nw+10}" y="${n.y-nh+10}" width="${nw*2-20}" height="${nh*2-20}" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" class="note-body" style="direction:${noteRtl?'rtl':'ltr'};text-align:${noteRtl?'right':'left'};color:var(--text);font-family:'Inter','Assistant',system-ui,sans-serif;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-wrap:break-word;width:100%;height:100%">${n.label?`<div style="font-weight:700;font-size:13px;margin-bottom:5px;color:${noteStroke};white-space:normal">${esc(n.label)}</div>`:''}<div data-mathbody="1">${mdBody}</div></div></foreignObject><rect class="nrz" data-nrz="${n.id}" x="${n.x+nw-12}" y="${n.y+nh-12}" width="14" height="14" rx="3" fill="${noteStroke}" opacity="0.4" style="cursor:nwse-resize"/>`;if(se||tg)ring=`<rect class="ring" x="${n.x-nw-4}" y="${n.y-nh-4}" width="${nw*2+8}" height="${nh*2+8}" rx="8"/>`}
@@ -351,22 +367,41 @@ function render(){
     const hitRect=isBigShape?`<rect class="th" x="${n.x-(n._w||100)}" y="${n.y-(n._h||60)}" width="${(n._w||100)*2}" height="${(n._h||60)*2}" rx="6" fill="transparent"/>`:`<circle class="th" cx="${n.x}" cy="${n.y}" r="${hitR}"/>`;
     h+=`<g class="node ${n.dim||focusDim?'dim':''} ${tg?'tgt':''}" data-id="${n.id}">${ring}${sh}${['resource','library'].includes(n.shape)?linkGlyph:''}${portal}${conf}${hitRect}${showLabel?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:''}</g>`;}
   cv.innerHTML=h;
-  // Render KaTeX in formula nodes
+  // D3 · Phase 1.6 — sync the HTML overlay with the SVG's viewBox transform,
+  // then paint its content. The transform maps world coords (the same ones
+  // the SVG node loop used above) to the screen via the same math:
+  // screen = (W/2 + (wx + view.x) * view.k, H/2 + (wy + view.y) * view.k).
+  // Children use plain `left:${wx}px; top:${wy}px` and ride this transform.
+  const ov=document.getElementById('canvasOverlay');
+  if(ov){
+    ov.style.transform=`translate(${W/2}px,${H/2}px) scale(${view.k}) translate(${view.x}px,${view.y}px)`;
+    ov.innerHTML=oh;
+  }
+  // Render KaTeX in formula nodes — now targets overlay (.fnode moved off
+  // of <foreignObject> to survive iOS WebKit paint).
   let _katexCount=0;
-  if(window.katex){cv.querySelectorAll('.fnode[data-latex]').forEach(el=>{const tex=el.dataset.latex;try{katex.render(tex,el,{throwOnError:false,displayMode:true,strict:'ignore'});_katexCount++}catch(e){el.textContent=tex}})}
-  // Render inline math inside note bodies via KaTeX auto-render
+  if(window.katex&&ov){ov.querySelectorAll('.fnode[data-latex]').forEach(el=>{const tex=el.dataset.latex;try{katex.render(tex,el,{throwOnError:false,displayMode:true,strict:'ignore'});_katexCount++}catch(e){el.textContent=tex}})}
+  // Render inline math inside note bodies via KaTeX auto-render.
+  // Note-body migration to overlay lands in a follow-up commit once formula
+  // overlay paint is verified on real iPad — until then this still targets
+  // the foreignObject path in the SVG tree (which paints fine on desktop).
   let _autoCount=0;
   if(window.renderMathInElement){cv.querySelectorAll('.note-body [data-mathbody]').forEach(el=>{try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore',output:'html'});_autoCount++}catch(e){}})}
   // Phase 1.5 diagnostics — post-render DOM read. Only emit when the render
   // preamble also emitted (gated by the same _shouldLog flag) so we stay in
-  // sync with pan/drag throttling above.
+  // sync with pan/drag throttling above. The overlay-paint section was
+  // added in Phase 1.6 so Azamat can confirm on real iPad "N formula
+  // overlay divs mounted for N formula nodes" even when paint is blank.
   if(_shouldLog&&window.dbg){
-    const katexEls=cv.querySelectorAll('.katex').length;
+    const katexEls=(ov||cv).querySelectorAll('.katex').length;
     const strongEls=cv.querySelectorAll('.note-body strong').length;
     const emEls=cv.querySelectorAll('.note-body em').length;
     const headingEls=cv.querySelectorAll('.note-body h1,.note-body h2,.note-body h3').length;
+    const ovFormulaDivs=ov?ov.querySelectorAll('.fnode[data-latex]').length:0;
+    const ovLabelDivs=ov?ov.querySelectorAll('.fnode-label').length:0;
     window.dbg('KATEX','post · katex.render()='+_katexCount+' · renderMathInElement()='+_autoCount+' · .katex DOM='+katexEls);
     window.dbg('MD','post · mdProcess calls this render='+(window._mdCallsThisRender||0)+' · <strong>='+strongEls+' · <em>='+emEls+' · headings='+headingEls);
+    window.dbg('SYS','overlay paint-check · fnode divs='+ovFormulaDivs+' · fnode-label divs='+ovLabelDivs+(ov?' · transform='+ov.style.transform.slice(0,60):' · #canvasOverlay MISSING'));
   }
   window._mdCallsThisRender=0;
 }

@@ -56,6 +56,13 @@
 <div id="sb"><div class="sbhead" onclick="sbHeadClick(event)"><span class="sbtog" onclick="event.stopPropagation();cycleSb()">☰</span><span id="sbName">Nodes</span><span style="flex:1"></span><span class="sbtog" onclick="event.stopPropagation();collapseAllZones()" title="Collapse / expand all">⇕</span><span class="sbtog" onclick="event.stopPropagation();document.getElementById('sb').classList.toggle('mini')" title="Minimize to bottom">▾</span></div><div class="sbsearch"><input id="sbq" placeholder="Filter list…" oninput="renderSB()"/></div><div class="sbbody" id="sbbody"></div><div class="resize" onpointerdown="sbResize(event)"></div></div>
 <div id="tabs"></div>
 <svg id="cv"></svg>
+<!-- D3 / Phase 1.6 — HTML overlay layer for rich content that iOS WebKit
+     refuses to paint inside SVG <foreignObject>. Shares the canvas's
+     transform (translate/scale of view.x/view.y/view.k) so children can use
+     plain left/top in world coords. pointer-events:none by default so taps
+     fall through to the SVG below; individual overlay children can re-enable
+     events when they need them (scrollable note bodies, link clicks…). -->
+<div id="canvasOverlay"></div>
 <div class="hint">Click: edit · Drag: move · Shift+drag: connect · Ctrl+click: multi-select · Ctrl+drag empty: marquee · Right-click: menu · Del: remove · Dbl-click: new</div>
 <script src="./app.js"></script>
 </body>

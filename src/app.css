@@ -114,6 +114,24 @@ button,input,select,textarea{font:inherit;color:inherit}
 #modal .pitem:hover{border-color:var(--accent);background:var(--bg2)}
 #cv{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;cursor:grab;display:block;touch-action:none;background:var(--bg);z-index:0}
 #cv.gr{cursor:grabbing}
+/* D3 / Phase 1.6 — HTML overlay for rich content that iOS WebKit refuses
+   to paint inside <foreignObject>. Stacked on top of #cv (same size,
+   pointer-events:none so taps fall through). Each render() updates
+   `transform` to the canvas's current pan/zoom so children — positioned
+   at world (wx, wy) with left/top — land exactly where their SVG outline
+   counterparts land. z-index:1 keeps it above the SVG substrate but below
+   the floating chrome (#tb, #pn, #sb, #modal — all z 10+). */
+#canvasOverlay{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;pointer-events:none;transform-origin:0 0;z-index:1;will-change:transform;-webkit-transform-origin:0 0}
+#canvasOverlay .nov{position:absolute;left:0;top:0;-webkit-user-select:none;user-select:none;pointer-events:none}
+/* Formula node overlay pieces: header label strip + KaTeX body. The parent
+   shell / border / resize handle stays in SVG (.node group). These two
+   overlay divs are sized to match those SVG rects 1:1 so the visual result
+   is indistinguishable from the previous foreignObject version except that
+   iOS actually paints it. */
+#canvasOverlay .fnode-label{display:flex;align-items:center;justify-content:center;font-family:'Inter','Assistant',system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+#canvasOverlay .fnode{display:flex;align-items:center;justify-content:center;color:var(--text);font-size:13px;text-align:center;overflow:auto}
+#canvasOverlay .fnode .katex{color:var(--text)}
+#canvasOverlay .nov.dim{opacity:.18}
 .zr{fill:transparent;stroke-width:1.5;stroke-dasharray:6,5}
 .zl{font:600 11px var(--sans);letter-spacing:1.2px;text-transform:uppercase;pointer-events:none}
 body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spacing:0;font-weight:700;font-size:12px}
