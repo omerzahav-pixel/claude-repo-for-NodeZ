@@ -143,6 +143,89 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
     expect(current).toBe("algo-exec-2026");
   });
 
+  test("1.1 More → Import full state menu item opens the native file picker (UI path, iPad-safe)", async ({
+    page,
+  }) => {
+    // Why this test exists: the previous 1.1 tests drive the input directly
+    // via page.setInputFiles('#imp', ...) which bypasses the UI chain entirely.
+    // The *actual* iPad bug is that the More-menu item runs
+    // `document.getElementById('imp').click()` from an onclick handler, and
+    // iOS Safari blocks synthetic .click() on a hidden file input because the
+    // user-gesture activation doesn't propagate through the JS hop.
+    // Fix is to swap the menu item to a <label for="imp"> — clicking a label
+    // is treated as a gesture on the associated input by the browser, so the
+    // picker opens correctly on iOS.
+    // This test drives the real UI path (tap More → tap Import) and expects
+    // the 'filechooser' Playwright event to fire. That event fires whenever
+    // the browser would show a native file picker, which is exactly what a
+    // label[for] activation triggers.
+    await openCleanApp(page);
+
+    await page.click("#moreBtn");
+    await expect(page.locator("#more.on")).toBeVisible();
+
+    const [chooser] = await Promise.all([
+      page.waitForEvent("filechooser", { timeout: 5_000 }),
+      page.locator("#moreBody").getByText("Import full state").click(),
+    ]);
+
+    // Provide a file so the picker path completes end-to-end and imF runs.
+    await chooser.setFiles(discMathJson);
+
+    await expect
+      .poll(() => canvasCount(page), {
+        message:
+          "Expected 17 canvases after picking disc_math through the More → Import chain",
+        timeout: 10_000,
+      })
+      .toBe(17);
+  });
+
+  test("1.1 Import menu items are label[for=…] (preserve the iOS user-gesture chain)", async ({
+    page,
+  }) => {
+    // Structural guard: after the label-based fix, the two Import menu items
+    // must be <label> elements whose for= points at the corresponding hidden
+    // file input. This is what makes the More → Import flow reliable on iOS
+    // Safari (synthetic .click() on the input from a JS onclick handler is
+    // blocked by the engine's user-gesture rules).
+    await openCleanApp(page);
+
+    await page.click("#moreBtn");
+    await expect(page.locator("#more.on")).toBeVisible();
+
+    const info = await page.evaluate(() => {
+      const imp = document.getElementById("imp") as HTMLInputElement | null;
+      const impC = document.getElementById("impC") as HTMLInputElement | null;
+      const body = document.getElementById("moreBody");
+      if (!imp || !impC || !body) {
+        return { ok: false, reason: "missing #imp, #impC, or #moreBody" };
+      }
+      // Find the menu item for "Import full state" and "Import into this
+      // canvas" by text, independent of the English/Hebrew labels.
+      const hits = Array.from(body.querySelectorAll("label"));
+      const forAll = hits.find((l) => l.getAttribute("for") === "imp");
+      const forCanvas = hits.find((l) => l.getAttribute("for") === "impC");
+      // display:none inputs don't count as a visible gesture target on iOS.
+      const impHidden = window.getComputedStyle(imp).display === "none";
+      const impCHidden = window.getComputedStyle(impC).display === "none";
+      return {
+        ok: !!forAll && !!forCanvas && !impHidden && !impCHidden,
+        hasForAll: !!forAll,
+        hasForCanvas: !!forCanvas,
+        impHidden,
+        impCHidden,
+      };
+    });
+
+    expect(
+      info.ok,
+      `Expected label[for=imp] and label[for=impC] in #moreBody, and file inputs not display:none. Got ${JSON.stringify(
+        info
+      )}`
+    ).toBe(true);
+  });
+
   test("1.1 Importing malformed JSON surfaces a visible error (no silent failure)", async ({
     page,
   }, testInfo) => {

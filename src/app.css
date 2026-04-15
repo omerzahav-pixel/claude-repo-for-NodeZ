@@ -38,8 +38,8 @@
 #more{position:absolute;top:calc(100% + 4px);right:0;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:200px;z-index:60}
 #more.on{display:block}
 #more .mh{padding:6px 12px 2px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
-#more button{display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 12px;border-radius:5px;cursor:pointer;font-size:12px;color:var(--text2)}
-#more button:hover{background:var(--panel2);color:var(--text)}
+#more button,#more label{display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 12px;border-radius:5px;cursor:pointer;font-size:12px;color:var(--text2);box-sizing:border-box}
+#more button:hover,#more label:hover{background:var(--panel2);color:var(--text)}
 #more .msep{height:1px;background:var(--border);margin:4px 6px}
 #indicators{display:flex;gap:6px;align-items:center;margin-left:4px}
 .ind{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s}
@@ -144,7 +144,7 @@ input,textarea,select,button{touch-action:manipulation}
   #tb button,#tb select,#tb input{min-height:44px;min-width:44px;padding:8px 12px;font-size:14px}
   #tabs .tab{min-height:44px;padding:8px 16px;font-size:13px}
   #tabs .newtab{min-height:44px;min-width:44px;padding:8px 12px}
-  #ctx button,#ep button,#more button{min-height:44px;padding:10px 14px;font-size:14px}
+  #ctx button,#ep button,#more button,#more label{min-height:44px;padding:10px 14px;font-size:14px}
   .pill{min-height:36px;padding:8px 14px;font-size:12px;display:inline-flex;align-items:center}
   #pn .brow button{min-height:44px;font-size:14px}
   #pn input,#pn textarea,#pn select{min-height:44px;font-size:14px;padding:10px 12px}
