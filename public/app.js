@@ -551,3 +551,15 @@ load().then(()=>{try{zF()}catch(e){console.error('zF failed',e)}
   // Try to render a blank canvas anyway so buttons work
   try{reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB();rebuildWsDropdown()}catch(e2){console.error('fallback render failed',e2)}
 });
+
+// Test hook: expose live state handles to Playwright via getters so assertions
+// can introspect the current S / view without relying on `let` top-level
+// binding scoping (non-module `let` is not attached to window). Read-only,
+// no behavioral impact in production — dead code unless tests poke at it.
+if(!window.__E2E){Object.defineProperty(window,'__E2E',{value:Object.freeze({
+  state:()=>S,
+  view:()=>view,
+  current:()=>S.canvases[S.current],
+  addNodeRaw:(node)=>{S.canvases[S.current].nodes.push(node);render();return node},
+  setCurrentCanvas:(id)=>{if(S.canvases[id]){S.current=id;render();return true}return false},
+})})}

@@ -16,6 +16,17 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   timeout: 60_000,
 
+  // Auto-start Vite for test runs. If the user already has `npm run dev`
+  // open, `reuseExistingServer` keeps that one instead of racing a second.
+  webServer: {
+    command: "npm run dev",
+    url: "http://localhost:5173/",
+    timeout: 60_000,
+    reuseExistingServer: true,
+    stdout: "ignore",
+    stderr: "pipe",
+  },
+
   use: {
     actionTimeout: 15_000,
     trace: "retain-on-failure",

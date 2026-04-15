@@ -19,9 +19,9 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 *Vite project · git worktree · Playwright baseline · Cloudflare Pages connected to GitHub*
 **Status:** ✅ done 2026-04-15 — Cloudflare Pages connect still needs the user in the browser; everything else shipped. See CHANGELOG.md.
 
-### 🚧 Phase 1 — Rendering migration ⚠️ CRITICAL
-*Move from SVG to DOM-with-CSS-transforms · viewport culling via rbush · Apple Scribble workaround · Pointer Events on DOM nodes*
-**Status:** not started · **Est:** 2–4 days · **Pause here for iPad verification before continuing**
+### 🚧 Phase 1 — Light-touch fixes + iPad hardening ⚠️ CRITICAL
+*Pivoted from full SVG→DOM rewrite (see DECISIONS.md D2) · keep SVG, fix the 5 data-layer bugs · defensive iPad hardening (Scribble + rbush culling + fixed-inset CSS)*
+**Status:** in progress — 1.0 repros landed on `v2-rewrite` (only bugs #3 LaTeX + #5 Markdown actually reproduce in emulation; #1 Import, #2 positions, #4 overflow all pass on both desktop-chrome and ipad-safari — awaiting user repro steps) · **Est:** ~2 days · **Pause here for iPad verification before continuing**
 
 ### 🚧 Phase 2 — PWA setup
 *Service worker · manifest · PWACompat · navigator.storage.persist() · Add to Home Screen working*

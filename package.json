@@ -14,5 +14,8 @@
     "@playwright/test": "^1.48.0",
     "typescript": "^5.6.2",
     "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "rbush": "^4.0.1"
   }
 }
