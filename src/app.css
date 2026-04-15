@@ -133,6 +133,17 @@ body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
 #dlg button.dn{background:var(--block);color:#fff;border:1px solid var(--block);font-weight:600}
 #dlg button:hover{filter:brightness(1.12)}
 #dlg button:focus{outline:2px solid var(--accent);outline-offset:2px}
+/* Phase 1.7 · bottom-right toast — subtle, auto-dismissing save/load
+   confirmations. Replaces the old full-width #bootLog banner that showed
+   init steps at the top of the screen. toast() re-positions the host
+   element each call to stack above the ◆ diag panel (right:8px bottom:8px)
+   so they never sit on top of each other. Hebrew flips to bottom-left. */
+#toast{position:fixed;right:14px;bottom:14px;z-index:55;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;max-width:min(340px,calc(100vw - 28px))}
+#toast .ts{background:#22201c;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px 14px;font:500 12px 'Inter','Assistant',system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast .ts.on{opacity:1;transform:translateY(0)}
+#toast .ts.ok{border-color:#7db36a}
+#toast .ts.err{border-color:#d96b5a}
+body.he #toast{right:auto;left:14px;align-items:flex-start;font-family:'Assistant','Inter',system-ui,sans-serif}
 #cv{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;cursor:grab;display:block;touch-action:none;background:var(--bg);z-index:0}
 #cv.gr{cursor:grabbing}
 /* D3 / Phase 1.6 — HTML overlay for rich content that iOS WebKit refuses

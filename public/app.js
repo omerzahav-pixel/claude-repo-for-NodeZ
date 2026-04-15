@@ -183,6 +183,40 @@ function uiNotice(message,opts={}){
   });
 }
 
+/* =========================================================================
+ * Phase 1.7 · Item #8 — bottom-right toast.
+ *
+ * Replaces the v1 top-of-screen #bootLog banner that rendered every init
+ * step in green monospace across the whole viewport width. That banner
+ * looked like a startup debug log and broke the "feels professional" test.
+ *
+ *   toast('Loaded vault · 42 nodes')                default info, 1.5s
+ *   toast('Saved', {kind:'ok'})                     green left-border
+ *   toast('Save failed', {kind:'err', ms:3000})     red left-border, 3s
+ *
+ * Positions above the ◆ diag panel (right:8px bottom:8px, max 45vh) so the
+ * two never overlap. Hebrew mode flips to the left side via CSS. In RTL,
+ * the host's `#toast` gets left:14px via body.he cascade.
+ *
+ * Kept intentionally minimal — no promise, no queue management; the CSS
+ * transition + setTimeout lifecycle is enough for "Saved"/"Loaded" pings.
+ * ========================================================================= */
+function toast(msg,opts={}){
+  const {kind='info',ms=1500}=opts;
+  let host=document.getElementById('toast');
+  if(!host){host=document.createElement('div');host.id='toast';document.body.appendChild(host)}
+  // Lift the stack above the ◆ diag panel when that panel is mounted.
+  // 18px margin so the toast isn't flush with the diag border.
+  const dbgPanel=document.getElementById('dbgPanel');
+  host.style.bottom=(dbgPanel?dbgPanel.offsetHeight+18:14)+'px';
+  const el=document.createElement('div');
+  el.className='ts'+(kind==='ok'?' ok':kind==='err'?' err':'');
+  el.textContent=msg;
+  host.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('on'));
+  setTimeout(()=>{el.classList.remove('on');setTimeout(()=>{el.remove();if(!host.children.length)host.remove()},250)},ms);
+}
+
 // Minimal Markdown processor for note bodies. Expects HTML-ESCAPED input so
 // nothing user-supplied can synthesize tags. Supported:
 //   # / ## / ### / …       headings
@@ -253,16 +287,24 @@ async function switchWorkspace(ws){await sv();await setCurrentWs(ws);S={canvases
 async function newWorkspace(){const name=await uiPrompt('New workspace name','university',{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}list.push(clean);await saveWorkspaces(list);await switchWorkspace(clean)}
 async function loadState(){try{const v=await storageGet(KEY());if(v){const o=JSON.parse(v);S={...S,...o}}}catch(e){console.error('load',e)}reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB()}
 async function load(){
-  const dbg=document.getElementById('bootLog')||(()=>{const d=document.createElement('div');d.id='bootLog';d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#22201c;color:#7db36a;font:11px/1.4 monospace;padding:8px;max-height:50vh;overflow-y:auto;border-bottom:2px solid #d97757;white-space:pre-wrap';d.onclick=()=>d.remove();document.body.appendChild(d);return d})();
-  const step=(m,ok)=>{dbg.textContent+='\n'+(ok===false?'✗ ':'✓ ')+m;dbg.scrollTop=dbg.scrollHeight};
+  // Phase 1.7 · Item #8 — replaced the v1 full-width #bootLog banner
+  // (green monospace across the viewport top) with a subtle bottom-right
+  // toast() fired once at the end of load(). Failures go to the ◆ diag
+  // panel via dbg() plus a red toast so the user still gets a visible
+  // signal if something breaks during boot, without a giant banner in
+  // their face on every page load.
+  const step=(m,ok)=>{window.dbg&&window.dbg('SYS',(ok===false?'✗ ':'✓ ')+m)};
   step('load() started');
   try{currentWs=await getCurrentWs();step('getCurrentWs: '+currentWs)}catch(e){step('getCurrentWs FAIL: '+e.message,false);currentWs='workspace'}
   let list;try{list=await listWorkspaces();step('listWorkspaces: '+JSON.stringify(list))}catch(e){step('listWorkspaces FAIL: '+e.message,false);list=['workspace']}
   if(!list.includes(currentWs)){list.push(currentWs);try{await saveWorkspaces(list);step('saveWorkspaces OK')}catch(e){step('saveWorkspaces FAIL: '+e.message,false)}}
   try{const existing=await storageGet('vault3-workspace');if(!existing){const legacy=await storageGet('vault3');if(legacy){await storageSet('vault3-workspace',legacy)}}step('legacy migration done')}catch(e){step('migration FAIL: '+e.message,false)}
-  try{await loadState();step('loadState OK — zones: '+(S.canvases?.vault?.zones?.length||0)+' nodes: '+(S.canvases?.vault?.nodes?.length||0))}catch(e){step('loadState FAIL: '+e.message,false);try{reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB();step('fallback render OK')}catch(e2){step('fallback render FAIL: '+e2.message,false)}}
+  let loadOk=true;
+  try{await loadState();step('loadState OK — zones: '+(S.canvases?.vault?.zones?.length||0)+' nodes: '+(S.canvases?.vault?.nodes?.length||0))}catch(e){loadOk=false;step('loadState FAIL: '+e.message,false);try{reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB();step('fallback render OK')}catch(e2){step('fallback render FAIL: '+e2.message,false)}}
   try{rebuildWsDropdown();step('rebuildWsDropdown OK')}catch(e){step('rebuildWsDropdown FAIL: '+e.message,false)}
-  step('load() complete. TAP this log to dismiss.');
+  step('load() complete');
+  const totalNodes=Object.values(S.canvases||{}).reduce((n,c)=>n+(c.nodes?.length||0),0);
+  toast(loadOk?('Loaded '+currentWs+' · '+totalNodes+' node'+(totalNodes===1?'':'s')):'Load failed — check diag',{kind:loadOk?'ok':'err',ms:loadOk?1500:3000});
 }
 async function sv(){const si=document.getElementById('saveInd');if(si)si.className='ind s-pend';try{const ok=await storageSet(KEY(),JSON.stringify(S));if(si)si.className=ok?'ind s-ok':'ind s-err'}catch(e){if(si){si.className='ind s-err';si.title='Save failed: '+e.message}}}
 const T={
