@@ -115,6 +115,19 @@ button,input,select,textarea{font:inherit;color:inherit}
 #pn input,#pn textarea,#pn select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:13px;color:var(--text)}
 #pn textarea{resize:vertical;min-height:60px;font-family:var(--serif);line-height:1.5}
 #pn input:focus,#pn textarea:focus,#pn select:focus{outline:none;border-color:var(--accent)}
+/* Phase 5 P1 #3 — progressive disclosure. "More details" section groups
+   the less-used fields behind a native <details> element so the default
+   panel stays focused on label/body/shape/status/zone. */
+#pn details.pn-more{margin-top:14px;border-top:1px solid var(--border);padding-top:4px}
+#pn details.pn-more summary{list-style:none;cursor:pointer;font:600 10px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:8px 0;user-select:none;display:flex;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent}
+#pn details.pn-more summary::-webkit-details-marker{display:none}
+#pn details.pn-more summary::before{content:'›';display:inline-block;transition:transform 140ms ease-out;color:var(--muted);font-size:14px;width:10px;text-align:center}
+#pn details.pn-more[open] summary::before{transform:rotate(90deg)}
+#pn details.pn-more summary:hover{color:var(--text)}
+#pn details.pn-more[open] summary{color:var(--text2)}
+#pn details.pn-more .pn-more-body{padding-top:2px}
+body.he #pn details.pn-more summary::before{content:'‹'}
+body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
 .urp{display:inline-block;background:var(--bg2);border:1px solid var(--border);color:var(--accent);padding:4px 10px;border-radius:12px;font-size:11px;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
 .brow button{flex:1;min-width:70px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:7px;cursor:pointer;font-weight:500;font-size:12px}

@@ -376,7 +376,7 @@ const T={
       shapes:'Shapes',status:'Status',edges:'Edges',nodes:'Nodes',
       add:'+ Add',zone:'+ Zone',fit:'Fit',back:'← Back',more:'⋯ More',
       label:'Label',notes:'Description / Notes',rationale:'Why this placement',url:'URL',docUrl:'Document link',tags:'Tags',confidence:'Confidence (0–5)',shape:'Shape',zoneF:'Zone',latex:'LaTeX formula',noteBody:'Note body (Markdown)',
-      save:'Save',close:'Close',del:'Delete',addedOn:'added',
+      save:'Save',close:'Close',del:'Delete',addedOn:'added',moreDetails:'More details',
       filterList:'Filter list…',searchCanvas:'Search canvas…',pasteUrl:'Paste URL…',
       newCanvas:'New canvas name:',newWs:'New workspace name (e.g. university, life):',
       exportAll:'Export all (full state)',exportThis:'Export this canvas',importAll:'Import full state',importThis:'Import into this canvas',pastePatch:'Paste patch',quickLink:'Quick-add from URL',dedupe:'Dedupe nodes',cleanOrphan:'Clean orphan canvases',clearCanvas:'Clear canvas',deleteWs:'Delete this workspace',
@@ -388,7 +388,7 @@ const T={
       shapes:'צורות',status:'מצב',edges:'קשרים',nodes:'נקודות',
       add:'+ הוסף',zone:'+ אזור',fit:'התאם',back:'חזרה →',more:'⋯ עוד',
       label:'כותרת',notes:'תיאור / הערות',rationale:'למה במיקום הזה',url:'קישור',docUrl:'קישור למסמך',tags:'תגיות',confidence:'ביטחון (0–5)',shape:'צורה',zoneF:'אזור',latex:'נוסחת LaTeX',noteBody:'גוף הפתק (Markdown)',
-      save:'שמירה',close:'סגירה',del:'מחיקה',addedOn:'נוסף',
+      save:'שמירה',close:'סגירה',del:'מחיקה',addedOn:'נוסף',moreDetails:'עוד פרטים',
       filterList:'סנן רשימה…',searchCanvas:'חיפוש בקנבס…',pasteUrl:'הדבק קישור…',
       newCanvas:'שם הקנבס החדש:',newWs:'שם סביבה חדשה (לדוגמה: university, life):',
       exportAll:'יצוא הכול (מלא)',exportThis:'יצוא הקנבס הזה',importAll:'יבוא מצב מלא',importThis:'יבוא לקנבס הזה',pastePatch:'הדבק patch',quickLink:'הוספה מהירה מקישור',dedupe:'מחיקת כפילויות',cleanOrphan:'ניקוי קנבסים יתומים',clearCanvas:'נקה קנבס',deleteWs:'מחיקת הסביבה',
@@ -754,6 +754,15 @@ function fromU(){const u=document.getElementById('urlIn').value.trim();if(!u)ret
    one keystroke at a time. */
 const AUTOSAVE_MS=200;
 let autosaveTimer=null,autosaveSnapped=false;
+/* Phase 5 P1 #3 — progressive disclosure for the property panel.
+   Primary fields (label, body, shape, status, zone) stay always visible;
+   secondary fields (rationale, url, tags, confidence, color, compact)
+   tuck behind a "More details" <details> summary. `panelDetailsOpen`
+   persists the open/closed choice across in-session rebuilds (shape
+   change, save-patch, node switch) so an advanced edit session keeps
+   its state. cp() resets to false so the next fresh-open panel starts
+   minimal again. */
+let panelDetailsOpen=false;
 function aSnap(){if(!autosaveSnapped){sn();autosaveSnapped=true}}
 function aFlush(){if(autosaveTimer){clearTimeout(autosaveTimer);autosaveTimer=null;if(sel)sv()}}
 function aField(applyFn,immediate){
@@ -785,20 +794,29 @@ function op(n){aFlush();autosaveSnapped=false;sel=n;pn.style.display='block';
     <label>${t('docUrl')}</label><input id="f_docUrl" value="${esc(n.docUrl||'')}" placeholder="Google Drive / Notion / Dropbox…" oninput="aField(x=>x.docUrl=this.value)"/>`:'';
   const latexField=isFormula?`<label>${t('latex')}</label><textarea id="f_latex" oninput="aField(x=>x.latex=this.value);updateLatexPreview()" style="font-family:monospace;font-size:12px">${esc(n.latex||'')}</textarea>${formulaPreview}`:'';
   const notesField=isNote?`<label>${t('noteBody')}</label><textarea id="f_notes" style="min-height:140px" oninput="aField(x=>x.notes=this.value)">${esc(n.notes)}</textarea>`:`<label>${t('notes')}</label><textarea id="f_notes" oninput="aField(x=>x.notes=this.value)">${esc(n.notes)}</textarea>`;
-  pn.innerHTML=`<button class="pn-close" onclick="cp()" aria-label="Close">&times;</button><h2>${esc(n.label||t('untitled'))}</h2><div class="meta">${esc(t(n.status))} · ${esc(zoneName)} · ${t('addedOn')} ${n.created}</div>${up}${docLink}${originBadge}
+  /* Phase 5 P1 #3 — progressive disclosure. Primary holds the 90%-of-use
+     fields (label, body, shape/status, zone); detailFields tucks the
+     occasional ones (rationale, url, tags, conf, color, compact) behind
+     a <details> disclosure. Open/close persists in panelDetailsOpen. */
+  const primaryFields=`
     <label>${t('label')}</label><input id="f_label" value="${esc(n.label)}" oninput="aField(x=>x.label=this.value)"/>
     ${latexField}
-    ${compactToggle}
     ${notesField}
-    ${isNote?'':`<label>${t('rationale')}</label><textarea id="f_rationale" oninput="aField(x=>x.rationale=this.value)">${esc(n.rationale)}</textarea>`}
-    ${urlFields}
-    ${colorPicker}
-    <label>${t('tags')}</label><input id="f_tags" value="${esc(n.tags)}" oninput="aField(x=>x.tags=this.value)"/>
-    <label>${t('confidence')}</label><input id="f_conf" type="number" min="0" max="5" step="1" value="${n.confidence||''}" oninput="aField(x=>x.confidence=this.value?parseInt(this.value):null)"/>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
     <div><label>${t('shape')}</label><select id="f_shape" onchange="aField(x=>x.shape=this.value,true);op(sel)">${SH.map(s=>`<option value="${s}" ${s===n.shape?'selected':''}>${esc(t(s))}</option>`).join('')}</select></div>
     <div><label>${t('status')}</label><select id="f_status" onchange="aField(x=>x.status=this.value,true)">${ST.map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${esc(t(s))}</option>`).join('')}</select></div></div>
-    <label>${t('zoneF')}</label><select id="f_zone" onchange="aField(x=>x.zone=this.value,true)">${zs().map(z=>`<option value="${z.id}" ${z.id===n.zone?'selected':''}>${esc(z.name)}</option>`).join('')}</select>
+    <label>${t('zoneF')}</label><select id="f_zone" onchange="aField(x=>x.zone=this.value,true)">${zs().map(z=>`<option value="${z.id}" ${z.id===n.zone?'selected':''}>${esc(z.name)}</option>`).join('')}</select>`;
+  const detailFields=`
+    ${isNote?'':`<label>${t('rationale')}</label><textarea id="f_rationale" oninput="aField(x=>x.rationale=this.value)">${esc(n.rationale)}</textarea>`}
+    ${urlFields}
+    <label>${t('tags')}</label><input id="f_tags" value="${esc(n.tags)}" oninput="aField(x=>x.tags=this.value)"/>
+    <label>${t('confidence')}</label><input id="f_conf" type="number" min="0" max="5" step="1" value="${n.confidence||''}" oninput="aField(x=>x.confidence=this.value?parseInt(this.value):null)"/>
+    ${colorPicker}
+    ${compactToggle}`;
+  const detailsBlock=`<details class="pn-more" ${panelDetailsOpen?'open':''} ontoggle="panelDetailsOpen=this.open"><summary>${t('moreDetails')}</summary><div class="pn-more-body">${detailFields}</div></details>`;
+  pn.innerHTML=`<button class="pn-close" onclick="cp()" aria-label="Close">&times;</button><h2>${esc(n.label||t('untitled'))}</h2><div class="meta">${esc(t(n.status))} · ${esc(zoneName)} · ${t('addedOn')} ${n.created}</div>${up}${docLink}${originBadge}
+    ${primaryFields}
+    ${detailsBlock}
     <div class="brow"><button class="pr" onclick="sP()">${t('save')}</button><button onclick="cp()">${t('close')}</button><button class="dn" onclick="delN(${n.id})">${t('del')}</button></div>
     ${portalBtn||copyBtn||pullBtn?`<div class="brow">${portalBtn}${copyBtn}${pullBtn}</div>`:''}`;
   if(isFormula)updateLatexPreview();
@@ -810,7 +828,7 @@ function updateLatexPreview(){const el=document.getElementById('latexPreview'),s
    (e.g. title, url pill, zone name). Still callable from explicit Save
    button + legacy contexts. */
 function sP(){if(!sel)return;aFlush();op(sel)}
-function cp(){aFlush();autosaveSnapped=false;sel=null;pn.style.display='none';render()}
+function cp(){aFlush();autosaveSnapped=false;panelDetailsOpen=false;sel=null;pn.style.display='none';render()}
 function createRoadmap(nid){const n=ns().find(x=>x.id===nid);if(!n)return;const cid='rm-'+nid;if(S.canvases[cid])return switchTo(cid);sn();S.canvases[cid]={nodes:[],edges:[],zones:JSON.parse(JSON.stringify(RMZ))};S.canvasMeta[cid]={name:n.label+' › Roadmap',parentNodeId:n.id,parentCanvas:S.current};n.childCanvas=cid;sv();switchTo(cid)}
 function copyBackToVault(nid){const n=ns().find(x=>x.id===nid);if(!n)return;sn();const fromCanvas=S.current;S.current='vault';const w=s2w(innerWidth/2,innerHeight/2);addNode(w.x,w.y,{...n,id:undefined,originId:n.id,childCanvas:null},true);S.current=fromCanvas;sv();uiNotice('Copied to vault.')}
 function copyToCanvas(nid,cid){const vn=S.canvases.vault.nodes.find(x=>x.id===nid);if(!vn)return;sn();const prev=S.current;S.current=cid;const z=zs()[0];const x=z.x+60+Math.random()*(z.w-140),y=z.y+70+Math.random()*(z.h-140);addNode(x,y,{...vn,id:undefined,originId:vn.id,zone:z.id,childCanvas:null},true);S.current=prev;sv();render()}
