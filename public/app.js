@@ -745,7 +745,31 @@ function delE(id){sn();C().edges=es().filter(e=>e.id!==id);sv();render()}
 function clr(){C().nodes=[];C().edges=[];cp();sv();render()}
 function dd(){sn();const sx=new Set();C().nodes=ns().filter(n=>{const k=(n.label||'').trim().toLowerCase();if(!k||sx.has(k))return false;sx.add(k);return true});const ids=new Set(ns().map(n=>n.id));C().edges=es().filter(e=>ids.has(e.from)&&ids.has(e.to));sv();render()}
 function fromU(){const u=document.getElementById('urlIn').value.trim();if(!u)return;let lbl=u;const z=(zs().find(x=>x.id==='inbox')||zs()[zs().length-1]).id;try{const p=new URL(u),seg=p.pathname.split('/').filter(Boolean);lbl=(seg[seg.length-1]||p.hostname).replace(/[-_]/g,' ').slice(0,40)}catch(e){}const w=s2w(innerWidth/2,innerHeight/2);const n=addNode(w.x,w.y,{label:lbl,url:u,shape:'resource',zone:z});document.getElementById('urlIn').value='';sel=n;op(n)}
-function op(n){sel=n;pn.style.display='block';
+/* Phase 5 P1 #2 — live preview + autosave for the property panel.
+   Typed input (label, notes, rationale, url, docUrl, tags, confidence,
+   latex) debounces at AUTOSAVE_MS, re-rendering the canvas on each
+   keystroke (live preview) and persisting at the tail. Selects and
+   checkboxes commit immediately. One undo-snapshot per panel session
+   so Ctrl+Z walks back to the state before the panel opened, not
+   one keystroke at a time. */
+const AUTOSAVE_MS=200;
+let autosaveTimer=null,autosaveSnapped=false;
+function aSnap(){if(!autosaveSnapped){sn();autosaveSnapped=true}}
+function aFlush(){if(autosaveTimer){clearTimeout(autosaveTimer);autosaveTimer=null;if(sel)sv()}}
+function aField(applyFn,immediate){
+  if(!sel)return;
+  aSnap();
+  applyFn(sel);
+  render();renderSB();
+  if(immediate){
+    if(autosaveTimer){clearTimeout(autosaveTimer);autosaveTimer=null}
+    sv();
+  }else{
+    if(autosaveTimer)clearTimeout(autosaveTimer);
+    autosaveTimer=setTimeout(()=>{autosaveTimer=null;sv()},AUTOSAVE_MS);
+  }
+}
+function op(n){aFlush();autosaveSnapped=false;sel=n;pn.style.display='block';
   const isFormula=n.shape==='formula',isNote=n.shape==='note';
   const up=(!isFormula&&!isNote&&n.url)?`<a class="urp" href="${esc(n.url)}" target="_blank" rel="noopener">↗ ${esc(n.url.replace(/^https?:\/\//,'').slice(0,42))}</a>`:'';
   const docLink=(!isFormula&&!isNote&&n.docUrl)?`<a class="urp" href="${esc(n.docUrl)}" target="_blank" rel="noopener" style="margin-left:6px">📄 ${esc(n.docUrl.replace(/^https?:\/\//,'').slice(0,36))}</a>`:'';
@@ -755,41 +779,38 @@ function op(n){sel=n;pn.style.display='block';
   const pullBtn=S.current!=='vault'?`<button onclick="showPullPicker()">${esc(t('pullFromVault'))}</button>`:'';
   const zoneName=zs().find(z=>z.id===n.zone)?.name||n.zone;
   const formulaPreview=isFormula?`<div id="latexPreview" style="background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:14px;margin:6px 0;text-align:center;min-height:50px"></div>`:'';
-  const compactToggle=isFormula?`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="f_compact" type="checkbox" ${n.compact?'checked':''}/>${S.hebrewMode?'תצוגה מצומצמת (כצומת רגיל)':'Compact view (as regular node)'}</label>`:'';
-  const colorPicker=(isNote||isFormula)?`<label>${S.hebrewMode?'צבע':'Color'}</label><div style="display:flex;gap:6px;align-items:center"><input id="f_color" type="color" value="${n.color||(isNote?'#d4a855':'#22201c')}" style="width:50px;height:32px;background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer"/><button onclick="document.getElementById('f_color').value='';sP()" style="font-size:11px">${S.hebrewMode?'איפוס':'Reset'}</button></div>`:'';
-  const urlFields=(!isFormula&&!isNote)?`<label>${t('url')}</label><input id="f_url" value="${esc(n.url)}" placeholder="https://…"/>
-    <label>${t('docUrl')}</label><input id="f_docUrl" value="${esc(n.docUrl||'')}" placeholder="Google Drive / Notion / Dropbox…"/>`:'';
-  const latexField=isFormula?`<label>${t('latex')}</label><textarea id="f_latex" oninput="updateLatexPreview()" style="font-family:monospace;font-size:12px">${esc(n.latex||'')}</textarea>${formulaPreview}`:'';
-  const notesField=isNote?`<label>${t('noteBody')}</label><textarea id="f_notes" style="min-height:140px">${esc(n.notes)}</textarea>`:`<label>${t('notes')}</label><textarea id="f_notes">${esc(n.notes)}</textarea>`;
+  const compactToggle=isFormula?`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="f_compact" type="checkbox" ${n.compact?'checked':''} onchange="aField(x=>x.compact=this.checked,true);op(sel)"/>${S.hebrewMode?'תצוגה מצומצמת (כצומת רגיל)':'Compact view (as regular node)'}</label>`:'';
+  const colorPicker=(isNote||isFormula)?`<label>${S.hebrewMode?'צבע':'Color'}</label><div style="display:flex;gap:6px;align-items:center"><input id="f_color" type="color" value="${n.color||(isNote?'#d4a855':'#22201c')}" style="width:50px;height:32px;background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer" oninput="aField(x=>x.color=this.value||null)"/><button onclick="document.getElementById('f_color').value='';aField(x=>x.color=null,true)" style="font-size:11px">${S.hebrewMode?'איפוס':'Reset'}</button></div>`:'';
+  const urlFields=(!isFormula&&!isNote)?`<label>${t('url')}</label><input id="f_url" value="${esc(n.url)}" placeholder="https://…" oninput="aField(x=>x.url=this.value)"/>
+    <label>${t('docUrl')}</label><input id="f_docUrl" value="${esc(n.docUrl||'')}" placeholder="Google Drive / Notion / Dropbox…" oninput="aField(x=>x.docUrl=this.value)"/>`:'';
+  const latexField=isFormula?`<label>${t('latex')}</label><textarea id="f_latex" oninput="aField(x=>x.latex=this.value);updateLatexPreview()" style="font-family:monospace;font-size:12px">${esc(n.latex||'')}</textarea>${formulaPreview}`:'';
+  const notesField=isNote?`<label>${t('noteBody')}</label><textarea id="f_notes" style="min-height:140px" oninput="aField(x=>x.notes=this.value)">${esc(n.notes)}</textarea>`:`<label>${t('notes')}</label><textarea id="f_notes" oninput="aField(x=>x.notes=this.value)">${esc(n.notes)}</textarea>`;
   pn.innerHTML=`<button class="pn-close" onclick="cp()" aria-label="Close">&times;</button><h2>${esc(n.label||t('untitled'))}</h2><div class="meta">${esc(t(n.status))} · ${esc(zoneName)} · ${t('addedOn')} ${n.created}</div>${up}${docLink}${originBadge}
-    <label>${t('label')}</label><input id="f_label" value="${esc(n.label)}"/>
+    <label>${t('label')}</label><input id="f_label" value="${esc(n.label)}" oninput="aField(x=>x.label=this.value)"/>
     ${latexField}
     ${compactToggle}
     ${notesField}
-    ${isNote?'':`<label>${t('rationale')}</label><textarea id="f_rationale">${esc(n.rationale)}</textarea>`}
+    ${isNote?'':`<label>${t('rationale')}</label><textarea id="f_rationale" oninput="aField(x=>x.rationale=this.value)">${esc(n.rationale)}</textarea>`}
     ${urlFields}
     ${colorPicker}
-    <label>${t('tags')}</label><input id="f_tags" value="${esc(n.tags)}"/>
-    <label>${t('confidence')}</label><input id="f_conf" type="number" min="0" max="5" step="1" value="${n.confidence||''}"/>
+    <label>${t('tags')}</label><input id="f_tags" value="${esc(n.tags)}" oninput="aField(x=>x.tags=this.value)"/>
+    <label>${t('confidence')}</label><input id="f_conf" type="number" min="0" max="5" step="1" value="${n.confidence||''}" oninput="aField(x=>x.confidence=this.value?parseInt(this.value):null)"/>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    <div><label>${t('shape')}</label><select id="f_shape">${SH.map(s=>`<option value="${s}" ${s===n.shape?'selected':''}>${esc(t(s))}</option>`).join('')}</select></div>
-    <div><label>${t('status')}</label><select id="f_status">${ST.map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${esc(t(s))}</option>`).join('')}</select></div></div>
-    <label>${t('zoneF')}</label><select id="f_zone">${zs().map(z=>`<option value="${z.id}" ${z.id===n.zone?'selected':''}>${esc(z.name)}</option>`).join('')}</select>
+    <div><label>${t('shape')}</label><select id="f_shape" onchange="aField(x=>x.shape=this.value,true);op(sel)">${SH.map(s=>`<option value="${s}" ${s===n.shape?'selected':''}>${esc(t(s))}</option>`).join('')}</select></div>
+    <div><label>${t('status')}</label><select id="f_status" onchange="aField(x=>x.status=this.value,true)">${ST.map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${esc(t(s))}</option>`).join('')}</select></div></div>
+    <label>${t('zoneF')}</label><select id="f_zone" onchange="aField(x=>x.zone=this.value,true)">${zs().map(z=>`<option value="${z.id}" ${z.id===n.zone?'selected':''}>${esc(z.name)}</option>`).join('')}</select>
     <div class="brow"><button class="pr" onclick="sP()">${t('save')}</button><button onclick="cp()">${t('close')}</button><button class="dn" onclick="delN(${n.id})">${t('del')}</button></div>
     ${portalBtn||copyBtn||pullBtn?`<div class="brow">${portalBtn}${copyBtn}${pullBtn}</div>`:''}`;
   if(isFormula)updateLatexPreview();
   render()}
 function updateLatexPreview(){const el=document.getElementById('latexPreview'),src=document.getElementById('f_latex');if(!el||!src||!window.katex)return;try{katex.render(src.value||'\\\\text{(empty)}',el,{throwOnError:false,displayMode:true,strict:'ignore'})}catch(e){el.textContent='⚠ '+e.message}}
-function sP(){if(!sel)return;sn();const n=sel;n.label=document.getElementById('f_label').value;
-  const fn=document.getElementById('f_notes');if(fn)n.notes=fn.value;
-  const fr=document.getElementById('f_rationale');if(fr)n.rationale=fr.value;
-  const fu=document.getElementById('f_url');if(fu)n.url=fu.value;
-  const fd=document.getElementById('f_docUrl');if(fd)n.docUrl=fd.value;
-  const fl=document.getElementById('f_latex');if(fl)n.latex=fl.value;
-  const fcomp=document.getElementById('f_compact');if(fcomp)n.compact=fcomp.checked;
-  const fcol=document.getElementById('f_color');if(fcol)n.color=fcol.value||null;
-  n.tags=document.getElementById('f_tags').value;n.shape=document.getElementById('f_shape').value;n.status=document.getElementById('f_status').value;n.zone=document.getElementById('f_zone').value;n.confidence=document.getElementById('f_conf').value?parseInt(document.getElementById('f_conf').value):null;sv();render();renderSB();op(n)}
-function cp(){sel=null;pn.style.display='none';render()}
+/* Phase 5 P1 #2 — with autosave wired to every field, sP() is now a
+   "commit now and rebuild the panel" shortcut: flush any pending debounce
+   then re-run op(n) to refresh labels/badges that only update on rebuild
+   (e.g. title, url pill, zone name). Still callable from explicit Save
+   button + legacy contexts. */
+function sP(){if(!sel)return;aFlush();op(sel)}
+function cp(){aFlush();autosaveSnapped=false;sel=null;pn.style.display='none';render()}
 function createRoadmap(nid){const n=ns().find(x=>x.id===nid);if(!n)return;const cid='rm-'+nid;if(S.canvases[cid])return switchTo(cid);sn();S.canvases[cid]={nodes:[],edges:[],zones:JSON.parse(JSON.stringify(RMZ))};S.canvasMeta[cid]={name:n.label+' › Roadmap',parentNodeId:n.id,parentCanvas:S.current};n.childCanvas=cid;sv();switchTo(cid)}
 function copyBackToVault(nid){const n=ns().find(x=>x.id===nid);if(!n)return;sn();const fromCanvas=S.current;S.current='vault';const w=s2w(innerWidth/2,innerHeight/2);addNode(w.x,w.y,{...n,id:undefined,originId:n.id,childCanvas:null},true);S.current=fromCanvas;sv();uiNotice('Copied to vault.')}
 function copyToCanvas(nid,cid){const vn=S.canvases.vault.nodes.find(x=>x.id===nid);if(!vn)return;sn();const prev=S.current;S.current=cid;const z=zs()[0];const x=z.x+60+Math.random()*(z.w-140),y=z.y+70+Math.random()*(z.h-140);addNode(x,y,{...vn,id:undefined,originId:vn.id,zone:z.id,childCanvas:null},true);S.current=prev;sv();render()}
