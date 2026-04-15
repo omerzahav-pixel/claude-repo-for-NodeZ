@@ -35,8 +35,8 @@
 <button onclick="un()" title="Ctrl+Z">↶</button>
 <button id="dimEdgesBtn" onclick="toggleDimEdges()" title="Dim edges (focus on nodes)">⌇</button>
 <span class="sep"></span>
-<div style="position:relative"><button id="moreBtn" onclick="document.getElementById('more').classList.toggle('on');window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()">⋯ More</button>
-<div id="more"><div id="moreBody"></div></div></div>
+<button id="moreBtn" onclick="toggleMore();window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()">⋯ More</button>
+<div id="more"><div id="moreBody"></div></div>
 <div id="indicators"><span class="ind s-ok" id="saveInd" title="Save status"></span><span class="ind" id="expInd" title="Export flash"></span></div>
 <!-- iOS Safari blocks synthetic .click() on a hidden file input called from
      a JS onclick handler because the user-gesture activation doesn't forward

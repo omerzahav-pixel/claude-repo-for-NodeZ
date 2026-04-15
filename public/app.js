@@ -217,6 +217,68 @@ function toast(msg,opts={}){
   setTimeout(()=>{el.classList.remove('on');setTimeout(()=>{el.remove();if(!host.children.length)host.remove()},250)},ms);
 }
 
+/* =========================================================================
+ * Phase 1.8 · Smart popover positioning utility.
+ *
+ * Anchors a popover panel to a trigger button and flips upward if not enough
+ * viewport space below. Works in LTR and RTL. Keeps the panel fully on-screen
+ * by clamping left/top so nothing gets cut off at viewport edges (important
+ * for narrow iPhone widths where the default "right-align to trigger" blows
+ * out the left side).
+ *
+ *   placePopover('more', 'moreBtn')
+ *   placePopover('more', 'moreBtn', { gap: 8, preferUp: false })
+ *
+ * The popover element must be in the DOM and have its current visibility
+ * applied (so offsetHeight/offsetWidth are real). Caller toggles the .on
+ * class; this function only writes positioning styles (top/left/right).
+ *
+ * Call sites currently: #more (top toolbar). Intended to absorb #ctx and #ep
+ * in a follow-up once we consolidate their bespoke positioning logic.
+ * ========================================================================= */
+function placePopover(panelId,anchorId,opts={}){
+  const panel=document.getElementById(panelId);
+  const anchor=document.getElementById(anchorId);
+  if(!panel||!anchor)return;
+  const gap=opts.gap??4;
+  // Anchor rect in viewport coords.
+  const a=anchor.getBoundingClientRect();
+  // Measure panel without forcing a re-layout if it's already visible; if
+  // hidden, temporarily flip visibility so we get real dimensions.
+  const wasOn=panel.classList.contains('on');
+  const prevVis=panel.style.visibility,prevDisp=panel.style.display;
+  if(!wasOn){panel.style.visibility='hidden';panel.style.display='block'}
+  const pw=panel.offsetWidth||panel.getBoundingClientRect().width||220;
+  const ph=panel.offsetHeight||panel.getBoundingClientRect().height||160;
+  if(!wasOn){panel.style.visibility=prevVis;panel.style.display=prevDisp}
+  const vw=innerWidth,vh=innerHeight;
+  const isRtl=document.body.classList.contains('he');
+  // Default: open below, align right edge to anchor's right edge (LTR) or
+  // left edge to anchor's left edge (RTL — mirrors what native menus do).
+  // Flip up if not enough space below.
+  const spaceBelow=vh-a.bottom,spaceAbove=a.top;
+  const openUp=opts.preferUp||(spaceBelow<ph+gap+8&&spaceAbove>spaceBelow);
+  // Reset any prior inline positioning.
+  panel.style.position='fixed';
+  panel.style.right='auto';
+  panel.style.bottom='auto';
+  // Vertical
+  if(openUp){
+    panel.style.top=Math.max(8,a.top-ph-gap)+'px';
+  }else{
+    panel.style.top=Math.min(vh-ph-8,a.bottom+gap)+'px';
+  }
+  // Horizontal — right-align in LTR, left-align in RTL, clamped to viewport.
+  let left;
+  if(isRtl){
+    left=a.left;
+  }else{
+    left=a.right-pw;
+  }
+  left=Math.max(8,Math.min(vw-pw-8,left));
+  panel.style.left=left+'px';
+}
+
 // Minimal Markdown processor for note bodies. Expects HTML-ESCAPED input so
 // nothing user-supplied can synthesize tags. Supported:
 //   # / ## / ### / …       headings
@@ -350,6 +412,22 @@ function applyDimBtn(){const btn=document.getElementById('dimEdgesBtn');if(btn){
 async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){await uiNotice('Cannot delete the last workspace.');return}if(!await uiConfirm(`Delete workspace "${currentWs}" and ALL its data? This cannot be undone.`,{title:'Delete workspace',danger:true,okLabel:'Delete'}))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
 function flashInd(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
 function hideMore(){window.dbg&&window.dbg('IMPORT','hideMore() — removing .on from #more (may break iOS label→input chain)');document.getElementById('more').classList.remove('on')}
+/* Phase 1.8 — toggleMore() centralizes open/close and anchors via
+   placePopover so the menu flips up when there's no room below (common in
+   portrait iPad/iPhone where the toolbar wraps to two rows and the menu
+   would otherwise run past the bottom of the viewport). */
+function toggleMore(){
+  const more=document.getElementById('more');
+  if(!more)return;
+  if(more.classList.contains('on')){more.classList.remove('on');return}
+  more.classList.add('on');
+  placePopover('more','moreBtn');
+}
+// Keep the More menu anchored while open if the viewport reflows.
+window.addEventListener('resize',()=>{
+  const more=document.getElementById('more');
+  if(more&&more.classList.contains('on'))placePopover('more','moreBtn');
+});
 /* Phase 1.7 · Item #9 — panel toggle / outside-click / Esc.
  *
  * Before: `?` opened the Legend but tapping `?` again did nothing — the

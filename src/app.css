@@ -35,7 +35,11 @@
 #tabs .tab .x{color:var(--muted);padding:0 2px}#tabs .tab .x:hover{color:var(--block)}
 #tabs .newtab{padding:6px 10px;color:var(--muted);cursor:pointer;font-size:13px}
 #tabs .newtab:hover{color:var(--accent)}
-#more{position:absolute;top:calc(100% + 4px);right:0;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:200px;z-index:60}
+/* Phase 1.8 — position:fixed so JS placePopover() can anchor + flip. The
+   old absolute+right:0 required #more to be inside a position:relative
+   wrapper, which broke when the toolbar wrapped to two rows on narrow
+   viewports (menu ended up under the wrong row). */
+#more{position:fixed;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:220px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow-y:auto;z-index:60;-webkit-overflow-scrolling:touch}
 #more.on{display:block}
 #more .mh{padding:6px 12px 2px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
 #more button,#more label{display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 12px;border-radius:5px;cursor:pointer;font-size:12px;color:var(--text2);box-sizing:border-box}
