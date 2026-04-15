@@ -26,7 +26,7 @@ const OUT = resolve(__dirname, "..", "public", "icons");
 mkdirSync(OUT, { recursive: true });
 
 // NodeZ palette.
-const BG = [0x1a, 0x18, 0x15, 0xff];      // warm dark
+const BG = [0x0F, 0x0F, 0x0F, 0xff];      // neutral dark (Phase 5 P1 #5 layered surfaces)
 const ACCENT = [0xd9, 0x77, 0x57, 0xff];  // terracotta
 const ACCENT2 = [0xc9, 0x63, 0x3f, 0xff]; // shade
 const TEXT = [0xf5, 0xf0, 0xe6, 0xff];    // cream
