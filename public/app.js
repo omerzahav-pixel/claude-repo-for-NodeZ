@@ -778,7 +778,7 @@ function aField(applyFn,immediate){
     autosaveTimer=setTimeout(()=>{autosaveTimer=null;sv()},AUTOSAVE_MS);
   }
 }
-function op(n){aFlush();autosaveSnapped=false;sel=n;pn.style.display='block';
+function op(n){aFlush();autosaveSnapped=false;sel=n;pn.classList.add('on');
   const isFormula=n.shape==='formula',isNote=n.shape==='note';
   const up=(!isFormula&&!isNote&&n.url)?`<a class="urp" href="${esc(n.url)}" target="_blank" rel="noopener">↗ ${esc(n.url.replace(/^https?:\/\//,'').slice(0,42))}</a>`:'';
   const docLink=(!isFormula&&!isNote&&n.docUrl)?`<a class="urp" href="${esc(n.docUrl)}" target="_blank" rel="noopener" style="margin-left:6px">📄 ${esc(n.docUrl.replace(/^https?:\/\//,'').slice(0,36))}</a>`:'';
@@ -828,7 +828,7 @@ function updateLatexPreview(){const el=document.getElementById('latexPreview'),s
    (e.g. title, url pill, zone name). Still callable from explicit Save
    button + legacy contexts. */
 function sP(){if(!sel)return;aFlush();op(sel)}
-function cp(){aFlush();autosaveSnapped=false;panelDetailsOpen=false;sel=null;pn.style.display='none';render()}
+function cp(){aFlush();autosaveSnapped=false;panelDetailsOpen=false;sel=null;pn.classList.remove('on');render()}
 function createRoadmap(nid){const n=ns().find(x=>x.id===nid);if(!n)return;const cid='rm-'+nid;if(S.canvases[cid])return switchTo(cid);sn();S.canvases[cid]={nodes:[],edges:[],zones:JSON.parse(JSON.stringify(RMZ))};S.canvasMeta[cid]={name:n.label+' › Roadmap',parentNodeId:n.id,parentCanvas:S.current};n.childCanvas=cid;sv();switchTo(cid)}
 function copyBackToVault(nid){const n=ns().find(x=>x.id===nid);if(!n)return;sn();const fromCanvas=S.current;S.current='vault';const w=s2w(innerWidth/2,innerHeight/2);addNode(w.x,w.y,{...n,id:undefined,originId:n.id,childCanvas:null},true);S.current=fromCanvas;sv();uiNotice('Copied to vault.')}
 function copyToCanvas(nid,cid){const vn=S.canvases.vault.nodes.find(x=>x.id===nid);if(!vn)return;sn();const prev=S.current;S.current=cid;const z=zs()[0];const x=z.x+60+Math.random()*(z.w-140),y=z.y+70+Math.random()*(z.h-140);addNode(x,y,{...vn,id:undefined,originId:vn.id,zone:z.id,childCanvas:null},true);S.current=prev;sv();render()}

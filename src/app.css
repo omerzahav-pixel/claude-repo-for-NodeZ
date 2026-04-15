@@ -108,7 +108,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 #lg h4:first-of-type{margin-top:0}#lg .row{display:flex;align-items:center;gap:6px;padding:1px 0;color:var(--text2)}
 #lg .sw{width:10px;height:10px;border-radius:2px}
 #lg.co .body{display:none}#lg .tog{float:right;cursor:pointer;color:var(--muted)}
-#pn{position:fixed;top:12px;right:12px;z-index:40;width:340px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;display:none;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+/* Phase 5 P1 #4 — smooth motion on open/close. The panel is always in
+   the DOM; we toggle opacity + transform + visibility + pointer-events
+   via the .on class. Delaying `visibility` on close keeps the fade-out
+   visible before the element drops from hit-testing. */
+#pn{position:fixed;top:12px;right:12px;z-index:40;width:340px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(6px);transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms}
+#pn.on{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity 220ms ease-out,transform 220ms ease-out,visibility 0ms linear 0ms}
+@media (prefers-reduced-motion: reduce){
+  #pn,#pn.on{transition:opacity 0ms,transform 0ms,visibility 0ms}
+}
 #pn h2{font:600 20px var(--serif);line-height:1.25;margin-bottom:4px}
 #pn .meta{color:var(--muted);font-size:11px;margin-bottom:10px}
 #pn label{display:block;font:600 10px var(--sans);color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.6px}
@@ -140,9 +148,16 @@ body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
 #ctx button:hover{background:var(--panel2);color:var(--text)}
 #ctx .csep{height:1px;background:var(--border);margin:3px 0}
 #ctx .csub{padding:3px 12px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
-#modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center}
-#modal.on{display:flex}
-#modal .mc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto}
+/* Phase 5 P1 #4 — modal backdrop fade + inner scale-up. Backdrop fades
+   180ms; inner .mc translates 8px + scales from 0.98 to give the dialog
+   a settled-in feel instead of a hard snap. */
+#modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity 180ms ease-out,visibility 0ms linear 180ms}
+#modal.on{opacity:1;visibility:visible;transition:opacity 180ms ease-out,visibility 0ms linear 0ms}
+#modal .mc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto;transform:translateY(8px) scale(.98);transition:transform 180ms ease-out}
+#modal.on .mc{transform:translateY(0) scale(1)}
+@media (prefers-reduced-motion: reduce){
+  #modal,#modal.on,#modal .mc,#modal.on .mc{transition:opacity 0ms,visibility 0ms,transform 0ms}
+}
 #modal h3{font:600 18px var(--serif);margin-bottom:8px}
 #modal p{color:var(--muted);font-size:12px;margin-bottom:10px}
 #modal textarea{width:100%;min-height:220px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px;font:12px/1.5 monospace;color:var(--text)}
