@@ -53,7 +53,7 @@ test.describe("Phase 2 · PWA", () => {
     expect(appleIcon).toBeTruthy();
     expect(appleIcon).toMatch(/icon-180\.png$/);
     // Theme color.
-    await expect(page.locator('meta[name=theme-color]').first()).toHaveAttribute("content", "#1a1815");
+    await expect(page.locator('meta[name=theme-color]').first()).toHaveAttribute("content", "#0F0F0F");
     // PWACompat script present.
     const pwacompat = await page.locator('script[src*="pwacompat"]').count();
     expect(pwacompat).toBeGreaterThan(0);
