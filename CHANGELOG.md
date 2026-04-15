@@ -4,6 +4,51 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P1 · Item #4 — smooth motion on open/close · 2026-04-16
+
+The property panel and paste-patch modal used to snap in and out of
+existence — display:none one frame, display:block the next. Now they
+fade and settle with matched easings, so the UI feels like it's
+thinking rather than flinching.
+
+**Panel (#pn).** Opacity 0↔1 + `translateY(6px → 0)`. 220ms ease-out
+on open; 140ms ease-in on close. `visibility` is held at `visible`
+through the close fade via a delayed transition
+(`visibility 0ms linear 140ms`) so the panel stays on-screen while
+opacity animates to 0, then drops out of hit testing at the end.
+
+**Modal (#modal + .mc).** Backdrop opacity fades 180ms ease-out.
+Inner dialog `.mc` scales from 0.98 and translates down 8px, resolving
+to identity on the same curve. Dialog feels like it settles in rather
+than slams into place.
+
+**Prefers-reduced-motion.** `@media (prefers-reduced-motion: reduce)`
+blocks on both rules null all durations to 0ms. Users with vestibular
+sensitivity who've asked their OS for less motion get zero-duration
+transitions — still class-toggle correctness, no animation.
+
+**Migration.** `op()` / `cp()` migrated from `pn.style.display =
+'block/none'` to `pn.classList.add/remove('on')` because `display:
+none` kills transitions. Panel now lives permanently in the DOM; its
+visibility is class-driven.
+
+**Tests.** 4 targeted tests in `tests/phase5_motion.spec.ts` assert the
+CSS is wired rather than timing mid-fade opacity (which is flaky):
+5.4.1 op()/cp() toggle `.on` · 5.4.2 #pn computed
+`transition-property` contains opacity with non-zero duration · 5.4.3
+#modal same assertion · 5.4.4 #modal .mc resolves to identity
+transform on open (proves scale-up is not stuck in closed state).
+All 4 green on desktop-chrome + ipad-safari + ipad-chrome. Full-suite
+regression: 76/76 on desktop-chrome (existing `toBeHidden()` assertions
+still pass — Playwright auto-retries until `visibility:hidden` settles
+after the fade).
+
+**Commits.**
+- `36e44ee` Phase 5 P1 #4 · smooth motion on open/close (app.js + app.css)
+- `3dfec45` Phase 5 P1 #4 · 4-test spec for smooth motion
+
+---
+
 ## Phase 5 P1 · Item #3 — progressive node properties · 2026-04-16
 
 The property panel used to dump every field — rationale, URL, doc URL,
