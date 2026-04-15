@@ -350,7 +350,32 @@ function applyDimBtn(){const btn=document.getElementById('dimEdgesBtn');if(btn){
 async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){await uiNotice('Cannot delete the last workspace.');return}if(!await uiConfirm(`Delete workspace "${currentWs}" and ALL its data? This cannot be undone.`,{title:'Delete workspace',danger:true,okLabel:'Delete'}))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
 function flashInd(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
 function hideMore(){window.dbg&&window.dbg('IMPORT','hideMore() — removing .on from #more (may break iOS label→input chain)');document.getElementById('more').classList.remove('on')}
-document.addEventListener('click',e=>{if(!document.getElementById('more').contains(e.target)&&!e.target.matches('[onclick*="more"]'))hideMore()});
+/* Phase 1.7 · Item #9 — panel toggle / outside-click / Esc.
+ *
+ * Before: `?` opened the Legend but tapping `?` again did nothing — the
+ * user had to hunt for the `×` inside the panel to close it. Same
+ * pattern issue affected the More menu (outside-click already worked on
+ * non-canvas taps only, and Escape didn't close it at all).
+ *
+ * toggleLegend() flips the .on class so the same button opens AND closes.
+ * hideLegend() is the explicit close used by the × tog span.
+ *
+ * IMPORTANT: we listen on 'pointerdown' (capture phase), not 'click'. The
+ * canvas #cv calls e.preventDefault() in its own pointerdown handler AND
+ * uses setPointerCapture — in Chromium that combo suppresses the synthetic
+ * 'click' event entirely, so a 'click'-based outside-close never fires
+ * when the user taps the canvas background. pointerdown fires first and is
+ * not affected, making outside-close reliable for both canvas and non-canvas
+ * targets. The Escape handler at the bottom of this file was extended to
+ * also call hideLegend() + hideMore(). */
+function toggleLegend(){document.getElementById('lg').classList.toggle('on')}
+function hideLegend(){document.getElementById('lg').classList.remove('on')}
+document.addEventListener('pointerdown',e=>{
+  const more=document.getElementById('more');
+  if(more&&more.classList.contains('on')&&!more.contains(e.target)&&!(e.target.closest&&e.target.closest('#moreBtn')))hideMore();
+  const lg=document.getElementById('lg');
+  if(lg&&lg.classList.contains('on')&&!lg.contains(e.target)&&!(e.target.closest&&e.target.closest('#lgBtn')))hideLegend();
+},true);
 function urlDomain(u){try{const p=new URL(u);const h=p.hostname.replace('www.','');if(h.includes('tradingview'))return 'tradingview';if(h.includes('github'))return 'github';if(h.includes('arxiv'))return 'arxiv';if(h.includes('notion'))return 'notion';if(h.includes('youtube'))return 'youtube';if(h.includes('x.com')||h.includes('twitter'))return 'x';return h.split('.')[0]}catch(e){return 'link'}}
 function renderSB(){const body=document.getElementById('sbbody');if(!body)return;const q=(document.getElementById('sbq')?.value||'').toLowerCase();const groups={};for(const n of ns()){if(q&&!((n.label||'')+(n.notes||'')+(n.tags||'')).toLowerCase().includes(q))continue;const zid=n.zone;if(!groups[zid])groups[zid]=[];groups[zid].push(n)}
   let h='';for(const z of zs()){const items=groups[z.id]||[];if(!items.length&&q)continue;const col=S.sbCollapse?.[S.current+':'+z.id];h+=`<div class="zhdr" onclick="toggleZoneCollapse('${z.id}')"><span style="color:${z.color}">${esc(z.name)}</span><span class="ct">${items.length}${col?' ▸':' ▾'}</span></div>`;if(!col)for(const n of items){const rtl=/[\u0590-\u05FF]/.test(n.label||'')?' rtl':'';const dot=statusDotSvg(n.status,n.shape);const desc=(n.notes||n.rationale||'').slice(0,50);
@@ -900,7 +925,7 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clien
    panel (not inline on the canvas), so blocking touch defaults here is safe. */
 cv.addEventListener('touchstart',e=>{e.preventDefault()},{passive:false});
 cv.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
-window.addEventListener('keydown',async e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(await uiConfirm(`Delete ${selSet.size} selected nodes?`,{title:'Bulk delete',danger:true,okLabel:'Delete'})){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';render()}});
+window.addEventListener('keydown',async e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(await uiConfirm(`Delete ${selSet.size} selected nodes?`,{title:'Bulk delete',danger:true,okLabel:'Delete'})){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';hideLegend();hideMore();render()}});
 function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h})),...ns().map(n=>({x1:n.x-60,y1:n.y-60,x2:n.x+60,y2:n.y+60}))];if(!items.length){view={x:0,y:0,k:.5};render();return}const x1=Math.min(...items.map(i=>i.x1)),y1=Math.min(...items.map(i=>i.y1)),x2=Math.max(...items.map(i=>i.x2)),y2=Math.max(...items.map(i=>i.y2)),pad=80;view.k=Math.min(innerWidth/(x2-x1+pad*2),innerHeight/(y2-y1+pad*2),.7);view.x=-(x1+x2)/2;view.y=-(y1+y2)/2;render()}
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}
 function imF(e){

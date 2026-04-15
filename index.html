@@ -49,8 +49,8 @@
 </div>
 <div id="bc"></div>
 <div id="fl"></div>
-<button id="lgBtn" onclick="document.getElementById('lg').classList.add('on')" title="Legend">?</button>
-<div id="lg"><span class="tog" onclick="document.getElementById('lg').classList.remove('on')">×</span>
+<button id="lgBtn" onclick="toggleLegend()" title="Legend">?</button>
+<div id="lg"><span class="tog" onclick="hideLegend()">×</span>
 <div class="body" id="lgBody"></div></div>
 <div id="pn"></div><div id="ctx"></div><div id="ep"></div><div id="modal"><div class="mc" id="mcbody"></div></div>
 <div id="sb"><div class="sbhead" onclick="sbHeadClick(event)"><span class="sbtog" onclick="event.stopPropagation();cycleSb()">☰</span><span id="sbName">Nodes</span><span style="flex:1"></span><span class="sbtog" onclick="event.stopPropagation();collapseAllZones()" title="Collapse / expand all">⇕</span><span class="sbtog" onclick="event.stopPropagation();document.getElementById('sb').classList.toggle('mini')" title="Minimize to bottom">▾</span></div><div class="sbsearch"><input id="sbq" placeholder="Filter list…" oninput="renderSB()"/></div><div class="sbbody" id="sbbody"></div><div class="resize" onpointerdown="sbResize(event)"></div></div>
