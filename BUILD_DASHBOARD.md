@@ -1,6 +1,6 @@
 # NodeZ — Build Dashboard
 
-*Last updated 16 April 2026 · Status: Phase 2 complete · Phase 5 P1 #1+#2 landed · Branch: v2-rewrite*
+*Last updated 16 April 2026 · Status: Phase 2 complete · Phase 5 P1 #1+#2+#3 landed · Branch: v2-rewrite*
 
 > Mirrors the live Notion dashboard at https://www.notion.so/343704adcc0e8166b4bac09c27ef5349
 > When you change phase status here, also update Notion (manually or via Notion MCP if connected).
@@ -45,7 +45,7 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 
 ### 🎨 Phase 5 — UI polish
 *Press-and-hold touch drag · live preview + autosave notes · progressive node properties · smooth motion · layered dark surfaces (#0F0F0F/#181A1B/#242424) · 8px grid · selection glow · auto-fit + smart placement · redo + tooltips · workspace color coding*
-**Status:** P1 in progress — Item #1 ✅ done 2026-04-16 (press-and-hold drag on touch; 350ms gate; swipe→pan / hold→drag / tap→panel unchanged; `.holding` visual + haptic feedback; 5-test spec `tests/phase5_hold_drag.spec.ts` green on desktop-chrome + ipad-safari + ipad-chrome). Item #2 ✅ done 2026-04-16 (live preview + autosave for property panel; `aSnap`/`aFlush`/`aField` helpers with 200ms debounce; `oninput`/`onchange` on all 12 fields; typing no longer rebuilds panel innerHTML — focus stays put; one undo snapshot per panel session; `cp()` flushes pending debounce before hiding; 6-test spec `tests/phase5_autosave.spec.ts` green on desktop-chrome + ipad-safari + ipad-chrome; 67/67 full-suite regression on desktop-chrome). Remaining P1: #3 progressive node properties · #4 smooth motion · #5 layered dark surfaces · #6 8px grid audit.
+**Status:** P1 in progress — Item #1 ✅ done 2026-04-16 (press-and-hold drag on touch; 350ms gate; swipe→pan / hold→drag / tap→panel unchanged; `.holding` visual + haptic feedback; 5-test spec `tests/phase5_hold_drag.spec.ts` green on desktop-chrome + ipad-safari + ipad-chrome). Item #2 ✅ done 2026-04-16 (live preview + autosave for property panel; `aSnap`/`aFlush`/`aField` helpers with 200ms debounce; `oninput`/`onchange` on all 12 fields; typing no longer rebuilds panel innerHTML — focus stays put; one undo snapshot per panel session; `cp()` flushes pending debounce before hiding; 6-test spec `tests/phase5_autosave.spec.ts` green on desktop-chrome + ipad-safari + ipad-chrome; 67/67 full-suite regression on desktop-chrome). Item #3 ✅ done 2026-04-16 (progressive node properties; primary fields label / body / shape+status / zone stay always visible, secondary fields rationale / url / tags / confidence / color / compact tuck behind a `<details class="pn-more">` disclosure; `panelDetailsOpen` persists across in-session rebuilds, `cp()` resets so fresh open is minimal; native `<details>` with custom chevron (RTL-mirrored for Hebrew); 5-test spec `tests/phase5_progressive.spec.ts` green on desktop-chrome + ipad-safari + ipad-chrome; 72/72 full-suite regression on desktop-chrome). Remaining P1: #4 smooth motion · #5 layered dark surfaces · #6 8px grid audit.
 
 ### 🚀 Phase 6 — Final ship
 *All patches re-verified · Lighthouse 90+ · production deploy · documentation*

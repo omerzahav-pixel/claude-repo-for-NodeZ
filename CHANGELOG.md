@@ -4,6 +4,50 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P1 · Item #3 — progressive node properties · 2026-04-16
+
+The property panel used to dump every field — rationale, URL, doc URL,
+tags, confidence, color, compact — onto the user in one tall scroll.
+Now it shows only the fields 90% of edits touch, and tucks the rest
+behind a "More details" disclosure. Renaming a node or switching its
+zone no longer requires scrolling past six optional inputs.
+
+**Layout.** `op(n)` composes two sections:
+- *Primary* (always visible): label, body (notes / note body / LaTeX
+  depending on shape), shape + status 2-col grid, zone.
+- *Details* (collapsed by default, inside `<details class="pn-more">`):
+  rationale, URL, doc URL, tags, confidence, color picker (note /
+  formula shapes), compact toggle (formula only).
+
+**State.** New module-level `panelDetailsOpen` flag persists the user's
+open/closed choice across in-session panel rebuilds (shape change
+triggers `op(sel)`, node switch, sP() refresh). `cp()` resets the flag
+to `false` so the next fresh-open panel starts minimal again — an
+advanced edit session holds state; closing the panel means "done for
+now."
+
+**CSS.** Uses the native HTML `<details>` element — good a11y + keyboard
+story for free. Custom chevron (`::before` content `›`, rotates 90°
+on `[open]`, mirrors to `‹` with `-90°` for Hebrew RTL) replaces the
+browser's default disclosure triangle. Summary styled as an uppercase
+muted label above a top-border divider so it reads as a section
+header, not an orphan inline control.
+
+**Tests.** 5 targeted tests in `tests/phase5_progressive.spec.ts`:
+5.3.1 panel opens with Details closed (secondary fields not visible)
+· 5.3.2 clicking summary expands (fields become visible) · 5.3.3
+shape-change rebuild preserves open state · 5.3.4 `cp()` resets so
+reopening starts collapsed · 5.3.5 autosave still fires for Details
+fields (f_tags writes through aField unchanged). All 5 green on
+desktop-chrome + ipad-safari + ipad-chrome. Full-suite regression:
+72/72 on desktop-chrome.
+
+**Commits.**
+- `eafefc2` Phase 5 P1 #3 · progressive disclosure (app.js + app.css)
+- `c4c79b7` Phase 5 P1 #3 · 5-test spec for progressive disclosure
+
+---
+
 ## Phase 5 P1 · Item #2 — live preview + autosave for property panel · 2026-04-16
 
 Typing in the property panel is now WYSIWYG and Save-less. Every
