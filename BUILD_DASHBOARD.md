@@ -1,6 +1,6 @@
 # NodeZ — Build Dashboard
 
-*Last updated 15 April 2026 · Status: handoff to Claude Code · Branch: v2-rewrite*
+*Last updated 16 April 2026 · Status: Phase 1.8 complete · Branch: v2-rewrite*
 
 > Mirrors the live Notion dashboard at https://www.notion.so/343704adcc0e8166b4bac09c27ef5349
 > When you change phase status here, also update Notion (manually or via Notion MCP if connected).
@@ -19,13 +19,21 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 *Vite project · git worktree · Playwright baseline · Cloudflare Pages connected to GitHub*
 **Status:** ✅ done 2026-04-15 — Cloudflare Pages connect still needs the user in the browser; everything else shipped. See CHANGELOG.md.
 
-### 🚧 Phase 1 — Light-touch fixes + iPad hardening ⚠️ CRITICAL
+### ✅ Phase 1 — Light-touch fixes + iPad hardening ⚠️ CRITICAL
 *Pivoted from full SVG→DOM rewrite (see DECISIONS.md D2) · keep SVG, fix the 5 data-layer bugs · defensive iPad hardening (Scribble + rbush culling + fixed-inset CSS)*
-**Status:** code-complete on `v2-rewrite` (42/42 Playwright tests green on desktop-chrome + ipad-safari) — **awaiting real-iPad verification before Phase 2**. Landed: 1.1 More→Import label fix (iOS user-gesture), 1.2 auto-fit-on-import, 1.3 Markdown processor with XSS-safe ordering, 1.4 KaTeX re-render-on-load, 1.6a fixed-inset shell CSS, 1.6b touchstart/touchmove claim on #cv, 1.6c rbush viewport culling (≥100 nodes, 200px margin), 1.7 per-canvas screenshot suite (48 PNGs under `test-screenshots/phase-1/{project}/{fixture}/`). Skipped: 1.5 note-overflow fix (user deferred — re-evaluate after real-iPad check).
+**Status:** ✅ done 2026-04-15 — 42/42 Playwright tests green on desktop-chrome + ipad-safari. Landed: 1.1 More→Import label fix (iOS user-gesture), 1.2 auto-fit-on-import, 1.3 Markdown processor with XSS-safe ordering, 1.4 KaTeX re-render-on-load, 1.6a fixed-inset shell CSS, 1.6b touchstart/touchmove claim on #cv, 1.6c rbush viewport culling (≥100 nodes, 200px margin), 1.7 per-canvas screenshot suite (48 PNGs under `test-screenshots/phase-1/{project}/{fixture}/`). Skipped: 1.5 note-overflow fix (user deferred — re-evaluate after real-iPad check).
+
+### ✅ Phase 1.7 — Dialog/toast/toggle hardening
+*In-app dialog system · toast replaces boot banner · panel toggle + outside-click + Esc for #lg and #more*
+**Status:** ✅ done 2026-04-16. Items #7 (uiPrompt/uiConfirm/uiNotice replace native prompt/confirm/alert — XSS-safe, iPad-friendly), #8 (toast API, #bootLog banner removed, boot toast "Loaded…"), #9 (`?` Legend button now TOGGLES, outside-click via pointerdown capture to survive #cv preventDefault + setPointerCapture, Esc closes both panels). 17 targeted Phase 1.7 tests in `tests/phase17_*.spec.ts`.
+
+### ✅ Phase 1.8 — Layout polish
+*Smart popover positioning · responsive toolbar (D6) · promoted toolbar buttons · collapsible breadcrumbs*
+**Status:** ✅ done 2026-04-16. Items #1 (placePopover() with flip-up + viewport clamp + RTL support, #more now position:fixed), #2 (responsive D6: secondary buttons collapse into More <768px — decision recorded in DECISIONS.md vs. bottom-nav alternative), #3 (⇲ Paste Patch + ⇅ Import promoted to top toolbar; Import remains `<label for=imp>` for iOS user-gesture chain), #4 (collapsible breadcrumbs: `.bc-mini` default + `.bc-full` expanded, moved below toolbar to top:62px). 30 Phase 1.8 tests in `tests/phase18_layout.spec.ts`, 147/147 full-suite green across desktop-chrome + ipad-safari + ipad-chrome.
 
 ### 🚧 Phase 2 — PWA setup
-*Service worker · manifest · PWACompat · navigator.storage.persist() · Add to Home Screen working*
-**Status:** not started · **Est:** 1 day
+*Service worker · manifest · PWACompat · navigator.storage.persist() · Add to Home Screen working · Lighthouse 90+*
+**Status:** next up
 
 ### 🚧 Phase 3 — Cloud sync
 *Google Drive appdata folder · OPFS local cache · last-write-wins with timestamps · debounced upload*
@@ -36,8 +44,8 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 **Status:** not started · **Est:** 1 day
 
 ### 🎨 Phase 5 — UI polish
-*8px grid · layered dark surfaces · command palette · spring animations · per-workspace color theming · bottom nav for mobile*
-**Status:** not started · **Est:** 1–2 days
+*Press-and-hold touch drag · live preview + autosave notes · progressive node properties · smooth motion · layered dark surfaces (#0F0F0F/#181A1B/#242424) · 8px grid · selection glow · auto-fit + smart placement · redo + tooltips · workspace color coding*
+**Status:** P1 must-ship + P2 ship-if-time planned, after Phase 2 PWA
 
 ### 🚀 Phase 6 — Final ship
 *All patches re-verified · Lighthouse 90+ · production deploy · documentation*
