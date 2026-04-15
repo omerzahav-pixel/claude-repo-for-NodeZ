@@ -500,9 +500,33 @@ async function quickLink(){const u=await uiPrompt('Add resource link','',{placeh
 async function clearCanvasConfirm(){if(!await uiConfirm('Clear current canvas?',{title:'Clear canvas',danger:true,okLabel:'Clear'}))return;sn();clr()}
 function sn(){hist.push(JSON.stringify(S));if(hist.length>40)hist.shift()}
 function un(){if(!hist.length)return;S=JSON.parse(hist.pop());const sid=sel?.id;sel=sid?ns().find(n=>n.id===sid):null;sv();render();bF();bB();sel?op(sel):cp()}
+/* Phase 1.8 — test hook. Spec files that need to construct deep canvas
+   chains without driving addNode + dblclick use this. The app itself
+   never reads it. One line here beats adding a full "open child canvas"
+   path to tests. */
+window.__testAddChildCanvas=(id,name,parent)=>{
+  if(!S.canvases[id])S.canvases[id]={nodes:[],edges:[],zones:[]};
+  S.canvasMeta[id]={name,parentCanvas:parent||'vault'};
+  S.current=id;
+  bB();
+};
 function bB(){const chain=[];let c2=S.current;while(c2){chain.unshift({id:c2,name:S.canvasMeta[c2]?.name||c2});const p=S.canvasMeta[c2]?.parentCanvas;c2=p||null}
   const backBtn=document.getElementById('backBtn');if(backBtn){if(chain.length>1){backBtn.style.display='inline-block';backBtn.setAttribute('data-parent',chain[chain.length-2].id)}else{backBtn.style.display='none'}}
-  bc.innerHTML=chain.map((n,i)=>i===chain.length-1?`<span class="cur">${esc(n.name)}</span>`:`<a onclick="switchTo('${n.id}')">${esc(n.name)}</a><span style="color:var(--muted)">›</span>`).join(' ')}
+  // Phase 1.8 — collapsible breadcrumbs. Default "thin": just the current
+  // canvas + a chevron if the chain is deeper than 1. Tap expands the full
+  // chain inline; tapping any ancestor navigates there. Depth-1 canvases
+  // skip the chevron and always show just the name.
+  const last=chain[chain.length-1];
+  const mini=chain.length>1
+    ?`<span class="bc-mini"><span class="bc-dots">…</span><span class="bc-sep">›</span><span class="cur">${esc(last.name)}</span><span class="bc-exp">▾</span></span>`
+    :`<span class="bc-mini"><span class="cur">${esc(last.name)}</span></span>`;
+  const full=chain.map((n,i)=>i===chain.length-1
+    ?`<span class="cur">${esc(n.name)}</span>`
+    :`<a onclick="event.stopPropagation();switchTo('${n.id}')">${esc(n.name)}</a><span class="bc-sep">›</span>`).join(' ');
+  const fullWrap=chain.length>1?`<span class="bc-full">${full}<span class="bc-col">▴</span></span>`:'';
+  bc.innerHTML=mini+fullWrap;
+  // Tap anywhere on #bc (except an <a> inside the expanded chain) toggles.
+  bc.onclick=e=>{if(e.target.tagName==='A')return;bc.classList.toggle('expanded')};}
 function goBack(){const p=document.getElementById('backBtn').getAttribute('data-parent');if(p)switchTo(p)}
 function switchTo(id){if(!S.canvases[id])return;S.current=id;sel=null;cp();view={x:0,y:0,k:.5};sv();render();bF();bB();renderTabs();renderSB();zF()}
 function render(){

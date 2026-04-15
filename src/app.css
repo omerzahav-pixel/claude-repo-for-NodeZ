@@ -77,8 +77,24 @@ button,input,select,textarea{font:inherit;color:inherit}
 #tb .ac{background:var(--accent);color:#1a1815;font-weight:600}
 #tb input{border-color:var(--border);background:var(--bg2);cursor:text;min-width:130px}
 .sep{width:1px;background:var(--border);margin:3px 4px}
-#bc{position:fixed;top:12px;right:60px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 14px;font:500 13px var(--sans);color:var(--text2);display:flex;gap:8px;align-items:center;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#bc a{color:var(--muted);cursor:pointer;text-decoration:none}#bc a:hover{color:var(--accent)}#bc .cur{color:var(--text);font-weight:600}
+/* Phase 1.8 · collapsible breadcrumbs.
+   Default state = thin one-line indicator: "… › current ▾".
+   Tap to expand → full "Vault › Projects › Trading ▴" chain.
+   The full chain is rendered inline and shown only when #bc.expanded.
+   Positioned at the right edge BELOW the toolbar so the widening toolbar
+   (iPad has 10+ coarse-pointer buttons at min-width 44px) cannot overlap
+   and swallow taps the way it did before Phase 1.8 D6. */
+#bc{position:fixed;top:62px;right:12px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 14px;font:500 13px var(--sans);color:var(--text2);display:flex;gap:6px;align-items:center;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none;transition:background .15s}
+#bc:hover{background:var(--panel2)}
+#bc a{color:var(--muted);cursor:pointer;text-decoration:none}#bc a:hover{color:var(--accent)}
+#bc .cur{color:var(--text);font-weight:600}
+#bc .bc-sep{color:var(--muted);padding:0 1px}
+#bc .bc-dots{color:var(--muted);letter-spacing:1px}
+#bc .bc-exp,#bc .bc-col{color:var(--muted);font-size:10px;margin-left:4px;transition:transform .15s}
+#bc:hover .bc-exp,#bc:hover .bc-col{color:var(--accent)}
+#bc .bc-full{display:none}
+#bc.expanded .bc-mini{display:none}
+#bc.expanded .bc-full{display:inline-flex;gap:6px;align-items:center}
 #fl{position:fixed;top:68px;left:12px;z-index:20;display:flex;gap:5px;flex-wrap:wrap;max-width:calc(100vw - 280px)}
 
 .pill{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:14px;font-size:11px;font-weight:500;cursor:pointer;user-select:none}
