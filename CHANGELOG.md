@@ -4,6 +4,61 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P1 · Item #2 — live preview + autosave for property panel · 2026-04-16
+
+Typing in the property panel is now WYSIWYG and Save-less. Every
+keystroke re-renders the canvas + sidebar immediately, and the full
+state persists 200ms after the user stops typing. Selects + checkboxes
+commit instantly. Closing the panel flushes any pending debounce first,
+so the user can't lose an unsaved keystroke by tapping Close too fast.
+
+**Helpers.** New `aSnap` / `aFlush` / `aField(applyFn, immediate)`
+helpers wrap every field mutation. `aField`:
+1. Calls `sn()` exactly once per panel session (`autosaveSnapped` flag)
+   so multi-keystroke typing collapses into a single undo frame —
+   Ctrl+Z walks back to before the panel opened, not one letter at a
+   time.
+2. Runs `applyFn(sel)` to mutate the selected node in-place.
+3. Calls `render()` + `renderSB()` for live preview.
+4. For `immediate` (selects, checkboxes, color-reset), fires `sv()`
+   right away. For debounced (text inputs), schedules `sv()` at
+   `AUTOSAVE_MS=200`.
+
+**Wiring.** `op(n)` now adds `oninput` on `#f_label`, `#f_notes`,
+`#f_rationale`, `#f_url`, `#f_docUrl`, `#f_tags`, `#f_conf`, `#f_latex`,
+and `onchange` on `#f_shape`, `#f_status`, `#f_zone`, `#f_compact`,
+`#f_color`. `#f_shape` and `#f_compact` handlers also call `op(sel)`
+to rebuild the panel because their on/off state toggles which fields
+are shown. All other fields mutate in place — the panel innerHTML is
+NOT rebuilt on each keystroke, so focus stays in the active
+textarea/input.
+
+**Panel lifecycle.** `op()` calls `aFlush()` and resets
+`autosaveSnapped=false` at the top, so switching selection flushes
+the previous panel's pending write and starts a fresh undo frame.
+`sP()` (save-patch / apply) calls `aFlush()` then `op(sel)` to
+re-render. `cp()` (close panel) calls `aFlush()`, resets
+`autosaveSnapped`, and hides the panel. The Reset-color button changed
+from a full `sP()` re-render to `aField(x=>x.color=null, true)` —
+same effect, no panel rebuild.
+
+**Tests.** 6 targeted tests in `tests/phase5_autosave.spec.ts`:
+5.2.1 label live-preview into `.nslice[data-nid]` overlay · 5.2.2
+notes persists after 200ms debounce + reload · 5.2.3 `cp()` flushes
+pending debounce (verifies in-memory state, then 250ms for WebKit
+IDB commit, then reload) · 5.2.4 typing keeps focus inside `#f_notes`
+· 5.2.5 shape select rebuilds the panel (rationale hidden for
+`shape:note`, notes textarea gains min-height) · 5.2.6 multi-keystroke
+edit collapses into a single undo snapshot. All 6 green on
+desktop-chrome + ipad-safari + ipad-chrome. Full-suite regression:
+67/67 on desktop-chrome.
+
+**Commits.**
+- `bded2e9` Phase 5 P1 #2 · live preview + autosave for property panel (app.js)
+- `5615d2d` Phase 5 P1 #2 · 6-test spec for live preview + autosave
+
+---
+
 ## Phase 5 P1 · Item #1 — press-and-hold drag on touch · 2026-04-16
 
 Touch users now get a 350ms hold gate before a finger on a node becomes
