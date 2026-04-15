@@ -4,6 +4,49 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P1 · Item #1 — press-and-hold drag on touch · 2026-04-16
+
+Touch users now get a 350ms hold gate before a finger on a node becomes
+a node-drag. A light swipe on a node pans the canvas instead of yanking
+the node around; a deliberate press-and-hold arms the drag and then
+motion moves the node. Mouse and Apple Pencil paths are unchanged
+(immediate drag), and a tap with no motion (<350ms) still opens the
+property panel — no regression in tap-to-edit.
+
+**Feedback.** When the gate opens we add `.holding` to `<body>`, the
+`g.node` hit-group, and the overlay `.nslice`. CSS gives the slice an
+accent-color drop-shadow glow (`drop-shadow(0 0 10px rgba(217,119,87,
+.7))`) with a 140ms transition, drops the hit-circle opacity so the
+accent fill reads through, and flips the body cursor to `grabbing`.
+If the browser exposes `navigator.vibrate`, a 12ms haptic buzz fires
+at gate open so the user feels the transition. All feedback clears on
+pointerup / pointercancel / multitouch / contextmenu fallback.
+
+**State model.** `drag.holdPending=true` on touch + node-target
+pointerdown. At 350ms the holdTimer flips `holdPending=false` and
+paints feedback. Motion before the gate fires clears holdTimer and
+swaps `drag.k` to `'pan'`, so the interaction smoothly converts
+swipe → pan. Motion after the gate keeps `drag.k='node'` and drags
+the node. longPressTimer (500ms contextmenu) also clears holdTimer
+when it fires, and the contextmenu cleanup path clears `.holding`.
+
+**Tests.** 5 targeted tests in `tests/phase5_hold_drag.spec.ts`:
+5.1 mouse drag immediate · 5.2 swipe→pan on touch · 5.3 hold→drag
+moves node not view · 5.4 tap→panel · 5.5 `.holding` on body +
+slice + hit-group. All 5 green on desktop-chrome + ipad-safari +
+ipad-chrome. Tests use synthetic PointerEvents (not
+`touchscreen.tap`) for controlled hold durations. The spec's
+`openCleanApp` helper waits 400ms past reload so the post-load
+`zF()` auto-fit (setTimeout 300ms) settles before interaction —
+otherwise the initial-framing race mutates view mid-drag and
+5.3's view-stability assertion flakes.
+
+**Commits.**
+- `17b12b1` Phase 5 P1 #1 · press-and-hold drag on touch (app.js + app.css)
+- `8233966` Phase 5 P1 #1 · 5-test spec for press-and-hold drag
+
+---
+
 ## Phase 2 — PWA setup · 2026-04-16
 
 End-to-end PWA: manifest, icons, Apple metas, service worker, persistent
