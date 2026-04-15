@@ -1,0 +1,18 @@
+{
+  "name": "nodez",
+  "private": true,
+  "version": "2.0.0-phase0",
+  "type": "module",
+  "description": "NodeZ — mobile-first knowledge canvas (v2 rewrite of Idea Vault)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5174",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.10"
+  }
+}

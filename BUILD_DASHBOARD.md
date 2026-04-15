@@ -15,9 +15,9 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 
 ## Phase tracker
 
-### ⏳ Phase 0 — Setup
+### ✅ Phase 0 — Setup
 *Vite project · git worktree · Playwright baseline · Cloudflare Pages connected to GitHub*
-**Status:** not started · **Est:** 1–2 hours
+**Status:** ✅ done 2026-04-15 — Cloudflare Pages connect still needs the user in the browser; everything else shipped. See CHANGELOG.md.
 
 ### 🚧 Phase 1 — Rendering migration ⚠️ CRITICAL
 *Move from SVG to DOM-with-CSS-transforms · viewport culling via rbush · Apple Scribble workaround · Pointer Events on DOM nodes*
