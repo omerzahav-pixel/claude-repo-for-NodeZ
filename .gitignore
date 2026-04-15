@@ -1,0 +1,47 @@
+# Secrets — never commit
+*client_secret*.json
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Playwright
+/playwright-report/
+/playwright/.cache/
+test-results/
+
+# Coverage
+coverage/
+*.lcov
+
+# Claude Code local state
+.claude/worktrees/
+.claude/settings.local.json
+
+# Misc
+*.tsbuildinfo
