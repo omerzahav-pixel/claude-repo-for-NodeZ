@@ -1,3 +1,73 @@
+// ============================================================================
+// Phase 1.5 · On-screen diagnostics for real-iPad debugging (bugs #1/#3/#5).
+// iPad Safari console access is painful — render log lines directly into the
+// DOM (bottom-right overlay) so Azamat can read them on the deployed URL
+// without plugging into a Mac. Auto-on unless URL has ?nodbg; tap × to close.
+// Sections: IMPORT (orange) · KATEX (green) · MD (purple) · SYS (gray).
+// ============================================================================
+(function(){
+  if(typeof location!=='undefined'&&location.search.indexOf('nodbg')>=0)return;
+  // Suppress the overlay under automation (Playwright sets navigator.webdriver)
+  // so existing screenshot tests and flow tests don't have to care about it.
+  // Real Safari / Chrome / Firefox leave webdriver undefined.
+  if(typeof navigator!=='undefined'&&navigator.webdriver)return;
+  var SC2={IMPORT:'#d97757',KATEX:'#7db36a',MD:'#c48a9b',SYS:'#8a8478'};
+  var t0=Date.now(),panel=null,body=null,collapsed=false,queue=[];
+  function esc2(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function ensure(){
+    if(panel||!document.body)return;
+    panel=document.createElement('div');
+    panel.id='dbgPanel';
+    panel.style.cssText='position:fixed;right:8px;bottom:8px;width:min(360px,calc(100vw - 16px));max-height:45vh;z-index:99999;background:rgba(26,24,21,.95);border:1px solid #d97757;border-radius:8px;color:#e8dfce;font:10px/1.35 ui-monospace,Menlo,Consolas,monospace;display:flex;flex-direction:column;box-shadow:0 4px 16px rgba(0,0,0,.4);pointer-events:auto';
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid #3a352e;background:#22201c;border-radius:7px 7px 0 0;font-weight:600;font-size:11px;flex-shrink:0;-webkit-user-select:none;user-select:none';
+    hdr.innerHTML='<span style="color:#d97757">◆</span><span>diag</span><span style="flex:1"></span><span id="dbgTog" style="cursor:pointer;padding:4px 8px;color:#8a8478">▾</span><span id="dbgClr" style="cursor:pointer;padding:4px 8px;color:#8a8478">clr</span><span id="dbgX" style="cursor:pointer;padding:4px 8px;color:#8a8478">×</span>';
+    body=document.createElement('div');
+    body.id='dbgBody';
+    body.style.cssText='flex:1;overflow-y:auto;padding:6px 8px;-webkit-overflow-scrolling:touch';
+    panel.appendChild(hdr);panel.appendChild(body);
+    document.body.appendChild(panel);
+    hdr.querySelector('#dbgTog').onclick=function(){collapsed=!collapsed;body.style.display=collapsed?'none':'block';hdr.querySelector('#dbgTog').textContent=collapsed?'▸':'▾'};
+    hdr.querySelector('#dbgClr').onclick=function(){body.innerHTML=''};
+    hdr.querySelector('#dbgX').onclick=function(){panel.remove();panel=null;body=null};
+    // Flush queued pre-DOM calls.
+    for(var i=0;i<queue.length;i++)dbgRender(queue[i][0],queue[i][1]);
+    queue=[];
+  }
+  function dbgRender(section,msg){
+    if(!body)return;
+    var ms=Date.now()-t0;
+    var color=SC2[section]||'#8a8478';
+    var row=document.createElement('div');
+    row.style.cssText='margin:1px 0;white-space:pre-wrap;word-break:break-word';
+    var tpad=String(ms);while(tpad.length<5)tpad=' '+tpad;
+    row.innerHTML='<span style="color:#544e45">'+tpad+'</span> <span style="color:'+color+';font-weight:700">'+section+'</span> '+esc2(msg);
+    body.appendChild(row);
+    body.scrollTop=body.scrollHeight;
+  }
+  function dbg(section,msg){
+    try{
+      if(!document.body){queue.push([section,msg]);return}
+      ensure();
+      dbgRender(section,msg);
+    }catch(e){}
+  }
+  window.dbg=dbg;
+  // Surface uncaught errors so iPad-only exceptions show up in the log.
+  window.addEventListener('error',function(e){dbg('SYS','ERROR: '+(e.message||'?')+(e.filename?' @ '+String(e.filename).split('/').pop()+':'+e.lineno:''))});
+  window.addEventListener('unhandledrejection',function(e){dbg('SYS','PROMISE: '+((e.reason&&e.reason.message)||e.reason||'?'))});
+  // Snapshot the environment as the first line so we can tell desktop vs real
+  // iPad apart in screenshots the user sends back.
+  var ua=navigator.userAgent;
+  var isIpadLike=/iPad|iPhone|iPod/.test(ua)||(navigator.maxTouchPoints>1&&/Mac/.test(ua));
+  dbg('SYS','boot · '+(isIpadLike?'iPad-class':'desktop')+' · '+ua.slice(0,90));
+  dbg('SYS','KaTeX script tag: '+(document.querySelector('script[src*="katex"]')?'present':'MISSING'));
+  dbg('SYS','autoRender script tag: '+(document.querySelector('script[src*="auto-render"]')?'present':'MISSING'));
+  // Confirm that when the CDNs actually resolve (defer), the globals land.
+  window.addEventListener('load',function(){
+    dbg('SYS','load · window.katex: '+(window.katex?'present':'MISSING')+' · renderMathInElement: '+(window.renderMathInElement?'present':'MISSING'));
+  });
+})();
 const DZ={vault:[{id:'ideas',name:'Ideas',x:-1100,y:-500,w:700,h:520,color:'#6fa8d3'},{id:'projects',name:'Projects',x:-350,y:-500,w:700,h:520,color:'#c9896a'},{id:'inbox',name:'Inbox',x:400,y:-500,w:520,h:520,color:'#7d7569'}]};
 const RMZ=[{id:'blockers',name:'Blockers',x:-1000,y:-500,w:600,h:400,color:'#d96b5a'},{id:'flight',name:'In Flight',x:-350,y:-500,w:600,h:400,color:'#6fa8d3'},{id:'next',name:'Next Up',x:300,y:-500,w:550,h:400,color:'#d4a855'},{id:'backlog',name:'Backlog',x:-1000,y:-70,w:600,h:400,color:'#8a8478'},{id:'done',name:'Done',x:-350,y:-70,w:600,h:400,color:'#7db36a'},{id:'principles',name:'Principles',x:300,y:-70,w:550,h:400,color:'#c48a9b'}];
 const SH=['project','idea','principle','resource','question','experiment','library','doc','formula','note'],ST=['done','progress','pending','blocked','idea'];
@@ -20,6 +90,9 @@ const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 // process it downstream. XSS invariant: because input is already escaped,
 // no Markdown transform can emit a tag that wasn't hardcoded here.
 function mdProcess(escapedText){
+  // Phase 1.5 — bug #5 diagnostic. Bumped here and reset at end of render()
+  // so post-render log can show "was mdProcess ever called on this pass?"
+  window._mdCallsThisRender=(window._mdCallsThisRender||0)+1;
   const math=[];
   let s=String(escapedText||'');
   s=s.replace(/\$\$[\s\S]+?\$\$/g,m=>{math.push(m);return '\x00M'+(math.length-1)+'\x00'});
@@ -119,7 +192,7 @@ function refreshUiText(){
   const sr=document.getElementById('sr');if(sr)sr.placeholder=t('searchCanvas');
   const sbq=document.getElementById('sbq');if(sbq)sbq.placeholder=t('filterList');
   const sbn=document.getElementById('sbName');if(sbn)sbn.textContent=t('nodes');
-  const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="hideMore()">${t('importAll')}</label><label for="impC" onclick="hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="if(confirm('Clear current canvas?')){sn();clr()}hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
+  const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="window.dbg&&window.dbg('IMPORT','label[for=imp] tapped — browser should now forward click to #imp');hideMore()">${t('importAll')}</label><label for="impC" onclick="window.dbg&&window.dbg('IMPORT','label[for=impC] tapped');hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="if(confirm('Clear current canvas?')){sn();clr()}hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
   bF();renderSB();renderLegend();
 }
 async function toggleHebrew(){const on=!(S.hebrewMode);S.hebrewMode=on;document.body.classList.toggle('he',on);const btn=document.getElementById('heBtn');if(btn){btn.style.background=on?'var(--accent)':'';btn.style.color=on?'#1a1815':''}refreshUiText();sv();render()}
@@ -128,7 +201,7 @@ function toggleDimEdges(){S.dimEdges=!S.dimEdges;sv();applyDimBtn();render()}
 function applyDimBtn(){const btn=document.getElementById('dimEdgesBtn');if(btn){btn.style.background=S.dimEdges?'var(--accent)':'';btn.style.color=S.dimEdges?'#1a1815':''}}
 async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){alert('Cannot delete the last workspace');return}if(!confirm(`Delete workspace "${currentWs}" and ALL its data? Cannot be undone.`))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
 function flashInd(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
-function hideMore(){document.getElementById('more').classList.remove('on')}
+function hideMore(){window.dbg&&window.dbg('IMPORT','hideMore() — removing .on from #more (may break iOS label→input chain)');document.getElementById('more').classList.remove('on')}
 document.addEventListener('click',e=>{if(!document.getElementById('more').contains(e.target)&&!e.target.matches('[onclick*="more"]'))hideMore()});
 function urlDomain(u){try{const p=new URL(u);const h=p.hostname.replace('www.','');if(h.includes('tradingview'))return 'tradingview';if(h.includes('github'))return 'github';if(h.includes('arxiv'))return 'arxiv';if(h.includes('notion'))return 'notion';if(h.includes('youtube'))return 'youtube';if(h.includes('x.com')||h.includes('twitter'))return 'x';return h.split('.')[0]}catch(e){return 'link'}}
 function renderSB(){const body=document.getElementById('sbbody');if(!body)return;const q=(document.getElementById('sbq')?.value||'').toLowerCase();const groups={};for(const n of ns()){if(q&&!((n.label||'')+(n.notes||'')+(n.tags||'')).toLowerCase().includes(q))continue;const zid=n.zone;if(!groups[zid])groups[zid]=[];groups[zid].push(n)}
@@ -174,6 +247,18 @@ function switchTo(id){if(!S.canvases[id])return;S.current=id;sel=null;cp();view=
 function render(){
   const W=Math.max(innerWidth||document.documentElement.clientWidth||800,400),H=Math.max(innerHeight||document.documentElement.clientHeight||600,400);
   if(window.dlog&&location.search.includes('debug')&&!window._renderLogged){window._renderLogged=true;dlog('render W='+W+' H='+H+' zones='+(zs()?.length||0)+' nodes='+(ns()?.length||0))}
+  // Phase 1.5 diagnostics — throttle so pan/drag doesn't flood, but always
+  // log the first few renders + any render after a quiet window so we see
+  // post-import / canvas-switch activity.
+  window._renderCount=(window._renderCount||0)+1;
+  const _rn=window._renderCount,_now=Date.now(),_last=window._lastRenderLog||0;
+  const _shouldLog=window.dbg&&(_rn<=3||(_now-_last)>1500);
+  if(_shouldLog){
+    window._lastRenderLog=_now;
+    const noteN=ns().filter(n=>n.shape==='note').length;
+    const fN=ns().filter(n=>n.shape==='formula'&&!n.compact).length;
+    window.dbg('KATEX','render #'+_rn+' · formulas='+fN+' · notes='+noteN+' · katex='+(window.katex?'yes':'MISSING')+' · autoRender='+(window.renderMathInElement?'yes':'MISSING'));
+  }
   cv.setAttribute('viewBox',`${-W/2/view.k-view.x} ${-H/2/view.k-view.y} ${W/view.k} ${H/view.k}`);
   cv.setAttribute('width',W);cv.setAttribute('height',H);
   // Phase 1 · 1.6c — viewport culling via rbush (bootstrap.ts loads it on
@@ -267,9 +352,23 @@ function render(){
     h+=`<g class="node ${n.dim||focusDim?'dim':''} ${tg?'tgt':''}" data-id="${n.id}">${ring}${sh}${['resource','library'].includes(n.shape)?linkGlyph:''}${portal}${conf}${hitRect}${showLabel?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:''}</g>`;}
   cv.innerHTML=h;
   // Render KaTeX in formula nodes
-  if(window.katex){cv.querySelectorAll('.fnode[data-latex]').forEach(el=>{const tex=el.dataset.latex;try{katex.render(tex,el,{throwOnError:false,displayMode:true,strict:'ignore'})}catch(e){el.textContent=tex}})}
+  let _katexCount=0;
+  if(window.katex){cv.querySelectorAll('.fnode[data-latex]').forEach(el=>{const tex=el.dataset.latex;try{katex.render(tex,el,{throwOnError:false,displayMode:true,strict:'ignore'});_katexCount++}catch(e){el.textContent=tex}})}
   // Render inline math inside note bodies via KaTeX auto-render
-  if(window.renderMathInElement){cv.querySelectorAll('.note-body [data-mathbody]').forEach(el=>{try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore',output:'html'})}catch(e){}})}
+  let _autoCount=0;
+  if(window.renderMathInElement){cv.querySelectorAll('.note-body [data-mathbody]').forEach(el=>{try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore',output:'html'});_autoCount++}catch(e){}})}
+  // Phase 1.5 diagnostics — post-render DOM read. Only emit when the render
+  // preamble also emitted (gated by the same _shouldLog flag) so we stay in
+  // sync with pan/drag throttling above.
+  if(_shouldLog&&window.dbg){
+    const katexEls=cv.querySelectorAll('.katex').length;
+    const strongEls=cv.querySelectorAll('.note-body strong').length;
+    const emEls=cv.querySelectorAll('.note-body em').length;
+    const headingEls=cv.querySelectorAll('.note-body h1,.note-body h2,.note-body h3').length;
+    window.dbg('KATEX','post · katex.render()='+_katexCount+' · renderMathInElement()='+_autoCount+' · .katex DOM='+katexEls);
+    window.dbg('MD','post · mdProcess calls this render='+(window._mdCallsThisRender||0)+' · <strong>='+strongEls+' · <em>='+emEls+' · headings='+headingEls);
+  }
+  window._mdCallsThisRender=0;
 }
 function bF(){const mode=S.filterMode||'zone';const otherMode=mode==='zone'?'status':'zone';const switchLabel=S.hebrewMode?(mode==='zone'?'אזורים ⇄ מצב':'מצב ⇄ אזורים'):(mode==='zone'?'Zones ⇄ Status':'Status ⇄ Zones');let h=`<span class="pill mode" onclick="switchFilterMode()" style="background:var(--accent);color:#1a1815;font-weight:600;cursor:pointer">${switchLabel}</span>`;if(mode==='zone'){zs().forEach(z=>h+=`<span class="pill on" data-f="zone:${z.id}" onclick="tF(this)" ondblclick="soloF(this)">${esc(z.name)}</span>`)}else{ST.forEach(s=>h+=`<span class="pill on" data-f="status:${s}" onclick="tF(this)" ondblclick="soloF(this)">${esc(t(s))}</span>`)}document.getElementById('fl').innerHTML=h}
 function switchFilterMode(){S.filterMode=S.filterMode==='status'?'zone':'status';sv();bF();aF()}
@@ -544,7 +643,37 @@ cv.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
 window.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(confirm(`Delete ${selSet.size} selected nodes?`)){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';render()}});
 function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h})),...ns().map(n=>({x1:n.x-60,y1:n.y-60,x2:n.x+60,y2:n.y+60}))];if(!items.length){view={x:0,y:0,k:.5};render();return}const x1=Math.min(...items.map(i=>i.x1)),y1=Math.min(...items.map(i=>i.y1)),x2=Math.max(...items.map(i=>i.x2)),y2=Math.max(...items.map(i=>i.y2)),pad=80;view.k=Math.min(innerWidth/(x2-x1+pad*2),innerHeight/(y2-y1+pad*2),.7);view.x=-(x1+x2)/2;view.y=-(y1+y2)/2;render()}
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}
-function imF(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{sn();S=JSON.parse(r.result);reconcileCanvases();sv();render();bF();bB();renderTabs();renderSB();zF()};r.readAsText(f)}
+function imF(e){
+  window.dbg&&window.dbg('IMPORT','imF entered · files='+((e.target.files&&e.target.files.length)||0));
+  const f=e.target.files[0];
+  if(!f){window.dbg&&window.dbg('IMPORT','no file selected — abort');return}
+  window.dbg&&window.dbg('IMPORT','file: '+f.name+' · '+f.size+'B');
+  const r=new FileReader();
+  r.onload=()=>{
+    window.dbg&&window.dbg('IMPORT','FileReader.onload · result len='+(r.result?r.result.length:0));
+    try{
+      sn();
+      const parsed=JSON.parse(r.result);
+      window.dbg&&window.dbg('IMPORT','JSON parsed · canvases='+Object.keys(parsed.canvases||{}).length);
+      S=parsed;
+      window.dbg&&window.dbg('IMPORT','state swapped · current='+S.current);
+      reconcileCanvases();
+      window.dbg&&window.dbg('IMPORT','reconcileCanvases done · nodes='+(S.canvases[S.current]?.nodes?.length||0));
+      sv();
+      render();
+      window.dbg&&window.dbg('IMPORT','render done');
+      bF();bB();renderTabs();renderSB();
+      zF();
+      window.dbg&&window.dbg('IMPORT','zF done — import complete');
+    }catch(err){
+      window.dbg&&window.dbg('IMPORT','ERROR in onload: '+err.message);
+      throw err;
+    }
+  };
+  r.onerror=()=>{window.dbg&&window.dbg('IMPORT','FileReader error: '+(r.error&&r.error.message))};
+  r.readAsText(f);
+  window.dbg&&window.dbg('IMPORT','readAsText dispatched');
+}
 function reconcileCanvases(){
   if(!S)S={};
   if(!S.canvases)S.canvases={};

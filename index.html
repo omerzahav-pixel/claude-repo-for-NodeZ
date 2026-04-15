@@ -12,7 +12,7 @@
      render() so formula nodes + inline math inside note bodies get typeset.
      Non-deferred app.js at end of body runs before these defer scripts,
      so the very first render() paints with window.katex still undefined. -->
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="if(window.render){try{window.render()}catch(e){}}"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="window.dbg&&window.dbg('KATEX','auto-render onload fired · renderMathInElement='+(window.renderMathInElement?'yes':'MISSING')+' · window.render='+(window.render?'yes':'MISSING'));if(window.render){try{window.render()}catch(e){window.dbg&&window.dbg('KATEX','render() threw: '+e.message)}}"></script>
 <link rel="stylesheet" href="./src/app.css">
 <!-- Phase 1 · 1.6c — bootstrap.ts loads rbush as a module and exposes it
      on window.RBush so the non-module app.js can use it for viewport
@@ -35,7 +35,7 @@
 <button onclick="un()" title="Ctrl+Z">↶</button>
 <button id="dimEdgesBtn" onclick="toggleDimEdges()" title="Dim edges (focus on nodes)">⌇</button>
 <span class="sep"></span>
-<div style="position:relative"><button id="moreBtn" onclick="document.getElementById('more').classList.toggle('on');event.stopPropagation()">⋯ More</button>
+<div style="position:relative"><button id="moreBtn" onclick="document.getElementById('more').classList.toggle('on');window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()">⋯ More</button>
 <div id="more"><div id="moreBody"></div></div></div>
 <div id="indicators"><span class="ind s-ok" id="saveInd" title="Save status"></span><span class="ind" id="expInd" title="Export flash"></span></div>
 <!-- iOS Safari blocks synthetic .click() on a hidden file input called from
@@ -44,8 +44,8 @@
      so the browser treats a tap on the menu item as a tap on the input,
      which keeps the gesture intact. For that, the inputs must be in the
      layout tree (not display:none), so they're visually hidden instead. -->
-<input id="imp" type="file" accept=".json" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0" onchange="imF(event)"/>
-<input id="impC" type="file" accept=".json" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0" onchange="imFCanvas(event)"/>
+<input id="imp" type="file" accept=".json" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0" onclick="window.dbg&&window.dbg('IMPORT','#imp received click event (iOS user-gesture forwarded)')" onchange="window.dbg&&window.dbg('IMPORT','#imp change event fired · files='+(this.files&&this.files.length||0));imF(event)"/>
+<input id="impC" type="file" accept=".json" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0" onclick="window.dbg&&window.dbg('IMPORT','#impC received click event')" onchange="window.dbg&&window.dbg('IMPORT','#impC change event fired · files='+(this.files&&this.files.length||0));imFCanvas(event)"/>
 </div>
 <div id="bc"></div>
 <div id="fl"></div>

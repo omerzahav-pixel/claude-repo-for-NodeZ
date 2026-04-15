@@ -1,0 +1,17 @@
+# Cloudflare Pages headers. Keeps cache out of the way when iterating on
+# iPad-only bugs: entry HTML + the non-hashed app.js must always be fresh
+# so deploys show up immediately on the real device. Vite-hashed asset
+# bundles (under /assets/…) can stay aggressively cached — their names
+# change on every build, so new content always lands under a new URL.
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/
+  Cache-Control: no-cache, must-revalidate
+
+/app.js
+  Cache-Control: no-cache, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
