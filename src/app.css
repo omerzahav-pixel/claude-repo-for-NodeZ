@@ -1,4 +1,10 @@
-:root{--bg:#1a1815;--bg2:#22201c;--panel:#2a2722;--panel2:#353128;--border:#3d3830;--text:#f5f0e6;--text2:#e8dfce;--muted:#8a8478;--accent:#d97757;--accent2:#c9633f;--done:#7db36a;--prog:#6fa8d3;--pend:#d4a855;--block:#d96b5a;--idea:#8a8478;--z-sys:#8b7ba8;--z-alg:#6b8cb0;--z-ind:#5fa3a8;--z-scr:#7aa882;--z-mac:#c48a9b;--z-proj:#c9896a;--z-inb:#7d7569;--serif:'Source Serif 4','Frank Ruhl Libre',Georgia,serif;--sans:'Inter','Assistant',system-ui,sans-serif}
+/* Phase 5 P1 #5 — layered dark surfaces. Three neutral-dark elevations:
+   --bg (#0F0F0F) page, --bg2 (#181A1B) inputs, --panel (#242424) panel
+   surfaces. --panel2 (#2E2E2E) steps one more for hover/elevated
+   states; --border (#333333) keeps dividers a touch brighter than
+   panel. Warm cream text + warm accent orange stay unchanged — the
+   cool/warm contrast is the core of the look. */
+:root{--bg:#0F0F0F;--bg2:#181A1B;--panel:#242424;--panel2:#2E2E2E;--border:#333333;--text:#f5f0e6;--text2:#e8dfce;--muted:#8a8478;--accent:#d97757;--accent2:#c9633f;--done:#7db36a;--prog:#6fa8d3;--pend:#d4a855;--block:#d96b5a;--idea:#8a8478;--z-sys:#8b7ba8;--z-alg:#6b8cb0;--z-ind:#5fa3a8;--z-scr:#7aa882;--z-mac:#c48a9b;--z-proj:#c9896a;--z-inb:#7d7569;--serif:'Source Serif 4','Frank Ruhl Libre',Georgia,serif;--sans:'Inter','Assistant',system-ui,sans-serif}
 #sb{position:fixed;top:148px;left:12px;bottom:48px;z-index:18;width:280px;background:var(--panel);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.3);transition:width .18s,height .18s,bottom .18s,top .18s}
 #sb.co{width:36px}#sb.co .sbbody,#sb.co .sbsearch{display:none}#sb.co .sbhead{padding:10px 8px;justify-content:center}
 #sb.mini{width:140px;height:36px;top:auto;bottom:52px;left:12px}
@@ -74,7 +80,7 @@ button,input,select,textarea{font:inherit;color:inherit}
    label element forwards clicks to its hidden file input, preserving the
    iOS user-gesture chain that synthetic .click() would lose. */
 #tb .tbLabel{user-select:none;-webkit-user-select:none;min-width:32px}
-#tb .ac{background:var(--accent);color:#1a1815;font-weight:600}
+#tb .ac{background:var(--accent);color:#0F0F0F;font-weight:600}
 #tb input{border-color:var(--border);background:var(--bg2);cursor:text;min-width:130px}
 .sep{width:1px;background:var(--border);margin:3px 4px}
 /* Phase 1.8 · collapsible breadcrumbs.
@@ -139,7 +145,7 @@ body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
 .urp{display:inline-block;background:var(--bg2);border:1px solid var(--border);color:var(--accent);padding:4px 10px;border-radius:12px;font-size:11px;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
 .brow button{flex:1;min-width:70px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:7px;cursor:pointer;font-weight:500;font-size:12px}
-.brow button.pr{background:var(--accent);color:#1a1815;border-color:var(--accent);font-weight:600}
+.brow button.pr{background:var(--accent);color:#0F0F0F;border-color:var(--accent);font-weight:600}
 .brow button.dn{color:var(--block);border-color:transparent}
 .port{display:inline-block;margin-left:6px;color:var(--accent);font-size:11px;cursor:pointer;text-decoration:underline}
 .origin{display:inline-block;background:var(--bg2);color:var(--muted);padding:2px 7px;border-radius:8px;font-size:10px;margin-top:4px}
@@ -181,7 +187,7 @@ body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
 #dlg input[type="text"]:focus,#dlg textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
 #dlg .drow{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 #dlg button{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:7px;cursor:pointer;font:500 12px 'Inter','Assistant',system-ui,sans-serif;min-width:72px}
-#dlg button.pr{background:var(--accent);color:#1a1815;font-weight:600;border:1px solid var(--accent)}
+#dlg button.pr{background:var(--accent);color:#0F0F0F;font-weight:600;border:1px solid var(--accent)}
 #dlg button.dn{background:var(--block);color:#fff;border:1px solid var(--block);font-weight:600}
 #dlg button:hover{filter:brightness(1.12)}
 #dlg button:focus{outline:2px solid var(--accent);outline-offset:2px}
@@ -191,7 +197,7 @@ body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
    element each call to stack above the ◆ diag panel (right:8px bottom:8px)
    so they never sit on top of each other. Hebrew flips to bottom-left. */
 #toast{position:fixed;right:14px;bottom:14px;z-index:55;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;max-width:min(340px,calc(100vw - 28px))}
-#toast .ts{background:#22201c;color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px 14px;font:500 12px 'Inter','Assistant',system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast .ts{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px 14px;font:500 12px 'Inter','Assistant',system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #toast .ts.on{opacity:1;transform:translateY(0)}
 #toast .ts.ok{border-color:#7db36a}
 #toast .ts.err{border-color:#d96b5a}
