@@ -4,6 +4,53 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P1 · Item #5 — layered dark surfaces · 2026-04-16
+
+The palette was a warm-brown leftover from the idea_vault prototype:
+`#1a1815` bg, `#22201c` inputs, `#2a2620` panels, `#d97757` terracotta
+accent. It read "leather journal" — fine for a single-user canvas on a
+desktop, wrong for a knowledge tool that needs to feel calm and modern
+on iPad in a dim room. Migrated to a cool neutral stack of greys so
+the content carries the color temperature, not the chrome.
+
+**Palette.** `:root` in `src/app.css`:
+- `--bg #0F0F0F` · body + canvas (true dark — OLED-friendly)
+- `--bg2 #181A1B` · inputs, filter pills, toast
+- `--panel #242424` · floating panels (#pn, #modal .mc, #more)
+- `--panel2 #2E2E2E` · nested surfaces, hover states
+- `--border #333333` · 1px hairlines
+
+Gives three clear depth layers (body → chrome → panel) instead of the
+two we had before. Text stays on `--text #f5f0e6` (cream) for warmth
+against the neutral greys.
+
+**Sweep.** Every hard-coded `#1a1815` in `src/app.css` (3 refs — mostly
+button text on light accents) and `public/app.js` (4 button-text refs +
+2 SVG `fill` attrs in the formula-icon templates + boot-debug header +
+filter pill) replaced with `#0F0F0F`. `#toast .ts` bg → `var(--bg2)`
+so toast tone follows the palette. Color-picker default swatch
+`#22201c` → `#181A1B`. Panel chrome now pulls exclusively from
+CSS custom properties — no more inline color literals.
+
+**Install chrome.** `<meta name=theme-color>` in `index.html` → `#0F0F0F`,
+inline `#backBtn color` → `#0F0F0F`, `public/manifest.webmanifest`
+`background_color` and `theme_color` → `#0F0F0F`. iOS status bar and
+Android splash now match the app's true body color instead of flashing
+a lighter frame on launch.
+
+**Icons.** `scripts/gen-icons.mjs` `const BG = [0x0F, 0x0F, 0x0F, 0xff]`
+(comment updated "warm dark" → "neutral dark"); regenerated all four
+PNGs (192, 512, 512-maskable, 180-apple). `dist/` rebuilt so the SW
+pre-cache ships the new icons.
+
+**Tests.** `tests/phase2_pwa.spec.ts` theme-color assertion updated
+to `#0F0F0F`; Phase 2 suite green on desktop-chrome (7/7) + ipad-chrome
+(7/7), ipad-safari skip pattern unchanged. Phase 5 motion +
+progressive regression green (9/9 on desktop-chrome) — palette change
+didn't regress any interactive behavior.
+
+---
+
 ## Phase 5 P1 · Item #4 — smooth motion on open/close · 2026-04-16
 
 The property panel and paste-patch modal used to snap in and out of
