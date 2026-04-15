@@ -5,6 +5,155 @@ or when a significant tradeoff was made. Newest first.
 
 ---
 
+## D5 — 2026-04-15 · Phase 1.6 · Per-node overlay slices to fix cross-layer z-stacking
+
+**Context.** D3 validated on real iPad (formula overlay paints correctly, tracks
+pan/zoom 1:1). But a second bug surfaced the moment two rich-content nodes
+overlap: **node B's content renders on top of node A's SVG shape** even when
+A is rendered after B in the node array. Mirrored for the other pair — A's
+content on top of B's shape — both are the same bug, viewed from either end.
+
+**Root cause.** D3's hybrid has two DOM layers: `svg#cv` on the bottom,
+`#canvasOverlay` on top. Within each layer, later DOM siblings stack on top,
+which is correct. Across layers, *everything* in the overlay is above
+*everything* in the SVG. Consequence: two overlapping rich nodes render as
+
+```
+bottom → top: A.rect → B.rect → A.content → B.content
+```
+
+instead of the expected
+
+```
+A.rect → A.content → B.rect → B.content
+```
+
+Options (a) re-ordering overlay DOM siblings and (b) explicit `z-index` on
+overlay children both fix within-layer ordering but do nothing about
+cross-layer — the whole overlay is one stacking context above the whole SVG.
+No amount of re-ordering inside either layer can interleave them.
+
+**Decision.** Move each node's **shape + content** into a single per-node
+slice. Outer SVG keeps only what doesn't participate in the z-stacking fight:
+`<defs>` + zones (borders, handles) + edges (paths, markers) + invisible hit
+rects wrapped in `<g class="node" data-id>` for event delegation. Every
+visible part of a node — shape outline, selection ring, text label, link
+glyph, portal arrow, confidence bar, and (for formula/note) the rich HTML
+body — lives in a single per-node `<div class="nslice" data-nid>` inside the
+overlay. Natural DOM-sibling ordering then stacks each complete node unit
+correctly relative to every other node.
+
+**Slice structure.**
+
+```html
+<div class="nslice" data-nid="${n.id}"
+     style="position:absolute; left:${n.x}px; top:${n.y}px; pointer-events:none">
+  <!-- shape + ring + SVG-text label + glyphs, drawn in world coords; the
+       inner <g transform="translate(-n.x,-n.y)"> pulls them back to the
+       slice's local origin so existing shape code stays unchanged. -->
+  <svg style="position:absolute; left:0; top:0; width:1px; height:1px;
+              overflow:visible; pointer-events:none">
+    <g transform="translate(${-n.x},${-n.y})">
+      ${ring}${shape}${glyphs}${svgTextLabel}
+    </g>
+  </svg>
+  <!-- rich content (formula label + KaTeX body, or note body) positioned
+       in local coords relative to the slice origin. -->
+  ${richContentDivs}
+</div>
+```
+
+The overlay's outer CSS transform
+(`translate(W/2,H/2) scale(view.k) translate(view.x,view.y)`) still maps
+world coords to the screen the same way the outer SVG's `viewBox` does —
+world `(n.x, n.y)` lands at `(W/2 + (n.x + view.x)*view.k,
+H/2 + (n.y + view.y)*view.k)` on both layers. Slices therefore line up with
+the edges drawn in the outer SVG and with the hit rects they pair with.
+
+**Why keep hit rects in the outer SVG.** Event delegation in `app.js` listens
+on the SVG surface for `pointerdown` / drag / context-menu and walks up to
+`.closest('g.node')[data-id]`. Keeping the invisible hit rects in a
+`pointer-events:none` overlay above them would swallow taps (the overlay is
+`pointer-events:none` so taps fall through), but the SVG is the owner of
+`pointerdown` handlers. Putting hit rects in the SVG lets the existing
+event-delegation code keep working without any refactor, while the overlay
+slice above owns the purely-visual part.
+
+**Why not per-node `<g>` inside `svg#cv` with a paired overlay div
+positioned by z-index.** Cross-layer stacking still can't be fixed with
+z-index alone (z-index only sorts siblings within the same stacking
+context). The only correct fix is co-locating each node's shape and
+content into one stacking context — which the slice is.
+
+**Tradeoffs accepted.**
+
+- Each render re-builds `oh` (overlay HTML) with as much markup as the SVG
+  `h` used to carry. The DOM sibling count roughly doubles vs. pre-D5 (one
+  `<g.node>` with hit rect in SVG + one `.nslice` in overlay per node).
+  rbush culling (`visIds`) still gates both loops — off-screen nodes produce
+  neither. Performance budget is unchanged for canvases under ≤100 nodes and
+  still capped by the 200px-margin cull for larger canvases.
+- Tests that asserted `g.node[data-id="X"] .note-body` need to re-target
+  `#canvasOverlay .nslice[data-nid="X"] .note-body`. Selectors that check
+  for `g.node[data-id]` existence (drag-overlap, cull hit-test) keep
+  working because the hit-rect `<g class="node">` stays in the SVG.
+- Selection chrome and focus dim now apply per-slice (via `.dim` class on
+  the slice wrapper) rather than per-`<g class="node">` in the SVG. CSS
+  updated accordingly.
+
+**Revisit threshold.** Same as D3 — if iOS WebKit ever fixes the
+`<foreignObject>` paint bug, the overlay can be retired entirely and all
+content goes back into SVG node groups. Until then, the slice pattern is
+the structural foundation for every remaining overlay migration (notes,
+zone labels, edge labels).
+
+---
+
+## D4 — 2026-04-15 · Phase 1.6 · Full-state Import via UI: deprioritized, known limitation
+
+**Context.** The Phase 1.1 fix to `imF()` (try/catch + hebrew state restore +
+dropdown rebuild + shape validation + user-visible error feedback) landed
+successfully, and Playwright + the on-screen diag overlay both confirm the
+full import chain completes end-to-end on desktop and on the Playwright
+`ipad-safari` project. On real iPad, however, the actual UI flow — tapping
+the "Import" item in the More menu, picking a JSON file from Files, seeing
+the canvas update — fails. The diag overlay shows no `imF()` entry line
+when the picker completes, which indicates the file-input `change` event
+isn't firing, or the label→input user-gesture forwarding breaks under
+specific iOS gesture conditions we haven't isolated.
+
+Debugging FileReader behavior on iOS Safari vs. Playwright's synthetic
+`setInputFiles` would burn hours against a moving target (each iPadOS point
+release changes gesture handling in small ways).
+
+**What works on real iPad.** The **Canvas import** path (`imFCanvas()` at
+`public/app.js:238`) forwards to the paste-patch modal, which accepts a
+pasted JSON payload and applies it via the same reconcile code path. Azamat
+uses paste-patch as his primary import path anyway.
+
+**Decision.** Document as a known limitation. Do not invest further cycles
+chasing it.
+
+**Workaround.** For full-state import on iPad: open a JSON file, copy its
+contents, open the canvas-import modal (More → Import canvas), paste the
+JSON into the textarea. Same end result, same reconcile path, no
+FileReader-on-iOS dependency.
+
+**Revisit threshold.** Re-open this only if:
+
+1. The paste-patch workaround stops working on iPad (regression in the
+   modal or the patch-apply code).
+2. A future feature genuinely requires full-state UI import to work (e.g.
+   a "restore from backup" flow where paste isn't acceptable UX).
+3. Apple changes iOS file-picker behavior in a way that makes the fix
+   trivial (e.g. a documented gesture-token forwarding mechanism).
+
+Until one of those fires, the More → Import button stays visible (it works
+on desktop, the primary dev platform) and the paste-patch path is
+documented as the iPad workaround.
+
+---
+
 ## D3 — 2026-04-15 · Phase 1.6 · Partial reversal of D2: hybrid SVG + HTML overlay for rich content
 
 **Context.** Phase 1 Playwright suite landed 42/42 green on `desktop-chrome` +

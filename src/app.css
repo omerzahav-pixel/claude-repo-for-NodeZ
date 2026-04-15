@@ -123,14 +123,36 @@ button,input,select,textarea{font:inherit;color:inherit}
    the floating chrome (#tb, #pn, #sb, #modal — all z 10+). */
 #canvasOverlay{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;pointer-events:none;transform-origin:0 0;z-index:1;will-change:transform;-webkit-transform-origin:0 0}
 #canvasOverlay .nov{position:absolute;left:0;top:0;-webkit-user-select:none;user-select:none;pointer-events:none}
-/* Formula node overlay pieces: header label strip + KaTeX body. The parent
-   shell / border / resize handle stays in SVG (.node group). These two
-   overlay divs are sized to match those SVG rects 1:1 so the visual result
-   is indistinguishable from the previous foreignObject version except that
-   iOS actually paints it. */
+/* D5 · Phase 1.6 — per-node slices. Each node lives in one .nslice div that
+   contains an inline mini-SVG (.nshape, width=1/height=1 + overflow:visible so
+   shapes extend past the layout box) + any rich HTML (.note-body, .fnode…).
+   This co-locates shape + content in the same stacking context so overlapping
+   notes z-stack correctly — the flat-overlay + split-layers approach in 1.6a
+   put ALL content above ALL shapes, which broke layering between nodes. */
+#canvasOverlay .nslice{position:absolute;left:0;top:0}
+#canvasOverlay .nslice.dim{opacity:.18}
+#canvasOverlay .nslice .nshape{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+#canvasOverlay .nslice .nshape text{fill:var(--text);font:500 12px var(--sans);text-anchor:middle;pointer-events:none}
+#canvasOverlay .nslice .nshape .ring{stroke:var(--accent);stroke-width:2.5;fill:none}
+#canvasOverlay .nslice.tgt .nshape .ring{stroke:var(--accent);stroke-width:3;fill:none;stroke-dasharray:4,3}
+/* Resize handle opts in to pointer events so drag keeps working even though
+   the rest of the slice + overlay is pointer-events:none. An overlay-level
+   pointerdown listener mirrors cv's so beginInteraction still fires. */
+#canvasOverlay .nslice .nrz{pointer-events:auto;cursor:nwse-resize}
+/* Formula node overlay pieces: header label strip + KaTeX body. */
 #canvasOverlay .fnode-label{display:flex;align-items:center;justify-content:center;font-family:'Inter','Assistant',system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
 #canvasOverlay .fnode{display:flex;align-items:center;justify-content:center;color:var(--text);font-size:13px;text-align:center;overflow:auto}
 #canvasOverlay .fnode .katex{color:var(--text)}
+/* D5 · Phase 1.6 — note body migrated from <foreignObject> to overlay div.
+   iOS WebKit refuses to paint rich HTML inside foreignObject, so the body
+   now renders here where it gets the same treatment as formula nodes. */
+#canvasOverlay .note-body{color:var(--text);font-family:'Inter','Assistant',system-ui,sans-serif;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-wrap:break-word;box-sizing:border-box;padding:0}
+#canvasOverlay .note-body h1,#canvasOverlay .note-body h2,#canvasOverlay .note-body h3{margin:4px 0 2px;font-weight:700}
+#canvasOverlay .note-body h1{font-size:14px}#canvasOverlay .note-body h2{font-size:13px}#canvasOverlay .note-body h3{font-size:12px}
+#canvasOverlay .note-body strong{font-weight:700}
+#canvasOverlay .note-body em{font-style:italic}
+#canvasOverlay .note-body code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;background:var(--bg2);padding:1px 3px;border-radius:2px}
+#canvasOverlay .note-body ul,#canvasOverlay .note-body ol{margin:2px 0;padding-inline-start:18px}
 #canvasOverlay .nov.dim{opacity:.18}
 .zr{fill:transparent;stroke-width:1.5;stroke-dasharray:6,5}
 .zl{font:600 11px var(--sans);letter-spacing:1.2px;text-transform:uppercase;pointer-events:none}

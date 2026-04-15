@@ -435,7 +435,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
       .poll(
         () =>
           page
-            .locator('g.node[data-id="9995"] .note-body .katex')
+            .locator('#canvasOverlay .nslice[data-nid="9995"] .note-body .katex')
             .count(),
         {
           message:
@@ -480,7 +480,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
     const overflowHandled = await page.evaluate(() => {
       const noteBody = document.querySelector(
-        'g.node[data-id="9991"] .note-body'
+        '#canvasOverlay .nslice[data-nid="9991"] .note-body'
       ) as HTMLElement | null;
       if (!noteBody) return { ok: false, reason: "note body not found" };
       const style = getComputedStyle(noteBody);
@@ -532,7 +532,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
     const md = await page.evaluate(() => {
       const el = document.querySelector(
-        'g.node[data-id="9992"] [data-mathbody]'
+        '#canvasOverlay .nslice[data-nid="9992"] [data-mathbody]'
       ) as HTMLElement | null;
       if (!el) return null;
       return {
@@ -575,7 +575,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
     const result = await page.evaluate(() => {
       const body = document.querySelector(
-        'g.node[data-id="9994"] .note-body'
+        '#canvasOverlay .nslice[data-nid="9994"] .note-body'
       ) as HTMLElement | null;
       if (!body) return null;
       const dir = getComputedStyle(body).direction;
@@ -623,7 +623,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
     const inspection = await page.evaluate(() => {
       const el = document.querySelector(
-        'g.node[data-id="9993"] [data-mathbody]'
+        '#canvasOverlay .nslice[data-nid="9993"] [data-mathbody]'
       ) as HTMLElement | null;
       return {
         found: !!el,
@@ -814,5 +814,52 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
     // Close the modal so downstream tests (if any) aren't left with a blocker.
     await page.evaluate(() => window.closeModal?.());
+  });
+
+  // -- D5 regression guard — cross-layer z-stacking ---------------------------
+
+  test("1.8 Overlay slice DOM order matches hit-rect DOM order (per-node z-stacking)", async ({
+    page,
+  }) => {
+    // D5 · Phase 1.6 — before the per-node slice fix, every overlay child
+    // (notes, formulas) lived as a sibling under #canvasOverlay; because the
+    // overlay is a sibling of #cv, not a child, all of its content rendered
+    // above every SVG shape regardless of which node was drawn on top of
+    // which. Real iPad then showed note A's body painted ON TOP of note B's
+    // SVG background even when B was drawn AFTER A. The fix co-locates each
+    // node's shape + content inside a single .nslice div so the stacking
+    // context is per-node, and the slice DOM order exactly mirrors the
+    // hit-rect DOM order in #cv. This test guards that invariant at the
+    // DOM level — Playwright can't catch the iOS paint bug, but it *can*
+    // catch a render() that regresses ordering between the two trees.
+    await openCleanApp(page);
+
+    await page.evaluate(() => {
+      const cur = window.__E2E!.current();
+      const zoneId = cur.zones[0]?.id ?? "ideas";
+      // Two overlapping notes + one formula so we exercise both rich shapes.
+      window.__E2E!.addNodeRaw({ id: 9881, x: 0, y: 0, zone: zoneId, shape: "note", status: "idea", label: "A", notes: "back" });
+      window.__E2E!.addNodeRaw({ id: 9882, x: 20, y: 20, zone: zoneId, shape: "note", status: "idea", label: "B", notes: "front" });
+      window.__E2E!.addNodeRaw({ id: 9883, x: 40, y: 40, zone: zoneId, shape: "formula", status: "idea", label: "F", latex: "x^2" });
+      window.render();
+    });
+
+    const result = await page.evaluate(() => {
+      const hitIds = Array.from(
+        document.querySelectorAll<SVGGElement>("#cv g.node")
+      ).map((g) => g.getAttribute("data-id"));
+      const sliceIds = Array.from(
+        document.querySelectorAll<HTMLElement>("#canvasOverlay .nslice")
+      ).map((d) => d.getAttribute("data-nid"));
+      return { hitIds, sliceIds };
+    });
+
+    // Every in-DOM node must have a matching slice, in the same order.
+    expect(result.sliceIds).toEqual(result.hitIds);
+    // Sanity check: our three added nodes are all present.
+    for (const id of ["9881", "9882", "9883"]) {
+      expect(result.hitIds).toContain(id);
+      expect(result.sliceIds).toContain(id);
+    }
   });
 });

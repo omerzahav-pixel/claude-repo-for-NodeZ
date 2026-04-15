@@ -205,7 +205,12 @@ function hideMore(){window.dbg&&window.dbg('IMPORT','hideMore() — removing .on
 document.addEventListener('click',e=>{if(!document.getElementById('more').contains(e.target)&&!e.target.matches('[onclick*="more"]'))hideMore()});
 function urlDomain(u){try{const p=new URL(u);const h=p.hostname.replace('www.','');if(h.includes('tradingview'))return 'tradingview';if(h.includes('github'))return 'github';if(h.includes('arxiv'))return 'arxiv';if(h.includes('notion'))return 'notion';if(h.includes('youtube'))return 'youtube';if(h.includes('x.com')||h.includes('twitter'))return 'x';return h.split('.')[0]}catch(e){return 'link'}}
 function renderSB(){const body=document.getElementById('sbbody');if(!body)return;const q=(document.getElementById('sbq')?.value||'').toLowerCase();const groups={};for(const n of ns()){if(q&&!((n.label||'')+(n.notes||'')+(n.tags||'')).toLowerCase().includes(q))continue;const zid=n.zone;if(!groups[zid])groups[zid]=[];groups[zid].push(n)}
-  let h='';for(const z of zs()){const items=groups[z.id]||[];if(!items.length&&q)continue;const col=S.sbCollapse?.[S.current+':'+z.id];h+=`<div class="zhdr" onclick="toggleZoneCollapse('${z.id}')"><span style="color:${z.color}">${esc(z.name)}</span><span class="ct">${items.length}${col?' ▸':' ▾'}</span></div>`;if(!col)for(const n of items){const rtl=/[\u0590-\u05FF]/.test(n.label||'')?' rtl':'';const dot=statusDotSvg(n.status,n.shape);const desc=(n.notes||n.rationale||'').slice(0,50);const ur=n.url?`<a class="urp" href="${esc(n.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${urlDomain(n.url)}</a>`:'';h+=`<div class="item${rtl}" onclick="focusNode(${n.id})">${dot}<div class="txt"><div class="lbl">${esc(n.label)}</div>${desc?`<div class="desc">${esc(desc)}</div>`:''}${ur}</div></div>`}}
+  let h='';for(const z of zs()){const items=groups[z.id]||[];if(!items.length&&q)continue;const col=S.sbCollapse?.[S.current+':'+z.id];h+=`<div class="zhdr" onclick="toggleZoneCollapse('${z.id}')"><span style="color:${z.color}">${esc(z.name)}</span><span class="ct">${items.length}${col?' ▸':' ▾'}</span></div>`;if(!col)for(const n of items){const rtl=/[\u0590-\u05FF]/.test(n.label||'')?' rtl':'';const dot=statusDotSvg(n.status,n.shape);const desc=(n.notes||n.rationale||'').slice(0,50);
+      // D5 · Phase 1.6 — run the preview snippet through mdProcess so
+      // **bold**, *italic*, `code` render as HTML in the sidebar. Input is
+      // already HTML-escaped via esc(), so the processor stays XSS-safe.
+      const descHtml=desc?mdProcess(esc(desc)):'';
+      const ur=n.url?`<a class="urp" href="${esc(n.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${urlDomain(n.url)}</a>`:'';h+=`<div class="item${rtl}" onclick="focusNode(${n.id})">${dot}<div class="txt"><div class="lbl">${esc(n.label)}</div>${descHtml?`<div class="desc">${descHtml}</div>`:''}${ur}</div></div>`}}
   body.innerHTML=h||'<div style="padding:12px;color:var(--muted);font-size:11px">No nodes yet</div>'}
 function toggleZoneCollapse(zid){if(!S.sbCollapse)S.sbCollapse={};const k=S.current+':'+zid;S.sbCollapse[k]=!S.sbCollapse[k];sv();renderSB()}
 function statusDotSvg(st,sh){const c=SC[st]||SC.idea;if(sh==='project'){const pts=[];for(let i=0;i<10;i++){const ang=-Math.PI/2+i*Math.PI/5;const r=i%2===0?5:2.5;pts.push((5+r*Math.cos(ang))+','+(5+r*Math.sin(ang)))}return `<svg class="dot" viewBox="0 0 10 10"><polygon points="${pts.join(' ')}" fill="${c}"/></svg>`}
@@ -317,7 +322,12 @@ function render(){
     const showEdgeLabel=!dimE&&view.k>0.4&&(!focusMode||edgeFocus);
     h+=`<path class="edge ${e.dim?'dim':''}" data-edge="${e.id}" d="M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}" fill="none" stroke="${et.c}" stroke-width="2.5" marker-end="url(#a-${e.type||'feeds'})" opacity="${edgeOpacity}"/>`;
     if(showEdgeLabel){const lbl=e.customLabel||t(e.type||'feeds');const mx=(ax+3*c1x+3*c2x+bx)/8,my=(ay+3*c1y+3*c2y+by)/8;const labelRtl=/[\u0590-\u05FF]/.test(lbl);const fsize=labelRtl?12:10;h+=`<foreignObject x="${mx-60}" y="${my-11}" width="120" height="22" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:'Inter','Assistant',system-ui,sans-serif;font-size:${fsize}px;color:${et.c};background:var(--bg);border:1px solid ${et.c};border-radius:3px;padding:2px 5px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">${esc(lbl)}</div></foreignObject>`}}
-  for(const n of ns()){if(visIds&&!visIds.has(n.id))continue;const c=SC[n.status]||SC.idea,s=42,se=sel?.id===n.id||selSet.has(n.id),tg=edgeHover?.id===n.id;const focusDim=focusMode&&!related.has(n.id);let sh='',ring='';
+  for(const n of ns()){if(visIds&&!visIds.has(n.id))continue;const c=SC[n.status]||SC.idea,s=42,se=sel?.id===n.id||selSet.has(n.id),tg=edgeHover?.id===n.id;const focusDim=focusMode&&!related.has(n.id);let sh='',ring='',richContent='';
+    // D5 · Phase 1.6 — shape SVG strings are unchanged (world coords via n.x /
+    // n.y). At the bottom of the loop each slice wraps them in a
+    // <g transform="translate(-n.x,-n.y)"> so the same markup lives inside a
+    // per-node div positioned at world (n.x, n.y). Cross-layer z-stacking is
+    // fixed because every node's shape + content travel together.
     if(n.shape==='project'){const pts=[];for(let i=0;i<10;i++){const ang=-Math.PI/2+i*Math.PI/5;const r=i%2===0?s:s*.5;pts.push((n.x+r*Math.cos(ang))+','+(n.y+r*Math.sin(ang)))}sh=`<polygon points="${pts.join(' ')}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="${s+6}"/>`}
     else if(n.shape==='library'){sh=`<rect x="${n.x-s}" y="${n.y-s*.65}" width="${s*2}" height="${s*1.3}" rx="3" fill="${c}" stroke="rgba(255,255,255,.18)"/><line x1="${n.x-s*.5}" y1="${n.y-s*.55}" x2="${n.x-s*.5}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/><line x1="${n.x}" y1="${n.y-s*.55}" x2="${n.x}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/><line x1="${n.x+s*.5}" y1="${n.y-s*.55}" x2="${n.x+s*.5}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/>`;if(se||tg)ring=`<rect class="ring" x="${n.x-s-4}" y="${n.y-s*.65-4}" width="${s*2+8}" height="${s*1.3+8}" rx="5"/>`}
     else if(n.shape==='principle'){sh=`<polygon points="${n.x},${n.y-s*.9} ${n.x+s*.9},${n.y} ${n.x},${n.y+s*.9} ${n.x-s*.9},${n.y}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<polygon class="ring" points="${n.x},${n.y-s*.9-5} ${n.x+s*.9+5},${n.y} ${n.x},${n.y+s*.9+5} ${n.x-s*.9-5},${n.y}"/>`}
@@ -338,26 +348,45 @@ function render(){
         n._w=fw;n._h=fh;
         const fillColor=n.color||'var(--bg2)';
         const labelRtl=/[\u0590-\u05FF]/.test(n.label||'');
-        // D3 · Phase 1.6 — SVG part is now frame + header stripe + resize
-        // handle only. The label text and the KaTeX body move to overlay
-        // divs below (oh += …) because iOS WebKit won't paint HTML inside
-        // <foreignObject>. See DECISIONS.md D3 for the full rationale.
-        sh=`<rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="${fh*2}" rx="10" fill="${fillColor}" stroke="${c}" stroke-width="2"/><rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="32" rx="10" fill="${c}" opacity="0.18"/><rect class="nrz" data-nrz="${n.id}" x="${n.x+fw-12}" y="${n.y+fh-12}" width="14" height="14" rx="3" fill="${c}" opacity="0.4" style="cursor:nwse-resize"/>`;
+        // Shape = frame + header stripe + resize handle. All three live inside
+        // the slice's inline SVG. .nrz gets `pointer-events:auto` via CSS so
+        // resize-drag still works even though the rest of the slice is
+        // `pointer-events:none`. See DECISIONS.md D5.
+        sh=`<rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="${fh*2}" rx="10" fill="${fillColor}" stroke="${c}" stroke-width="2"/><rect x="${n.x-fw}" y="${n.y-fh}" width="${fw*2}" height="32" rx="10" fill="${c}" opacity="0.18"/><rect class="nrz" data-nrz="${n.id}" x="${n.x+fw-12}" y="${n.y+fh-12}" width="14" height="14" rx="3" fill="${c}" opacity="0.4"/>`;
         if(se||tg)ring=`<rect class="ring" x="${n.x-fw-4}" y="${n.y-fh-4}" width="${fw*2+8}" height="${fh*2+8}" rx="12"/>`;
-        // Overlay: header label at (x-fw+10, y-fh+5) size (fw*2-20)×24
-        //         body at (x-fw+10, y-fh+38) size (fw*2-20)×(fh*2-46)
-        // Dimensions match the previous <foreignObject> rects 1:1 so the
-        // visual outcome is pixel-identical on engines that did paint it.
-        const fDim=(n.dim||focusDim)?' dim':'';
-        oh+=`<div class="nov fnode-label${fDim}" data-nid="${n.id}" style="left:${n.x-fw+10}px;top:${n.y-fh+5}px;width:${fw*2-20}px;height:24px;color:${c};direction:${labelRtl?'rtl':'ltr'}">${esc(n.label||'')}</div>`;
-        oh+=`<div class="nov fnode${fDim}" data-latex="${esc(n.latex||'')}" data-nid="${n.id}" style="left:${n.x-fw+10}px;top:${n.y-fh+38}px;width:${fw*2-20}px;height:${fh*2-46}px">${n.latex?'':'<span style=\"color:var(--muted);font-size:11px\">(אין נוסחה)</span>'}</div>`;
+        // Rich HTML content for the formula lives in the slice directly
+        // (label strip + KaTeX body). Positions are LOCAL to the slice's
+        // (n.x, n.y) origin — match the former foreignObject rects 1:1.
+        richContent=
+          `<div class="nov fnode-label" data-nid="${n.id}" style="left:${-fw+10}px;top:${-fh+5}px;width:${fw*2-20}px;height:24px;color:${c};direction:${labelRtl?'rtl':'ltr'}">${esc(n.label||'')}</div>`+
+          `<div class="nov fnode" data-latex="${esc(n.latex||'')}" data-nid="${n.id}" style="left:${-fw+10}px;top:${-fh+38}px;width:${fw*2-20}px;height:${fh*2-46}px">${n.latex?'':'<span style=\"color:var(--muted);font-size:11px\">(אין נוסחה)</span>'}</div>`;
       }
     }
-    else if(n.shape==='note'){const body=(n.notes||n.label||'');const lines=body.split('\n');const maxLine=Math.max(...lines.map(l=>l.length),(n.label||'').length);const lineCount=lines.length+(n.label?2:0);const autoW=Math.max(140,Math.min(280,maxLine*3.5+30));const autoH=Math.max(70,Math.min(280,lineCount*9+24));const nw=n.userW||autoW;const nh=n.userH||autoH;n._w=nw;n._h=nh;const noteRtl=/[\u0590-\u05FF]/.test(body);const noteStroke=n.color||c;const safeBody=String(body).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');const mdBody=mdProcess(safeBody);sh=`<rect x="${n.x-nw}" y="${n.y-nh}" width="${nw*2}" height="${nh*2}" rx="6" fill="var(--panel)" stroke="${noteStroke}" stroke-width="2"/><foreignObject x="${n.x-nw+10}" y="${n.y-nh+10}" width="${nw*2-20}" height="${nh*2-20}" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" class="note-body" style="direction:${noteRtl?'rtl':'ltr'};text-align:${noteRtl?'right':'left'};color:var(--text);font-family:'Inter','Assistant',system-ui,sans-serif;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-wrap:break-word;width:100%;height:100%">${n.label?`<div style="font-weight:700;font-size:13px;margin-bottom:5px;color:${noteStroke};white-space:normal">${esc(n.label)}</div>`:''}<div data-mathbody="1">${mdBody}</div></div></foreignObject><rect class="nrz" data-nrz="${n.id}" x="${n.x+nw-12}" y="${n.y+nh-12}" width="14" height="14" rx="3" fill="${noteStroke}" opacity="0.4" style="cursor:nwse-resize"/>`;if(se||tg)ring=`<rect class="ring" x="${n.x-nw-4}" y="${n.y-nh-4}" width="${nw*2+8}" height="${nh*2+8}" rx="8"/>`}
+    else if(n.shape==='note'){
+      const body=(n.notes||n.label||'');
+      const lines=body.split('\n');
+      const maxLine=Math.max(...lines.map(l=>l.length),(n.label||'').length);
+      const lineCount=lines.length+(n.label?2:0);
+      const autoW=Math.max(140,Math.min(280,maxLine*3.5+30));
+      const autoH=Math.max(70,Math.min(280,lineCount*9+24));
+      const nw=n.userW||autoW;const nh=n.userH||autoH;
+      n._w=nw;n._h=nh;
+      const noteRtl=/[\u0590-\u05FF]/.test(body);
+      const noteStroke=n.color||c;
+      const safeBody=String(body).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const mdBody=mdProcess(safeBody);
+      // D5 · Phase 1.6 — note migration. Shape = border rect + resize handle
+      // (inline SVG). Body = overlay div with mdProcess output + inline math
+      // container. No more <foreignObject> — iOS WebKit finally paints it.
+      sh=`<rect x="${n.x-nw}" y="${n.y-nh}" width="${nw*2}" height="${nh*2}" rx="6" fill="var(--panel)" stroke="${noteStroke}" stroke-width="2"/><rect class="nrz" data-nrz="${n.id}" x="${n.x+nw-12}" y="${n.y+nh-12}" width="14" height="14" rx="3" fill="${noteStroke}" opacity="0.4"/>`;
+      if(se||tg)ring=`<rect class="ring" x="${n.x-nw-4}" y="${n.y-nh-4}" width="${nw*2+8}" height="${nh*2+8}" rx="8"/>`;
+      const titleHtml=n.label?`<div style="font-weight:700;font-size:13px;margin-bottom:5px;color:${noteStroke};white-space:normal">${esc(n.label)}</div>`:'';
+      richContent=`<div class="nov note-body" data-nid="${n.id}" style="left:${-nw+10}px;top:${-nh+10}px;width:${nw*2-20}px;height:${nh*2-20}px;direction:${noteRtl?'rtl':'ltr'};text-align:${noteRtl?'right':'left'}">${titleHtml}<div data-mathbody="1">${mdBody}</div></div>`;
+    }
     else{sh=`<circle cx="${n.x}" cy="${n.y}" r="${s*.75}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="${s*.75+4}"/>`}
     const lbl=(n.label||'').length>26?n.label.slice(0,24)+'…':(n.label||'');
-    const portal=n.childCanvas?` <text x="${n.x+s-6}" y="${n.y-s*.45}" font-size="14" fill="var(--accent)">↗</text>`:'';
-    const linkGlyph=n.url?`<text x="${n.x}" y="${n.y+4}" font-size="13" text-anchor="middle" fill="rgba(26,24,21,.85)" font-weight="700" style="pointer-events:none">🔗</text>`:'';
+    const portal=n.childCanvas?`<text x="${n.x+s-6}" y="${n.y-s*.45}" font-size="14" fill="var(--accent)">↗</text>`:'';
+    const linkGlyph=n.url?`<text x="${n.x}" y="${n.y+4}" font-size="13" text-anchor="middle" fill="rgba(26,24,21,.85)" font-weight="700">🔗</text>`:'';
     const conf=n.confidence?`<rect x="${n.x-s*.8}" y="${n.y+s+22}" width="${s*1.6*(n.confidence/5)}" height="3" fill="${n.confidence>=4?SC.done:n.confidence>=2?SC.pend:SC.blocked}" rx="1"/>`:'';
     const hitR=drag?.k==='edge'?s+30:s+6;
     const rtl=/[\u0590-\u05FF]/.test(n.label||'');
@@ -365,7 +394,22 @@ function render(){
     const showLabel=view.k>0.28&&(!['formula','note'].includes(n.shape)||isCompactFormula);
     const isBigShape=(n.shape==='formula'&&!n.compact)||n.shape==='note';
     const hitRect=isBigShape?`<rect class="th" x="${n.x-(n._w||100)}" y="${n.y-(n._h||60)}" width="${(n._w||100)*2}" height="${(n._h||60)*2}" rx="6" fill="transparent"/>`:`<circle class="th" cx="${n.x}" cy="${n.y}" r="${hitR}"/>`;
-    h+=`<g class="node ${n.dim||focusDim?'dim':''} ${tg?'tgt':''}" data-id="${n.id}">${ring}${sh}${['resource','library'].includes(n.shape)?linkGlyph:''}${portal}${conf}${hitRect}${showLabel?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:''}</g>`;}
+    // Outer SVG: just an invisible hit target wrapped in <g.node data-id> so
+    // the existing closest('.node') event delegation keeps routing drags.
+    h+=`<g class="node" data-id="${n.id}">${hitRect}</g>`;
+    // Overlay: per-node slice at world (n.x, n.y) containing the visible
+    // shape, ring, glyphs, SVG text label, plus rich HTML content. The inner
+    // <g transform="translate(-n.x,-n.y)"> pulls world-coord shape markup
+    // back to the slice's local origin so shape-gen code stays unchanged.
+    const dimCls=(n.dim||focusDim)?' dim':'';
+    const tgtCls=tg?' tgt':'';
+    const svgLabel=showLabel?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:'';
+    const glyphs=(['resource','library'].includes(n.shape)?linkGlyph:'')+portal+conf+svgLabel;
+    oh+=`<div class="nslice${dimCls}${tgtCls}" data-nid="${n.id}" style="left:${n.x}px;top:${n.y}px">`
+      +`<svg class="nshape" width="1" height="1" style="overflow:visible">`
+      +`<g transform="translate(${-n.x},${-n.y})">${ring}${sh}${glyphs}</g>`
+      +`</svg>${richContent}</div>`;
+  }
   cv.innerHTML=h;
   // D3 · Phase 1.6 — sync the HTML overlay with the SVG's viewBox transform,
   // then paint its content. The transform maps world coords (the same ones
@@ -382,11 +426,11 @@ function render(){
   let _katexCount=0;
   if(window.katex&&ov){ov.querySelectorAll('.fnode[data-latex]').forEach(el=>{const tex=el.dataset.latex;try{katex.render(tex,el,{throwOnError:false,displayMode:true,strict:'ignore'});_katexCount++}catch(e){el.textContent=tex}})}
   // Render inline math inside note bodies via KaTeX auto-render.
-  // Note-body migration to overlay lands in a follow-up commit once formula
-  // overlay paint is verified on real iPad — until then this still targets
-  // the foreignObject path in the SVG tree (which paints fine on desktop).
+  // D5 · Phase 1.6 — note bodies now live in the overlay (per-node slices),
+  // so this scans `ov` instead of `cv`. The mdProcess output wraps in
+  // <div data-mathbody> and auto-render walks that subtree for $…$ / $$…$$.
   let _autoCount=0;
-  if(window.renderMathInElement){cv.querySelectorAll('.note-body [data-mathbody]').forEach(el=>{try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore',output:'html'});_autoCount++}catch(e){}})}
+  if(window.renderMathInElement&&ov){ov.querySelectorAll('.note-body [data-mathbody]').forEach(el=>{try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false,strict:'ignore',output:'html'});_autoCount++}catch(e){}})}
   // Phase 1.5 diagnostics — post-render DOM read. Only emit when the render
   // preamble also emitted (gated by the same _shouldLog flag) so we stay in
   // sync with pan/drag throttling above. The overlay-paint section was
@@ -394,14 +438,17 @@ function render(){
   // overlay divs mounted for N formula nodes" even when paint is blank.
   if(_shouldLog&&window.dbg){
     const katexEls=(ov||cv).querySelectorAll('.katex').length;
-    const strongEls=cv.querySelectorAll('.note-body strong').length;
-    const emEls=cv.querySelectorAll('.note-body em').length;
-    const headingEls=cv.querySelectorAll('.note-body h1,.note-body h2,.note-body h3').length;
+    // D5 · Phase 1.6 — note-body Markdown/heading reads now target `ov`.
+    const strongEls=ov?ov.querySelectorAll('.note-body strong').length:0;
+    const emEls=ov?ov.querySelectorAll('.note-body em').length:0;
+    const headingEls=ov?ov.querySelectorAll('.note-body h1,.note-body h2,.note-body h3').length:0;
     const ovFormulaDivs=ov?ov.querySelectorAll('.fnode[data-latex]').length:0;
     const ovLabelDivs=ov?ov.querySelectorAll('.fnode-label').length:0;
+    const ovNoteDivs=ov?ov.querySelectorAll('.note-body').length:0;
+    const ovSlices=ov?ov.querySelectorAll('.nslice').length:0;
     window.dbg('KATEX','post · katex.render()='+_katexCount+' · renderMathInElement()='+_autoCount+' · .katex DOM='+katexEls);
     window.dbg('MD','post · mdProcess calls this render='+(window._mdCallsThisRender||0)+' · <strong>='+strongEls+' · <em>='+emEls+' · headings='+headingEls);
-    window.dbg('SYS','overlay paint-check · fnode divs='+ovFormulaDivs+' · fnode-label divs='+ovLabelDivs+(ov?' · transform='+ov.style.transform.slice(0,60):' · #canvasOverlay MISSING'));
+    window.dbg('SYS','overlay paint-check · slices='+ovSlices+' · fnode='+ovFormulaDivs+' · fnode-label='+ovLabelDivs+' · note-body='+ovNoteDivs+(ov?' · transform='+ov.style.transform.slice(0,60):' · #canvasOverlay MISSING'));
   }
   window._mdCallsThisRender=0;
 }
@@ -634,6 +681,31 @@ cv.addEventListener('pointercancel',e=>{
   if(drag?.snap){hist.pop()}
   drag=null;cv.classList.remove('gr');document.body.classList.remove('dragging');render();
 });
+
+/* D5 · Phase 1.6 — per-node overlay slices migration. The overlay sits above
+   #cv as a sibling (not a child), so pointer events fired on overlay children
+   with `pointer-events:auto` (only .nrz today) do not bubble to cv. Mirror
+   cv's pointerdown here so resize-drag keeps working. pointermove/pointerup
+   are on `document` already, so no parallel listener needed for those. */
+(function(){
+  const _ov=document.getElementById('canvasOverlay');if(!_ov)return;
+  _ov.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button===2)return;
+    // Only the .nrz handle claims pointer-events:auto inside the overlay, so
+    // arriving here means we should behave exactly like cv's single-finger
+    // pointerdown: record the pointer, call beginInteraction, preventDefault.
+    activePtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(activePtrs.size>2)return;
+    beginInteraction(e);
+    e.preventDefault();
+  });
+  _ov.addEventListener('pointercancel',e=>{
+    activePtrs.delete(e.pointerId);
+    if(activePtrs.size<2)pinchState=null;
+    if(drag?.snap){hist.pop()}
+    drag=null;document.body.classList.remove('dragging');render();
+  });
+})();
 
 cv.addEventListener('dblclick',e=>{const nE=e.target.closest?.('.node');if(nE){const n=ns().find(x=>x.id===+nE.dataset.id);if(n.shape==='project'&&S.current==='vault'){if(n.childCanvas)switchTo(n.childCanvas);else if(confirm('Create roadmap for "'+n.label+'"?'))createRoadmap(n.id);return}sel=n;op(n);return}const w=s2w(e.clientX,e.clientY);const n=addNode(w.x,w.y);sel=n;op(n)});
 
