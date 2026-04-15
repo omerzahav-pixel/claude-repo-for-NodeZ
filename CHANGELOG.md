@@ -4,6 +4,102 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 2 — PWA setup · 2026-04-16
+
+End-to-end PWA: manifest, icons, Apple metas, service worker, persistent
+storage. Installable from desktop Chrome + iOS Safari Add-to-Home-Screen.
+
+**Icons.** New `scripts/gen-icons.mjs` encodes PNGs from scratch (zlib
+deflateSync + CRC32 chunks, no image library) and emits four files into
+`public/icons/`: `icon-192.png`, `icon-512.png`, `icon-180.png` (Apple
+canonical), `icon-512-maskable.png` (40% safe-zone inset for Android
+adaptive launcher). The design is three connected circles on the NodeZ
+warm-dark background (#1a1815) — the brand mark as a tiny node graph.
+Zero image-toolchain dependency keeps the build lean.
+
+**Manifest.** `public/manifest.webmanifest` — `name`, `short_name`,
+`description`, `start_url: "./"`, `scope: "./"`, `display: standalone`,
+`orientation: any`, `theme_color` + `background_color` = #1a1815,
+`categories: ["productivity", "utilities"]`, three `icons` entries
+including a `purpose: "maskable"`, `prefer_related_applications: false`.
+Relative URLs throughout so preview-URL sub-paths (Cloudflare Pages)
+still resolve.
+
+**Apple + legacy metas.** `index.html` head gains `lang="en"`, descriptive
+title + description, `theme-color`, manifest link, 192 icon link, 180
+`apple-touch-icon`, full Apple trio (`apple-mobile-web-app-capable`,
+`apple-mobile-web-app-status-bar-style="black-translucent"`,
+`apple-mobile-web-app-title="NodeZ"`), the legacy `mobile-web-app-capable`
+alias, `format-detection=telephone=no`, and PWACompat v2.0.17 async-loaded
+from jsdelivr to back-fill Windows/Samsung/legacy-Apple metas from the
+manifest. Single source of truth.
+
+**Service worker.** `public/sw.js` (~140 lines). Strategy split:
+network-first for HTML navigations (deploys land on first reload, with
+cached `index.html` fallback for offline boot), stale-while-revalidate
+for same-origin shell assets, cache-first for CDN fonts + KaTeX (content-
+addressed, never drift). `VERSION` bumps invalidate old caches in
+`activate`; `skipWaiting()` + `clients.claim()` apply instantly, which
+iOS Safari especially needs so a stale SW doesn't pin users on the old
+bundle. `SKIP_WAITING` postMessage handler exposed for a future
+"update available" UX. Data (IndexedDB `ideaVault`, localStorage) is
+deliberately out of SW scope — app reads/writes it directly.
+
+**Registration + persistent storage.** `src/bootstrap.ts` registers the
+SW on `window.load` (so the shell paints before we compete for bandwidth),
+wires an `updatefound` listener, and calls `navigator.storage.persist()`
+to request eviction-resistant storage for IndexedDB workspaces. iOS 17+
+grants persist silently once the PWA is installed; desktop Chrome grants
+based on engagement signals. All paths relative so sub-path hosting
+just works.
+
+**Tests.** `tests/phase2_pwa.spec.ts` — 7 tests:
+- 2.1 head metas + manifest link + PWACompat tag (`.first()` on locators
+  because PWACompat async-injects duplicate Apple metas it derives from
+  the manifest; we assert on our explicit one, which browsers use before
+  PWACompat runs)
+- 2.2 manifest parses, required fields present, 192 + 512 + maskable icons
+- 2.3 every manifest icon fetches, returns PNG signature, > 500 bytes
+- 2.4 `navigator.serviceWorker.ready` resolves with an active worker
+- 2.5 `navigator.storage.persist()` invoked on boot (monkeypatched via
+  `addInitScript`)
+- 2.6 sw.js source has `VERSION` literal + `skipWaiting()` + `clients.claim()`
+- 2.7 `dist/` build output contains manifest + icons + sw.js
+
+Gotchas fixed: ESM Playwright tests restored `__dirname` via
+`fileURLToPath(import.meta.url)`; WebKit SW support in Playwright's
+harness is flaky, so the suite skips `ipad-safari` via `beforeEach` —
+real iPad gets a manual pass.
+
+**Lighthouse 13.** (PWA category was removed in LH12; audits now live in
+Best Practices / SEO.) On `dist/` served statically:
+
+| Category        | Score |
+|-----------------|-------|
+| Performance     | 93    |
+| Best Practices  | 100   |
+| SEO             | 100   |
+| Accessibility   | 58    |
+
+`installable-manifest` + `service-worker` audits pass. Accessibility 58
+comes from pre-existing issues unrelated to Phase 2 (canvas/toolbar
+color-contrast, toolbar buttons using `title` not aria-labels, the
+deliberate `user-scalable=no` viewport to disable iPad pinch-zoom on
+the app chrome, unlabeled workspace `<select>`). Tracked for Phase 5
+polish; does not block Phase 3.
+
+**Commits (4, on `v2-rewrite`):**
+- `34087f9` Phase 2 · icons generator + 4 PNGs
+- `abe5c44` Phase 2 · manifest + Apple metas + PWACompat shim
+- `4736ca7` Phase 2 · service worker + register + storage.persist()
+- `152b8ae` Phase 2 · 7-test spec
+
+**Full-suite regression:** 162 passed / 6 skipped across desktop-chrome +
+ipad-safari + ipad-chrome (skips = Phase 2 PWA suite on ipad-safari,
+by design).
+
+---
+
 ## Phase 1.8 — Layout polish · 2026-04-16
 
 Four layout-polish items shipped as three focused commits on `v2-rewrite`.

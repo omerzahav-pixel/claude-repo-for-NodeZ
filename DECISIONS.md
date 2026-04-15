@@ -5,6 +5,63 @@ or when a significant tradeoff was made. Newest first.
 
 ---
 
+## D7 — 2026-04-16 · Phase 2 · Lighthouse PWA-score retirement + accessibility deferral
+
+**Context.** The BUILD_DASHBOARD acceptance criteria reads "Lighthouse PWA
+score 90+". Phase 2's completion gate was "stop if <80". Running
+`lighthouse@13.1.0` against the built bundle failed with
+`unrecognized category in 'onlyCategories': pwa` — Lighthouse dropped
+the PWA category in v12 (≈2024). The former PWA audits are now folded
+into Best Practices (installable-manifest, service-worker, themed-omnibox,
+content-width) and SEO (viewport, maskable-icon).
+
+**LH13 result on `dist/` served statically:**
+
+| Category        | Score |
+|-----------------|-------|
+| Performance     | 93    |
+| Best Practices  | 100   |
+| SEO             | 100   |
+| Accessibility   | 58    |
+
+`installable-manifest` + `service-worker` audits both pass. Every
+direct-PWA audit passes.
+
+**Decision.** Treat "Best Practices ≥ 90 with installable-manifest and
+service-worker passing" as the operational replacement for the retired
+PWA score. Phase 2 clears that bar with room to spare (100 on Best
+Practices). The BUILD_DASHBOARD acceptance criterion will be updated
+before v2 ship to reflect the LH13 reality.
+
+**Accessibility 58 — deferred to Phase 5, explicitly.** Four failures,
+all pre-Phase-2:
+
+1. `color-contrast` — canvas/toolbar foreground ratios. Phase 5 P1's
+   layered-dark-surfaces audit (#0F0F0F / #181A1B / #242424) will
+   surface these.
+2. `label` — toolbar icon-buttons use `title` not `aria-label`. Easy
+   fix, bundled with Phase 5 P1 progressive-node-properties polish.
+3. `meta-viewport` — `user-scalable=no` + `maximum-scale=1`. Deliberate:
+   pinch-zoom on the iPad app-chrome double-taps into a broken state
+   where the canvas transform and the document transform compound. The
+   canvas has its own pinch-to-zoom. Will revisit as part of Phase 5
+   if a known-good pattern emerges, otherwise accept the contrast-of-
+   priorities (iPad UX > generic accessibility audit).
+4. `select-name` — workspace `<select id="wsSel">` lacks an associated
+   `<label>`. One-line fix, Phase 5 P1.
+
+**Consequences.** Phase 2 does not block on Accessibility 58. Phase 3
+remains authorized to begin (after user sign-off). Phase 5 inherits an
+explicit accessibility punch-list that will be re-audited with LH at
+the end of Phase 5.
+
+**Revisit threshold.** Re-open this decision if Lighthouse reintroduces
+a PWA category, if any of the direct-PWA audits (installable-manifest,
+service-worker) regress, or if real-device install-to-home-screen
+fails in manual verification.
+
+---
+
 ## D6 — 2026-04-16 · Phase 1.8 · Responsive toolbar — "overflow into More" over bottom-nav
 
 **Context.** Phase 1.8 requires the top toolbar to work at three widths we

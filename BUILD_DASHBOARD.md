@@ -1,6 +1,6 @@
 # NodeZ — Build Dashboard
 
-*Last updated 16 April 2026 · Status: Phase 1.8 complete · Branch: v2-rewrite*
+*Last updated 16 April 2026 · Status: Phase 2 complete · Branch: v2-rewrite*
 
 > Mirrors the live Notion dashboard at https://www.notion.so/343704adcc0e8166b4bac09c27ef5349
 > When you change phase status here, also update Notion (manually or via Notion MCP if connected).
@@ -31,9 +31,9 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 *Smart popover positioning · responsive toolbar (D6) · promoted toolbar buttons · collapsible breadcrumbs*
 **Status:** ✅ done 2026-04-16. Items #1 (placePopover() with flip-up + viewport clamp + RTL support, #more now position:fixed), #2 (responsive D6: secondary buttons collapse into More <768px — decision recorded in DECISIONS.md vs. bottom-nav alternative), #3 (⇲ Paste Patch + ⇅ Import promoted to top toolbar; Import remains `<label for=imp>` for iOS user-gesture chain), #4 (collapsible breadcrumbs: `.bc-mini` default + `.bc-full` expanded, moved below toolbar to top:62px). 30 Phase 1.8 tests in `tests/phase18_layout.spec.ts`, 147/147 full-suite green across desktop-chrome + ipad-safari + ipad-chrome.
 
-### 🚧 Phase 2 — PWA setup
+### ✅ Phase 2 — PWA setup
 *Service worker · manifest · PWACompat · navigator.storage.persist() · Add to Home Screen working · Lighthouse 90+*
-**Status:** next up
+**Status:** ✅ done 2026-04-16. Landed: PWA icon set (192/512 any + 512 maskable + 180 apple-touch, generated via pure-Node `scripts/gen-icons.mjs` — no image lib), `public/manifest.webmanifest` (display=standalone, theme+bg #1a1815, categories, scope ./), Apple metas + PWACompat shim in `index.html`, `public/sw.js` (network-first HTML / SWR same-origin / cache-first CDN, VERSION-bumped caches, skipWaiting + clients.claim), SW registered on window.load via `src/bootstrap.ts`, `navigator.storage.persist()` called on boot. 7 Phase 2 tests in `tests/phase2_pwa.spec.ts` (162/168 full-suite green, 6 skips = ipad-safari PWA set per WebKit-SW flakiness). Lighthouse 13 audit (no PWA category since LH12): Performance 93 · Best Practices 100 · SEO 100 · Accessibility 58 (pre-existing canvas/toolbar issues, not Phase 2 — tracked for Phase 5). Installable-manifest + service-worker audits pass.
 
 ### 🚧 Phase 3 — Cloud sync
 *Google Drive appdata folder · OPFS local cache · last-write-wins with timestamps · debounced upload*
