@@ -5,6 +5,135 @@ or when a significant tradeoff was made. Newest first.
 
 ---
 
+## D3 — 2026-04-15 · Phase 1.6 · Partial reversal of D2: hybrid SVG + HTML overlay for rich content
+
+**Context.** Phase 1 Playwright suite landed 42/42 green on `desktop-chrome` +
+`ipad-safari` projects. On real iPad, three fixes (#1 Import, #3 KaTeX, #5
+Markdown) still failed. Phase 1.5 shipped an on-screen diagnostic overlay
+(`window.dbg`) so Azamat could read the import/render code-path log directly
+on the deployed URL. The readings were definitive:
+
+| Signal                                  | On real iPad      | Interpretation                                    |
+| --------------------------------------- | ----------------- | ------------------------------------------------- |
+| Import chain end-to-end                 | completes cleanly | `imF()` + `reconcileCanvases()` are fine          |
+| `katex.render()` invocations per render | 9                 | KaTeX executed                                    |
+| `.katex` DOM elements after render      | 18                | KaTeX wrote nodes into the DOM                    |
+| `mdProcess` calls per render            | 2                 | Markdown processor ran                            |
+| `<strong>` in `.note-body`              | 3                 | Markdown output is in the DOM                     |
+| **Canvas formula node paint**           | **blank**         | **iOS WebKit did not draw what it parsed**        |
+| **Canvas note body paint**              | **blank**         | **iOS WebKit did not draw what it parsed**        |
+| Property-panel KaTeX preview            | perfect           | Same KaTeX HTML renders fine *outside* SVG        |
+| Sidebar note preview                    | literal `**bold**`| Separate code path that doesn't call `mdProcess`  |
+
+**Root cause.** iOS WebKit (which backs Safari *and* Chrome on iOS — Apple
+forces every browser engine on the platform) has a long-standing paint bug for
+HTML content embedded inside SVG `<foreignObject>`. The HTML subtree parses,
+lays out, and has correct bounding rects — but WebKit's painter simply never
+draws it. Desktop Chrome's Blink engine paints foreignObject contents
+correctly, which is why the whole Playwright suite (including the `ipad-safari`
+project, backed by a *Chromium-bundled* WebKit) flagged all fixes as green
+even though real iPad users see blank cards. This is the failure class the
+Phase 1.5 feedback memory warned about.
+
+D2's "keep SVG for everything" was right for substrate, transforms, edges, and
+simple SVG primitives. It was wrong for the node-content pieces that were
+shipping HTML through `<foreignObject>`.
+
+**Decision.** Hybrid architecture. Keep D2's SVG substrate but move all rich
+HTML content off of `<foreignObject>` and onto an HTML overlay layer.
+
+**What stays SVG:**
+
+- `<svg id="cv">` root, `viewBox`, pan/zoom transform math.
+- Node shape outlines: `<rect>`, `<circle>`, `<polygon>` (project star,
+  principle diamond, resource hexagon, library rectangle, question pentagon,
+  experiment triangle, doc folded rect, formula frame rect, note frame rect).
+- Zone borders (`<rect class="zr">` with dashed stroke).
+- Edges (`<path>` with marker-end arrowheads).
+- Selection rings, hit rects (`class="th"`), resize handles.
+- Compact-node labels rendered as `<text>` (plain SVG text, not foreignObject).
+
+**What moves to HTML overlay:**
+
+- Zone titles (currently a `<foreignObject>` wrapping a styled `<div>`).
+- Edge labels (currently a `<foreignObject>` wrapping a styled `<div>`).
+- Formula node header label (currently a `<foreignObject>` wrapping a styled
+  `<div>`).
+- Formula node KaTeX content (currently a `<foreignObject>` wrapping
+  `<div class="fnode" data-latex>`).
+- Note node title + body (currently a `<foreignObject>` wrapping
+  `<div class="note-body">` with nested markdown HTML and `data-mathbody`).
+
+**Implementation — the two-layer pattern (Excalidraw / tldraw).**
+
+1. Add `<div id="canvasOverlay">` as a sibling of `<svg id="cv">`, same
+   parent, `position:absolute; inset:0; pointer-events:none;
+   transform-origin:0 0; will-change:transform`.
+2. On every `render()`, apply the canvas-space transform to the overlay:
+
+   ```js
+   overlay.style.transform =
+     `translate(${W/2}px,${H/2}px) scale(${view.k}) translate(${view.x}px,${view.y}px)`;
+   ```
+
+   This matches the SVG's `viewBox="${-W/2/view.k-view.x} ${-H/2/view.k-view.y}
+   ${W/view.k} ${H/view.k}"` exactly: a world point `(wx, wy)` lands at screen
+   `(W/2 + (wx + view.x) * view.k, H/2 + (wy + view.y) * view.k)` on both
+   layers.
+
+3. Each overlay child uses plain absolute positioning (`position:absolute;
+   left:${wx}px; top:${wy}px`) inside the transformed parent. No per-child
+   transform math — they all ride the parent's transform.
+
+4. `pointer-events:none` on the overlay by default lets taps pass through to
+   the SVG underneath (which owns drag / select / context-menu). Individual
+   overlay children can opt back in (`pointer-events:auto`) for scrolling a
+   long note body or tapping a link, once we need it.
+
+**Why not `<div>` canvas for everything.** A full DOM-based canvas would
+duplicate the transform for every single edge path, marker arrow, and shape
+outline. SVG `<path>` + `<marker>` is the right tool for 2D vector primitives.
+The overlay pattern buys us correct iOS paint for rich content *without*
+losing SVG's transform batching or the tiny-per-edge cost that DOM paths
+would introduce.
+
+**Why not `<img>`-ize KaTeX output via canvas / SVG serialization.** Doable
+but kills interactive select/copy of the math and introduces a second render
+pipeline. Save it for a hypothetical Phase 6 perf optimization if overlay
+paint ever becomes the bottleneck.
+
+**Culling.** The rbush viewport-cull Set (`visIds`) built once per render for
+the SVG node loop is reused by the overlay builder. Off-screen nodes produce
+neither SVG shape nor overlay div.
+
+**Test strategy.** Playwright can still verify DOM wiring (an overlay div
+exists per visible formula, `.katex` renders inside it) but is *not* a paint
+test — the foreignObject bug proved that `ipad-safari`'s Chromium-bundled
+WebKit paints overlays Apple's WebKit won't. Real-iPad verification stays
+required after each migration step. The diagnostic overlay exposes an
+`overlay-paint-check` count so Azamat can confirm "N overlay divs mounted for
+N expected rich-content nodes" without plugging into a Mac.
+
+**Migration order (Phase 1.6):**
+
+1. Add overlay layer infrastructure + migrate **formula node content only**
+   (header label + KaTeX body) → deploy → real-iPad verification.
+2. If #1 paints, migrate note node title + body → deploy → verify.
+3. Migrate zone labels + edge labels → deploy → verify.
+4. Wire sidebar mini-preview through `mdProcess` (separate one-line fix — the
+   sidebar is plain HTML, not foreignObject, so it doesn't need overlay
+   treatment, just needs to stop showing literal `**bold**`).
+
+**Revisit threshold.** If iOS WebKit ever fixes the foreignObject paint bug
+(tracked as a Safari bug since roughly 2019), the overlay layer can be
+retired. Unlikely before 2027 based on historical cadence. The overlay pattern
+is cheap enough that we don't need to remove it even if the bug gets fixed —
+keeping the two-layer separation leaves room for Phase 5 polish (spring
+animations on note bodies, embedded iframes in doc nodes, etc.) without
+fighting SVG.
+
+---
+
 ## D2 — 2026-04-15 · Phase 1 · Light-touch pivot: keep SVG, defer DOM rewrite
 
 **Context.** The original CLAUDE_CODE_BRIEF.md called for a full SVG → DOM
