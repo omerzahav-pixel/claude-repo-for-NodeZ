@@ -1,9 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Idea Vault</title>
+<title>NodeZ — Idea Vault</title>
+<meta name="description" content="A mobile-first knowledge canvas for Markdown notes, formulas, and linked ideas.">
+<meta name="theme-color" content="#1a1815">
+<!-- Phase 2 · PWA manifest + Apple meta. iOS Safari still ignores most of
+     the manifest, so the `apple-*` tags are load-bearing for "Add to Home
+     Screen" to launch in standalone mode with the right status-bar style.
+     apple-touch-icon points at the 180×180 PNG (Apple's canonical size). -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NodeZ">
+<meta name="format-detection" content="telephone=no">
+<!-- PWACompat fills in the non-standard Microsoft / Apple metas the
+     manifest would otherwise provide so a single manifest.webmanifest covers
+     every target. Loads defer, runs after the manifest is fetched. -->
+<script async src="https://cdn.jsdelivr.net/npm/pwacompat@2.0.17/pwacompat.min.js" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
