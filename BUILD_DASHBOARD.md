@@ -21,7 +21,7 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 
 ### 🚧 Phase 1 — Light-touch fixes + iPad hardening ⚠️ CRITICAL
 *Pivoted from full SVG→DOM rewrite (see DECISIONS.md D2) · keep SVG, fix the 5 data-layer bugs · defensive iPad hardening (Scribble + rbush culling + fixed-inset CSS)*
-**Status:** in progress — 1.0 repros landed on `v2-rewrite` (only bugs #3 LaTeX + #5 Markdown actually reproduce in emulation; #1 Import, #2 positions, #4 overflow all pass on both desktop-chrome and ipad-safari — awaiting user repro steps) · **Est:** ~2 days · **Pause here for iPad verification before continuing**
+**Status:** code-complete on `v2-rewrite` (42/42 Playwright tests green on desktop-chrome + ipad-safari) — **awaiting real-iPad verification before Phase 2**. Landed: 1.1 More→Import label fix (iOS user-gesture), 1.2 auto-fit-on-import, 1.3 Markdown processor with XSS-safe ordering, 1.4 KaTeX re-render-on-load, 1.6a fixed-inset shell CSS, 1.6b touchstart/touchmove claim on #cv, 1.6c rbush viewport culling (≥100 nodes, 200px margin), 1.7 per-canvas screenshot suite (48 PNGs under `test-screenshots/phase-1/{project}/{fixture}/`). Skipped: 1.5 note-overflow fix (user deferred — re-evaluate after real-iPad check).
 
 ### 🚧 Phase 2 — PWA setup
 *Service worker · manifest · PWACompat · navigator.storage.persist() · Add to Home Screen working*
