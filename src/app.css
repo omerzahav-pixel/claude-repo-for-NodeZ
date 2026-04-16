@@ -289,6 +289,28 @@ body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spaci
 #emptyState .es-cta:hover{filter:brightness(1.08)}
 @media (pointer:coarse){#emptyState .es-inner{padding:24px 28px;max-width:88vw}#emptyState .es-cta{min-height:44px;padding:12px 22px}}
 @media (prefers-reduced-motion:reduce){#emptyState{transition:none}}
+/* Phase 5 P2 · Landing screen. Full-viewport overlay, z-index above
+   everything including the empty-state. Backdrop dims the canvas so the
+   workspace cards pop. Cards show a colored left-stripe matching wsColor(). */
+#landing{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:200;background:rgba(0,0,0,.6);opacity:0;transition:opacity .3s ease}
+#landing.on{display:flex;opacity:1}
+#landing .ld-inner{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:28px 36px;text-align:center;max-width:460px;width:92vw;box-shadow:0 16px 48px rgba(0,0,0,.5)}
+#landing .ld-emoji{font-size:40px;color:var(--accent);margin-bottom:4px;line-height:1}
+#landing h2{margin:0 0 4px;font-size:22px;font-weight:700;color:var(--text)}
+#landing p{margin:0 0 16px;color:var(--muted);font-size:13px}
+#ld-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:50vh;overflow-y:auto}
+.ld-card{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:left;transition:background .12s}
+.ld-card:hover{background:var(--panel2)}
+.ld-card.cur{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ld-stripe{width:4px;height:28px;border-radius:2px;flex-shrink:0}
+.ld-name{font-size:14px;font-weight:600;color:var(--text)}
+.ld-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.ld-new{background:transparent;border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;color:var(--text2);cursor:pointer;width:100%;margin-bottom:8px}
+.ld-new:hover{border-color:var(--accent);color:var(--text)}
+.ld-skip{background:transparent;border:none;padding:8px 16px;font-size:12px;color:var(--muted);cursor:pointer}
+.ld-skip:hover{color:var(--text)}
+@media (pointer:coarse){.ld-card{padding:14px 16px;min-height:48px}.ld-new{min-height:44px;padding:12px 22px}}
+@media (prefers-reduced-motion:reduce){#landing{transition:none}}
 /* === Mobile / iPad enhancements === */
 /* iPad hardening (Phase 1 · 1.6a): lock the app shell to the visual viewport
    so iOS rubber-band, pull-to-refresh, and scroll-chaining can't yank the

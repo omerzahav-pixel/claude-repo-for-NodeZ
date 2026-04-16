@@ -363,6 +363,31 @@ async function rebuildWsDropdown(){const list=await listWorkspaces();const sel=d
 async function switchWorkspace(ws){await sv();await setCurrentWs(ws);S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:{vault:{name:'Vault',parentNodeId:null}},nextId:1,hebrewMode:false};hist=[];selSet.clear();sel=null;await loadState();rebuildWsDropdown()}
 async function newWorkspace(){const name=await uiPrompt('New workspace name','university',{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}list.push(clean);await saveWorkspaces(list);await switchWorkspace(clean)}
 async function loadState(){try{const v=await storageGet(KEY());if(v){const o=JSON.parse(v);S={...S,...o}}}catch(e){console.error('load',e)}reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB()}
+/* Phase 5 P2 · Landing screen — shown on first load when ≥ 2 workspaces. */
+async function showLanding(){
+  const list=await listWorkspaces();if(list.length<2)return;
+  const ld=document.getElementById('landing');if(!ld)return;
+  const ldList=document.getElementById('ld-list');if(!ldList)return;
+  // Gather node counts per workspace by peeking at IDB
+  const counts={};
+  for(const ws of list){
+    try{const raw=await storageGet('vault3-'+ws);if(raw){const o=JSON.parse(raw);counts[ws]=Object.values(o.canvases||{}).reduce((n,c)=>n+(c.nodes?.length||0),0)}else{counts[ws]=0}}catch(e){counts[ws]=0}
+  }
+  ldList.innerHTML=list.map(ws=>{
+    const col=wsColor(ws);const cur=ws===currentWs;const cnt=counts[ws]||0;
+    return `<div class="ld-card${cur?' cur':''}" onclick="closeLanding();if('${esc(ws)}'!==currentWs)switchWorkspace('${esc(ws)}')" data-ws="${esc(ws)}"><div class="ld-stripe" style="background:${col}"></div><div><div class="ld-name">${esc(ws)}</div><div class="ld-meta">${cnt} ${t('ldNodes')}${cur?' · '+t('ldCurrent'):''}</div></div></div>`
+  }).join('');
+  document.getElementById('ld-title').textContent=t('ldTitle');
+  document.getElementById('ld-hint').textContent=t('ldHint');
+  document.getElementById('ld-new').textContent=t('ldNew');
+  document.getElementById('ld-skip').textContent=t('ldSkip');
+  ld.classList.add('on');
+  // Escape to dismiss
+  const escH=(e)=>{if(e.key==='Escape'){closeLanding();document.removeEventListener('keydown',escH)}};
+  document.addEventListener('keydown',escH);
+  ld._escH=escH;
+}
+function closeLanding(){const ld=document.getElementById('landing');if(!ld)return;ld.classList.remove('on');if(ld._escH){document.removeEventListener('keydown',ld._escH);delete ld._escH}}
 async function load(){
   // Phase 1.7 · Item #8 — replaced the v1 full-width #bootLog banner
   // (green monospace across the viewport top) with a subtle bottom-right
@@ -382,6 +407,8 @@ async function load(){
   step('load() complete');
   const totalNodes=Object.values(S.canvases||{}).reduce((n,c)=>n+(c.nodes?.length||0),0);
   toast(loadOk?('Loaded '+currentWs+' · '+totalNodes+' node'+(totalNodes===1?'':'s')):'Load failed — check diag',{kind:loadOk?'ok':'err',ms:loadOk?1500:3000});
+  // Phase 5 P2 · show landing screen if ≥ 2 workspaces
+  try{await showLanding()}catch(e){window.dbg&&window.dbg('SYS','showLanding error: '+e.message)}
 }
 async function sv(){const si=document.getElementById('saveInd');if(si)si.className='ind s-pend';try{const ok=await storageSet(KEY(),JSON.stringify(S));if(si)si.className=ok?'ind s-ok':'ind s-err'}catch(e){if(si){si.className='ind s-err';si.title='Save failed: '+e.message}}}
 const T={
@@ -398,7 +425,8 @@ const T={
       mhExport:'Export',mhImport:'Import',mhUtil:'Utilities',mhWs:'Workspace',
       ctxEdge:'Edge',ctxZone:'Zone',changeTo:'Change to',deleteEdge:'Delete edge',unlockZ:'🔓 Unlock (allow move/resize)',lockZ:'🔒 Lock position',renameZ:'Rename',recolorZ:'Recolor',deleteZ:'Delete zone',addNodeHere:'+ Add node here',addZoneHere:'+ Add zone here',customLabel:'Label for this connection:',untitled:'Untitled',clearCanvasConfirm:'Clear current canvas?',deleteSelected:'Delete N selected nodes?',openRoadmap:'Open roadmap',createRoadmap:'+ Create roadmap',copyToVault:'Copy to vault',pullFromVault:'Pull from vault',copiedFromVault:'copied from vault',
       ttWs:'Switch workspace',ttNewWs:'New workspace',ttHe:'Hebrew mode (toggle RTL + translated UI)',ttBack:'Back to parent canvas',ttAdd:'Add node (or double-click empty canvas)',ttZone:'Add zone (group of related nodes)',ttSearch:'Filter visible nodes by label / notes',ttFit:'Fit view to all nodes',ttUndo:'Undo (Ctrl+Z)',ttRedo:'Redo (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'Dim edges (focus on nodes)',ttPatch:'Paste patch JSON',ttImport:'Import full state JSON',ttMore:'More options (export / import / utilities / workspace)',ttLegend:'Legend · keyboard shortcuts',ttSbTog:'Cycle sidebar: Nodes · Edges · Zones',ttSbCollapse:'Collapse / expand all',ttSbMini:'Minimize to bottom',
-      esTitle:'This canvas is empty',esHint:'Tap <b>+ Add</b> to create your first node, or double-click the canvas anywhere to add one there.',esAdd:'+ Add first node'},
+      esTitle:'This canvas is empty',esHint:'Tap <b>+ Add</b> to create your first node, or double-click the canvas anywhere to add one there.',esAdd:'+ Add first node',
+      ldTitle:'NodeZ',ldHint:'Pick a workspace to start',ldNew:'+ New workspace',ldSkip:'Continue with current',ldCurrent:'current',ldNodes:'nodes'},
   he:{idea:'רעיון',progress:'בתהליך',pending:'ממתין',blocked:'חסום',done:'הושלם',
       project:'פרויקט',question:'שאלה',experiment:'ניסוי',principle:'עיקרון',resource:'משאב',library:'ספרייה',doc:'מסמך',formula:'נוסחה',note:'פתק',
       blocker:'חסימה',feeds:'מזין את',related:'קשור ל',derived:'נגזר מ',example:'דוגמה',proof:'הוכחה',arrow:'חץ',custom:'מותאם',
@@ -412,7 +440,8 @@ const T={
       mhExport:'יצוא',mhImport:'יבוא',mhUtil:'כלים',mhWs:'סביבה',
       ctxEdge:'קשר',ctxZone:'אזור',changeTo:'שנה ל',deleteEdge:'מחק קשר',unlockZ:'🔓 פתח (אפשר הזזה/שינוי גודל)',lockZ:'🔒 נעל מיקום',renameZ:'שנה שם',recolorZ:'שנה צבע',deleteZ:'מחק אזור',addNodeHere:'+ הוסף נקודה כאן',addZoneHere:'+ הוסף אזור כאן',customLabel:'תווית לקשר הזה:',untitled:'ללא כותרת',clearCanvasConfirm:'לנקות את הקנבס הנוכחי?',deleteSelected:'למחוק N נקודות שנבחרו?',openRoadmap:'פתח מפת דרכים',createRoadmap:'+ צור מפת דרכים',copyToVault:'העתק לוולט',pullFromVault:'משוך מהוולט',copiedFromVault:'הועתק מהוולט',
       ttWs:'החלפת סביבה',ttNewWs:'סביבה חדשה',ttHe:'מצב עברית (RTL וטקסט מתורגם)',ttBack:'חזרה לקנבס האב',ttAdd:'הוספת נקודה (או לחיצה כפולה על שטח ריק)',ttZone:'הוספת אזור (קבוצת נקודות קשורות)',ttSearch:'סינון נקודות לפי כותרת / הערות',ttFit:'התאם תצוגה לכל הנקודות',ttUndo:'בטל (Ctrl+Z)',ttRedo:'שחזר (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'עמעם קשרים (התמקד בנקודות)',ttPatch:'הדבקת patch בפורמט JSON',ttImport:'יבוא מצב מלא (JSON)',ttMore:'אפשרויות נוספות (יצוא / יבוא / כלים / סביבה)',ttLegend:'מקרא · קיצורי מקלדת',ttSbTog:'מעבר בסרגל: נקודות · קשרים · אזורים',ttSbCollapse:'כווץ / הרחב את כל האזורים',ttSbMini:'הקטן לתחתית',
-      esTitle:'הקנבס הזה ריק',esHint:'לחצו <b>+ הוספה</b> ליצירת הנקודה הראשונה, או לחיצה כפולה על שטח ריק.',esAdd:'+ הוסף נקודה ראשונה'}
+      esTitle:'הקנבס הזה ריק',esHint:'לחצו <b>+ הוספה</b> ליצירת הנקודה הראשונה, או לחיצה כפולה על שטח ריק.',esAdd:'+ הוסף נקודה ראשונה',
+      ldTitle:'NodeZ',ldHint:'בחרו סביבת עבודה',ldNew:'+ סביבה חדשה',ldSkip:'המשך עם הנוכחית',ldCurrent:'נוכחית',ldNodes:'נקודות'}
 };
 function t(k){return T[S.hebrewMode?'he':'en'][k]||k}
 function refreshUiText(){
@@ -436,6 +465,11 @@ function refreshUiText(){
   const esT=document.getElementById('es-title');if(esT)esT.textContent=t('esTitle');
   const esH=document.getElementById('es-hint');if(esH)esH.innerHTML=t('esHint');
   const esA=document.getElementById('es-add');if(esA)esA.textContent=t('esAdd');
+  // Phase 5 P2 · landing i18n
+  const ldT=document.getElementById('ld-title');if(ldT)ldT.textContent=t('ldTitle');
+  const ldH=document.getElementById('ld-hint');if(ldH)ldH.textContent=t('ldHint');
+  const ldN=document.getElementById('ld-new');if(ldN)ldN.textContent=t('ldNew');
+  const ldS=document.getElementById('ld-skip');if(ldS)ldS.textContent=t('ldSkip');
   const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="window.dbg&&window.dbg('IMPORT','label[for=imp] tapped — browser should now forward click to #imp');hideMore()">${t('importAll')}</label><label for="impC" onclick="window.dbg&&window.dbg('IMPORT','label[for=impC] tapped');hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="clearCanvasConfirm();hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
   bF();renderSB();renderLegend();
 }

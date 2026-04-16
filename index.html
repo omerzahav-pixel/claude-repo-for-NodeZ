@@ -96,6 +96,10 @@
      fall through to the SVG below; individual overlay children can re-enable
      events when they need them (scrollable note bodies, link clicks…). -->
 <div id="canvasOverlay"></div>
+<!-- Phase 5 P2 · Landing screen. Shown on first load when ≥ 2 workspaces
+     exist. Lists workspace cards with color stripes; click one to switch.
+     Dismissed by clicking a card, pressing Escape, or clicking outside. -->
+<div id="landing"><div class="ld-inner"><div class="ld-emoji">✦</div><h2 id="ld-title">NodeZ</h2><p id="ld-hint">Pick a workspace to start</p><div id="ld-list"></div><button class="ld-new" onclick="closeLanding();newWorkspace()" id="ld-new">+ New workspace</button><button class="ld-skip" onclick="closeLanding()" id="ld-skip">Continue with current</button></div></div>
 <div class="hint">Click: edit · Drag: move · Shift+drag: connect · Ctrl+click: multi-select · Ctrl+drag empty: marquee · Right-click: menu · Del: remove · Dbl-click: new</div>
 <script src="./app.js"></script>
 </body>
