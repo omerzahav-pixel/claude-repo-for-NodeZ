@@ -676,16 +676,17 @@ function render(){
     const hitRect=isBigShape?`<rect class="th" x="${n.x-(n._w||100)}" y="${n.y-(n._h||60)}" width="${(n._w||100)*2}" height="${(n._h||60)*2}" rx="6" fill="transparent"/>`:`<circle class="th" cx="${n.x}" cy="${n.y}" r="${hitR}"/>`;
     // Outer SVG: just an invisible hit target wrapped in <g.node data-id> so
     // the existing closest('.node') event delegation keeps routing drags.
-    h+=`<g class="node" data-id="${n.id}">${hitRect}</g>`;
+    h+=`<g class="node${se?' sel':''}" data-id="${n.id}">${hitRect}</g>`;
     // Overlay: per-node slice at world (n.x, n.y) containing the visible
     // shape, ring, glyphs, SVG text label, plus rich HTML content. The inner
     // <g transform="translate(-n.x,-n.y)"> pulls world-coord shape markup
     // back to the slice's local origin so shape-gen code stays unchanged.
     const dimCls=(n.dim||focusDim)?' dim':'';
     const tgtCls=tg?' tgt':'';
+    const selCls=se?' sel':'';
     const svgLabel=showLabel?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:'';
     const glyphs=(['resource','library'].includes(n.shape)?linkGlyph:'')+portal+conf+svgLabel;
-    oh+=`<div class="nslice${dimCls}${tgtCls}" data-nid="${n.id}" style="left:${n.x}px;top:${n.y}px">`
+    oh+=`<div class="nslice${dimCls}${tgtCls}${selCls}" data-nid="${n.id}" style="left:${n.x}px;top:${n.y}px">`
       +`<svg class="nshape" width="1" height="1" style="overflow:visible">`
       +`<g transform="translate(${-n.x},${-n.y})">${ring}${sh}${glyphs}</g>`
       +`</svg>${richContent}</div>`;
