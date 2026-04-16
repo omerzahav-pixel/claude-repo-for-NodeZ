@@ -4,6 +4,81 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P2 · Workspace color coding · 2026-04-16
+
+Switching workspaces used to look identical regardless of which one
+was active — the `#wsSel` dropdown showed black text on a dark panel
+and nothing else signaled identity. Now every workspace name hashes to
+a stable HSL hue so the same string always returns the same color,
+with no per-workspace picker or storage migration.
+
+**`wsColor(name)` helper (`public/app.js`).** Polynomial hash
+`h = (h * 31 + charCode) % 360` → `hsl(h, 55%, 60%)`. Fixed saturation
+and lightness keep colors legible on the dark palette without clashing
+with canvas content. Same string → same hue, always.
+
+**`rebuildWsDropdown()`.** Every `<option>` now carries an inline
+`style="color: hsl(...)"` so the list shows each workspace in its own
+hue. The `#wsSel` element itself gets `borderLeftColor` +
+`borderLeftWidth:3px` from the current workspace's color, turning the
+left edge into a stripe that persists even when the dropdown is
+closed. `paddingLeft` shrinks from 12px (the default from the inline
+`padding:8px 12px`) to 10px so the 3px stripe doesn't shove content
+rightward — net content-edge position unchanged at 13px from the
+outer edge.
+
+**No bullet prefix on options.** First cut prepended "● " to each
+option. On iPad Pro 11 landscape this made the select wide enough to
+push the wrapped toolbar into 2 rows, which overlapped the breadcrumbs
+at `top:64px` and blocked tap events. Dropping the bullet fixed it —
+inline color alone is sufficient identity signal. Confirmed by
+`tests/phase18_layout.spec.ts 1.8.10 Depth>1 chain: tap toggles
+expanded class` going back to green on both iPad projects.
+
+**Tests.** `tests/phase5_wscolor.spec.ts` — 6 assertions covering
+stripe presence + 3px width, per-option inline color (normalized to
+`rgb(...)` by `style.color` getter), deterministic stripe color on
+workspace switch, `wsColor` stability, and padding-left compensation
+so text doesn't shift. 18/18 green across desktop-chrome +
+ipad-safari + ipad-chrome. 99/99 desktop-chrome + 192/192 iPad
+full-suite regression green.
+
+---
+
+## Phase 5 P2 · Redo · 2026-04-16
+
+Undo had been live since Phase 1 via `un()` popping `hist`. Redo
+mirrors it: `re()` pops a separate `redoStack`, pushes the current
+state back onto `hist`, and restores. Any fresh mutation through
+`sn()` clears `redoStack` — a classic branching-history model, not a
+list you can walk sideways.
+
+**Code (`public/app.js`).** New globals `redoStack = []`. `sn()` now
+does `redoStack.length = 0` on every fresh snapshot. `un()` captures
+`S` into `redoStack` before popping `hist`. `re()` is symmetric.
+`bB()` end-of-function reads both stacks and sets
+`#undoBtn.disabled = !hist.length` / `#redoBtn.disabled = !redoStack.length`
+so the toolbar shows available-actions without the user having to tap
+and see nothing happen.
+
+**Keyboard.** Existing Ctrl+Z branch in the keydown handler kept.
+Added Ctrl+Shift+Z and Ctrl+Y branches before the plain Ctrl+Z test,
+both calling `re()`. Works with ⌘ on macOS (`e.metaKey`) too.
+
+**UI.** `<button id="redoBtn" onclick="re()" title="Redo (Ctrl+Y)">↷</button>`
+added to the toolbar next to ↶. `src/app.css` gains
+`#tb button:disabled{opacity:.35;cursor:default;color:var(--muted)}`
+so disabled state is visible without ambiguity.
+
+**Tests.** `tests/phase5_redo.spec.ts` — 6 assertions covering
+initial-disabled state, addC→un→re roundtrip, redo-stack clear on
+fresh mutation, Ctrl+Y shortcut, Ctrl+Shift+Z shortcut, and undo
+button disabled state. 18/18 green across desktop-chrome + ipad-safari
++ ipad-chrome. 93/93 desktop-chrome + 180/180 iPad full-suite
+regression green.
+
+---
+
 ## Phase 5 P2 · Expandable description field · 2026-04-16
 
 The property panel's textareas were a tiny 64px tall regardless of
