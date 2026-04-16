@@ -4,6 +4,51 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P2 · Tooltips pass · 2026-04-16
+
+Walked every toolbar button, input, and sidebar toggle and asked: if I
+didn't write this app, would I know what this icon does on hover? The
+single-glyph buttons (⌇ dim-edges, ⇲ paste-patch, ⇅ import, ↶ undo,
+↷ redo, א/A Hebrew, ? legend) already had titles; the text-label
+buttons did not because they "look obvious" — except the current
+canvas isn't always obvious. Gaps filled:
+
+- `#wsSel` → "Switch workspace"
+- `#backBtn` → "Back to parent canvas"
+- `#addBtn` → "Add node (or double-click empty canvas)"
+- `#zoneBtn` → "Add zone (group of related nodes)"
+- `#sr` → "Filter visible nodes by label / notes"
+- `#fitBtn` → "Fit view to all nodes"
+- `#moreBtn` → "More options (export / import / utilities / workspace)"
+- sidebar cycle toggle (☰) → "Cycle sidebar: Nodes · Edges · Zones"
+
+Existing titles expanded: `#redoBtn` now says "Redo (Ctrl+Y /
+Ctrl+Shift+Z)" so both shortcuts are discoverable. `#heBtn` spells out
+"toggle RTL + translated UI" (previously just "Hebrew mode").
+
+**i18n pass (`public/app.js`).** Static English titles in `index.html`
+are the baseline so the browser paints them before JS runs. On boot
+and every Hebrew toggle, `refreshUiText()` now walks a `titleMap` of
+`{elementId → ttKey}` and writes `T[lang][ttKey]` into the title
+attribute. The anonymous `#sb .sbhead .sbtog` spans are targeted by
+selector since they don't have ids. Toggling back to English restores
+the English strings — no drift.
+
+**Tests.** `tests/phase5_tooltips.spec.ts` — 6 assertions: every
+tracked element has a non-empty title, sidebar toggle spans carry
+titles, default is English, Hebrew toggle rewrites to Hebrew
+("התאם…"), toggle back restores English, and the redo tooltip
+advertises both shortcut variants. 18/18 green across desktop-chrome
++ ipad-safari + ipad-chrome. 112/112 desktop-chrome + 218/218 iPad
+full-suite regression green.
+
+iPad Safari/Chrome don't surface title hints on tap so this is
+primarily a desktop-UX improvement, but the attribute + i18n plumbing
+is worth maintaining for future accessibility passes (screen readers
+do read titles in many modes).
+
+---
+
 ## Phase 5 P2 · Paste-patch size sanity · 2026-04-16
 
 `applyPatch()` used to `JSON.parse` whatever lived in `#pt` and dive
