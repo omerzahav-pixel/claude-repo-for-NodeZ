@@ -4,6 +4,57 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P2 · Selection glow + drag visual feedback · 2026-04-16
+
+First item in the P2 (ship-if-time) bucket. The drawn SVG ring on a
+selected node was always there but read as a thin outline lost in dense
+canvases; now the selected node also carries a soft accent halo so it
+pops at a glance, and brightens while being dragged so the user feels
+"this is the one I'm moving".
+
+**Wiring.** In `public/app.js` render loop, when `se = sel?.id === n.id
+|| selSet.has(n.id)`, both the SVG hit-group (`g.node[data-id]`) and
+the overlay slice (`.nslice[data-nid]`) now receive a `sel` class —
+mirroring the existing `dim`/`tgt`/`holding` class pattern. The hit
+group isn't styled directly but having the class there keeps
+delegation/querying symmetric with the slice, the same way `.holding`
+is applied to both layers for Phase 5 P1 #1.
+
+**CSS.** Two rules in `src/app.css`, placed BEFORE `.nslice.holding`
+so the stronger press-and-hold glow still wins during the brief
+overlap when a selected node is being held for drag:
+
+```css
+.nslice.sel{filter:drop-shadow(0 0 6px rgba(217,119,87,.45)) drop-shadow(0 0 2px rgba(217,119,87,.7));transition:filter 160ms ease-out}
+body.dragging .nslice.sel{filter:drop-shadow(0 0 12px rgba(217,119,87,.8)) drop-shadow(0 0 3px rgba(217,119,87,1));transition:filter 80ms ease-out}
+@media (prefers-reduced-motion: reduce){.nslice.sel,body.dragging .nslice.sel{transition:none}}
+```
+
+Accent orange `rgb(217,119,87)` matches `--accent`. Base halo sits at
+.45/.7 alpha with 6/2px spread (visible but calm); the drag-active
+variant jumps to .8/1 alpha with 12/3px spread so motion reads as
+"intensified selection" rather than a new indicator.
+
+**Tests.** `tests/phase5_selection.spec.ts` — 5 tests × 3 projects = 15
+new assertions:
+- 5P2.1: tapping node A tags its slice + hit-group; node B stays clean.
+- 5P2.2: re-tapping (toggle close) drops the `sel` class.
+- 5P2.3: `getComputedStyle(…).filter` on `.nslice.sel` contains
+  `drop-shadow` (CSS rule actually took effect, not just the class).
+- 5P2.4: forcing `body.dragging` changes the settled computed filter
+  vs. the base `.sel` filter — confirms the cascade override. Reads
+  with a 200ms settle so getComputedStyle returns the end-of-transition
+  value, not a mid-transition interpolation.
+- 5P2.5: Ctrl+click multi-select leaves at least one `.nslice.sel` in
+  the DOM (selSet multi-select path also tagged).
+
+**Regression.** 81/81 desktop-chrome full suite green (76 pre-existing
++ 5 new). 160/161 iPad engines green, 6 skipped (pre-existing WebKit-SW
+PWA flakiness). One flaky miss on ipad-safari hold-drag 5.3 re-ran
+green — unrelated to this change.
+
+---
+
 ## Phase 5 P1 · Item #6 — 8px grid audit · 2026-04-16
 
 Every spacing token in the chrome now lands on the 4/8/12/16/20/24
