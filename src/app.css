@@ -126,8 +126,20 @@ button,input,select,textarea{font:inherit;color:inherit}
 #pn h2{font:600 20px var(--serif);line-height:1.25;margin-bottom:4px}
 #pn .meta{color:var(--muted);font-size:11px;margin-bottom:12px}
 #pn label{display:block;font:600 10px var(--sans);color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.6px}
+/* Phase 5 P2 — textarea labels for expandable fields (notes, rationale,
+   latex) are flex rows so the ⇱ expand button sits on the right. .flabel
+   keeps label's typography from the selector above; justify-between pushes
+   the button to the far edge, matching native OS "expand" affordances. */
+#pn label.flabel{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#pn .expandBtn{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:2px 6px;font-size:14px;border-radius:4px;line-height:1;-webkit-tap-highlight-color:transparent}
+#pn .expandBtn:hover{color:var(--accent);background:var(--bg2)}
+#pn .expandBtn:active{background:var(--panel2)}
+@media(pointer:coarse){#pn .expandBtn{padding:6px 10px;font-size:16px}}
 #pn input,#pn textarea,#pn select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text)}
-#pn textarea{resize:vertical;min-height:64px;font-family:var(--serif);line-height:1.5}
+/* Phase 5 P2 — resize:none on auto-grow textareas; height is managed by
+   aGrow() which sets it in response to content. min-height is the floor
+   for an empty textarea; beyond max-height the element scrolls inside. */
+#pn textarea{resize:none;min-height:64px;max-height:50vh;font-family:var(--serif);line-height:1.5;overflow-y:hidden}
 #pn input:focus,#pn textarea:focus,#pn select:focus{outline:none;border-color:var(--accent)}
 /* Phase 5 P1 #3 — progressive disclosure. "More details" section groups
    the less-used fields behind a native <details> element so the default

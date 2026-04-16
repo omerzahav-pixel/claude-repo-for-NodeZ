@@ -766,6 +766,44 @@ let autosaveTimer=null,autosaveSnapped=false;
 let panelDetailsOpen=false;
 function aSnap(){if(!autosaveSnapped){sn();autosaveSnapped=true}}
 function aFlush(){if(autosaveTimer){clearTimeout(autosaveTimer);autosaveTimer=null;if(sel)sv()}}
+/* Phase 5 P2 — expandable description. Auto-grow a textarea to fit its
+   content up to 50% of viewport height, then lock and scroll inside.
+   Called on input + after op() rebuilds so existing content opens at
+   the right height instead of the CSS min-height (64px). No-ops for
+   non-textarea nodes so the querySelectorAll loop in op() is safe. */
+function aGrow(el){
+  if(!el||el.tagName!=='TEXTAREA')return;
+  const cap=Math.round(innerHeight*0.5);
+  el.style.height='auto';
+  const need=el.scrollHeight;
+  el.style.height=Math.min(need,cap)+'px';
+  el.style.overflowY=need>cap?'auto':'hidden';
+}
+/* Phase 5 P2 — expand textarea into the modal for roomy writing. Reuses
+   the existing #modal backdrop so Esc/outside-tap close still works.
+   Typing in the expanded view calls aField() the same way the panel
+   textarea does — the node mutates in place. On close we sync the
+   panel's textarea value + re-grow so focus/scroll don't jump. */
+function expandField(fieldId,nodeKey,labelText){
+  if(!sel)return;
+  const cur=sel[nodeKey]||'';
+  modal.classList.add('on');
+  document.getElementById('mcbody').innerHTML=`<h3>${esc(labelText)}</h3>
+    <textarea id="ef_body" dir="auto" style="width:100%;min-height:60vh;font-family:var(--serif);font-size:15px;line-height:1.55;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);resize:none">${esc(cur)}</textarea>
+    <div class="brow"><button class="pr" onclick="closeExpanded('${fieldId}','${nodeKey}')">${S.hebrewMode?'סיום':'Done'}</button></div>`;
+  const ta=document.getElementById('ef_body');
+  ta.focus();
+  // Place caret at end so keyboard users can continue typing.
+  try{ta.setSelectionRange(ta.value.length,ta.value.length)}catch(e){}
+  ta.addEventListener('input',()=>{aField(x=>x[nodeKey]=ta.value)});
+}
+function closeExpanded(fieldId,nodeKey){
+  aFlush();
+  closeModal();
+  // Re-sync the panel textarea from the mutated sel state + re-grow.
+  const panelTa=document.getElementById(fieldId);
+  if(panelTa&&sel){panelTa.value=sel[nodeKey]||'';aGrow(panelTa)}
+}
 function aField(applyFn,immediate){
   if(!sel)return;
   aSnap();
@@ -793,8 +831,9 @@ function op(n){aFlush();autosaveSnapped=false;sel=n;pn.classList.add('on');
   const colorPicker=(isNote||isFormula)?`<label>${S.hebrewMode?'צבע':'Color'}</label><div style="display:flex;gap:8px;align-items:center"><input id="f_color" type="color" value="${n.color||(isNote?'#d4a855':'#181A1B')}" style="width:48px;height:32px;background:transparent;border:1px solid var(--border);border-radius:8px;cursor:pointer" oninput="aField(x=>x.color=this.value||null)"/><button onclick="document.getElementById('f_color').value='';aField(x=>x.color=null,true)" style="font-size:11px">${S.hebrewMode?'איפוס':'Reset'}</button></div>`:'';
   const urlFields=(!isFormula&&!isNote)?`<label>${t('url')}</label><input id="f_url" value="${esc(n.url)}" placeholder="https://…" oninput="aField(x=>x.url=this.value)"/>
     <label>${t('docUrl')}</label><input id="f_docUrl" value="${esc(n.docUrl||'')}" placeholder="Google Drive / Notion / Dropbox…" oninput="aField(x=>x.docUrl=this.value)"/>`:'';
-  const latexField=isFormula?`<label>${t('latex')}</label><textarea id="f_latex" oninput="aField(x=>x.latex=this.value);updateLatexPreview()" style="font-family:monospace;font-size:12px">${esc(n.latex||'')}</textarea>${formulaPreview}`:'';
-  const notesField=isNote?`<label>${t('noteBody')}</label><textarea id="f_notes" style="min-height:140px" oninput="aField(x=>x.notes=this.value)">${esc(n.notes)}</textarea>`:`<label>${t('notes')}</label><textarea id="f_notes" oninput="aField(x=>x.notes=this.value)">${esc(n.notes)}</textarea>`;
+  const latexField=isFormula?`<label class="flabel">${t('latex')}<button type="button" class="expandBtn" onclick="expandField('f_latex','latex','${esc(t('latex'))}')" title="Expand" aria-label="Expand">⇱</button></label><textarea id="f_latex" oninput="aField(x=>x.latex=this.value);aGrow(this);updateLatexPreview()" style="font-family:monospace;font-size:12px">${esc(n.latex||'')}</textarea>${formulaPreview}`:'';
+  const notesLbl=isNote?t('noteBody'):t('notes');
+  const notesField=`<label class="flabel">${notesLbl}<button type="button" class="expandBtn" onclick="expandField('f_notes','notes','${esc(notesLbl)}')" title="Expand" aria-label="Expand">⇱</button></label><textarea id="f_notes" ${isNote?'style="min-height:140px"':''} oninput="aField(x=>x.notes=this.value);aGrow(this)">${esc(n.notes)}</textarea>`;
   /* Phase 5 P1 #3 — progressive disclosure. Primary holds the 90%-of-use
      fields (label, body, shape/status, zone); detailFields tucks the
      occasional ones (rationale, url, tags, conf, color, compact) behind
@@ -808,7 +847,7 @@ function op(n){aFlush();autosaveSnapped=false;sel=n;pn.classList.add('on');
     <div><label>${t('status')}</label><select id="f_status" onchange="aField(x=>x.status=this.value,true)">${ST.map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${esc(t(s))}</option>`).join('')}</select></div></div>
     <label>${t('zoneF')}</label><select id="f_zone" onchange="aField(x=>x.zone=this.value,true)">${zs().map(z=>`<option value="${z.id}" ${z.id===n.zone?'selected':''}>${esc(z.name)}</option>`).join('')}</select>`;
   const detailFields=`
-    ${isNote?'':`<label>${t('rationale')}</label><textarea id="f_rationale" oninput="aField(x=>x.rationale=this.value)">${esc(n.rationale)}</textarea>`}
+    ${isNote?'':`<label class="flabel">${t('rationale')}<button type="button" class="expandBtn" onclick="expandField('f_rationale','rationale','${esc(t('rationale'))}')" title="Expand" aria-label="Expand">⇱</button></label><textarea id="f_rationale" oninput="aField(x=>x.rationale=this.value);aGrow(this)">${esc(n.rationale)}</textarea>`}
     ${urlFields}
     <label>${t('tags')}</label><input id="f_tags" value="${esc(n.tags)}" oninput="aField(x=>x.tags=this.value)"/>
     <label>${t('confidence')}</label><input id="f_conf" type="number" min="0" max="5" step="1" value="${n.confidence||''}" oninput="aField(x=>x.confidence=this.value?parseInt(this.value):null)"/>
@@ -821,6 +860,10 @@ function op(n){aFlush();autosaveSnapped=false;sel=n;pn.classList.add('on');
     <div class="brow"><button class="pr" onclick="sP()">${t('save')}</button><button onclick="cp()">${t('close')}</button><button class="dn" onclick="delN(${n.id})">${t('del')}</button></div>
     ${portalBtn||copyBtn||pullBtn?`<div class="brow">${portalBtn}${copyBtn}${pullBtn}</div>`:''}`;
   if(isFormula)updateLatexPreview();
+  // Phase 5 P2 — auto-grow every textarea to fit existing content after
+  // rebuild. Runs once per op(); subsequent typing calls aGrow(this) via
+  // inline oninput so growth is continuous.
+  pn.querySelectorAll('textarea').forEach(aGrow);
   render()}
 function updateLatexPreview(){const el=document.getElementById('latexPreview'),src=document.getElementById('f_latex');if(!el||!src||!window.katex)return;try{katex.render(src.value||'\\\\text{(empty)}',el,{throwOnError:false,displayMode:true,strict:'ignore'})}catch(e){el.textContent='⚠ '+e.message}}
 /* Phase 5 P1 #2 — with autosave wired to every field, sP() is now a
