@@ -574,7 +574,26 @@ function cycleSb(){const sb=document.getElementById('sb');sb.classList.remove('m
 function sbHeadClick(e){const sb=document.getElementById('sb');if(sb.classList.contains('mini')){sb.classList.remove('mini')}}
 function sbResize(e){e.preventDefault();const sb=document.getElementById('sb');const sx=e.clientX,ow=sb.offsetWidth;const mm=ev=>{sb.style.width=Math.max(200,Math.min(500,ow+ev.clientX-sx))+'px'};const mu=()=>{document.removeEventListener('pointermove',mm);document.removeEventListener('pointerup',mu)};document.addEventListener('pointermove',mm);document.addEventListener('pointerup',mu)}
 function collapseAllZones(){if(!S.sbCollapse)S.sbCollapse={};const ck=S.current+':__';const allCollapsed=zs().every(z=>S.sbCollapse[S.current+':'+z.id]);for(const z of zs())S.sbCollapse[S.current+':'+z.id]=!allCollapsed;sv();renderSB()}
-function renderTabs(){const t=document.getElementById('tabs');if(!t)return;let h='';for(const cid of Object.keys(S.canvases)){const name=S.canvasMeta[cid]?.name||cid;const cur=cid===S.current;const closeBtn=cid==='vault'?'':`<span class="x" onclick="event.stopPropagation();closeCanvas('${cid}')" title="Delete canvas">×</span>`;h+=`<div class="tab${cur?' cur':''}" onclick="switchTo('${cid}')" oncontextmenu="event.preventDefault();showTabCtx(event,'${cid}')">${esc(name)}${closeBtn}</div>`}h+='<div class="newtab" onclick="newTab()" title="New standalone canvas">＋</div>';t.innerHTML=h}
+function renderTabs(){const t=document.getElementById('tabs');if(!t)return;
+  /* Phase 5b · collapsible tab groups — nest child canvases under their
+     parent canvas tab. Clicking the toggle collapses/expands children. */
+  const ids=Object.keys(S.canvases);
+  const children={};const roots=[];
+  for(const cid of ids){const m=S.canvasMeta[cid];const pc=m?.parentCanvas;
+    if(pc&&ids.includes(pc)){if(!children[pc])children[pc]=[];children[pc].push(cid)}
+    else roots.push(cid)}
+  if(!S._tabCollapse)S._tabCollapse={};
+  let h='';function addTab(cid,indent){
+    const name=S.canvasMeta[cid]?.name||cid;const cur=cid===S.current;
+    const hasKids=(children[cid]||[]).length>0;
+    const collapsed=!!S._tabCollapse[cid];
+    const tog=hasKids?`<span class="tab-tog" onclick="event.stopPropagation();toggleTabGroup('${cid}')">${collapsed?'▸':'▾'}</span>`:'';
+    const closeBtn=cid==='vault'?'':`<span class="x" onclick="event.stopPropagation();closeCanvas('${cid}')" title="Delete canvas">×</span>`;
+    h+=`<div class="tab${cur?' cur':''}" style="${indent?'padding-left:24px;font-size:11px':''}" onclick="switchTo('${cid}')" oncontextmenu="event.preventDefault();showTabCtx(event,'${cid}')">${tog}${esc(name)}${closeBtn}</div>`;
+    if(!collapsed&&children[cid]){for(const kid of children[cid])addTab(kid,true)}}
+  for(const cid of roots)addTab(cid,false);
+  h+='<div class="newtab" onclick="newTab()" title="New standalone canvas">＋</div>';t.innerHTML=h}
+function toggleTabGroup(cid){if(!S._tabCollapse)S._tabCollapse={};S._tabCollapse[cid]=!S._tabCollapse[cid];renderTabs()}
 function positionCtx(x,y){ctx.style.left='-9999px';ctx.style.top='-9999px';ctx.style.display='block';requestAnimationFrame(()=>{const r=ctx.getBoundingClientRect();const W=innerWidth,H=innerHeight,pad=8;let nx=x,ny=y;if(x+r.width+pad>W)nx=Math.max(pad,x-r.width);if(y+r.height+pad>H)ny=Math.max(pad,y-r.height);ctx.style.left=nx+'px';ctx.style.top=ny+'px'})}
 function showTabCtx(e,cid){const m=S.canvasMeta[cid]||{};
   const isLinked=!!m.parentNodeId;const linkLabel=isLinked?(S.hebrewMode?'חבר לפרויקט אחר':'Reconnect to project'):(S.hebrewMode?'חבר לפרויקט':'Connect to project');

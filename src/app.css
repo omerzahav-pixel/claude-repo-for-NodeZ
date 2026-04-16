@@ -41,6 +41,7 @@
 #tabs .tab .x{color:var(--muted);padding:0 4px}#tabs .tab .x:hover{color:var(--block)}
 #tabs .newtab{padding:8px 12px;color:var(--muted);cursor:pointer;font-size:13px}
 #tabs .newtab:hover{color:var(--accent)}
+.tab-tog{font-size:9px;color:var(--muted);margin-right:2px;cursor:pointer;padding:0 2px}.tab-tog:hover{color:var(--accent)}
 /* Phase 1.8 — position:fixed so JS placePopover() can anchor + flip. The
    old absolute+right:0 required #more to be inside a position:relative
    wrapper, which broke when the toolbar wrapped to two rows on narrow

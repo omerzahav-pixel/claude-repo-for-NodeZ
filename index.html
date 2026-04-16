@@ -54,13 +54,12 @@
 <button id="redoBtn" onclick="re()" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" style="display:inline-flex;transform:scaleX(-1)">↶</button>
 <button id="dimEdgesBtn" onclick="toggleDimEdges()" title="Dim edges (focus on nodes)">⌇</button>
 <span class="sep"></span>
-<!-- Phase 1.8 · promoted to top toolbar.
-     ⇲ = paste-patch modal (no file picker; pure JS action).
-     ⇅ = import full state. MUST be a <label for="imp"> so iOS Safari
-          preserves the user-gesture chain into the hidden file input
-          (same pattern as the More-menu items). Styled below as a button. -->
-<button id="patchBtn" onclick="showPatch()" title="Paste patch JSON">⇲</button>
-<label id="importBtn" for="imp" class="tbLabel" title="Import full state JSON" onclick="window.dbg&&window.dbg('IMPORT','toolbar ⇅ tapped — label forwards to #imp')">⇅</label>
+<!-- Phase 1.8 · promoted to top toolbar. Phase 5b: text labels for clarity.
+     Paste-patch = pure JS action (no file picker).
+     Import = <label for="imp"> so iOS Safari preserves the user-gesture
+     chain into the hidden file input. -->
+<button id="patchBtn" onclick="showPatch()" title="Paste patch JSON">📋 Patch</button>
+<label id="importBtn" for="imp" class="tbLabel" title="Import full state JSON" onclick="window.dbg&&window.dbg('IMPORT','toolbar import tapped — label forwards to #imp')">📥 Import</label>
 <span class="sep"></span>
 <button id="moreBtn" onclick="toggleMore();window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()" title="More options (export / import / utilities / workspace)">⋯ More</button>
 <div id="more"><div id="moreBody"></div></div>
