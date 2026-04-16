@@ -6,11 +6,19 @@
 // Sections: IMPORT (orange) · KATEX (green) · MD (purple) · SYS (gray).
 // ============================================================================
 (function(){
+  // Phase 5b — diag overlay hidden by default for normal users. Opt-in via
+  // ?diag=1 in URL, or Ctrl+Shift+D hotkey (wired later). Playwright stays
+  // suppressed via navigator.webdriver. ?nodbg still force-disables.
   if(typeof location!=='undefined'&&location.search.indexOf('nodbg')>=0)return;
-  // Suppress the overlay under automation (Playwright sets navigator.webdriver)
-  // so existing screenshot tests and flow tests don't have to care about it.
-  // Real Safari / Chrome / Firefox leave webdriver undefined.
   if(typeof navigator!=='undefined'&&navigator.webdriver)return;
+  var optIn=typeof location!=='undefined'&&location.search.indexOf('diag=1')>=0;
+  if(!optIn){
+    // Still register window.dbg so code using it doesn't crash, but skip the panel.
+    window.dbg=function(){};
+    // Allow Ctrl+Shift+D to activate retroactively.
+    document.addEventListener('keydown',function _dk(e){if(e.ctrlKey&&e.shiftKey&&e.key==='D'){e.preventDefault();document.removeEventListener('keydown',_dk);location.search=(location.search?location.search+'&':'?')+'diag=1'}});
+    return;
+  }
   var SC2={IMPORT:'#d97757',KATEX:'#7db36a',MD:'#c48a9b',SYS:'#8a8478'};
   var t0=Date.now(),panel=null,body=null,collapsed=false,queue=[];
   function esc2(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -349,7 +357,13 @@ async function setCurrentWs(ws){await storageSet('vault3-current-ws',ws);current
    without any per-workspace picker or storage migration. Same string →
    same hue, always. Saturation + lightness stay fixed so colors stay
    distinct from canvas content without clashing against dark panels. */
-function wsColor(name){let h=0;for(let i=0;i<(name||'').length;i++)h=(h*31+name.charCodeAt(i))%360;return`hsl(${h},55%,60%)`}
+/* Phase 5b · workspace color with optional override. Custom overrides are
+   stored in a simple map in storage so rename + recolor persist. */
+const WS_COLORS_KEY='vault3-ws-colors';
+let _wsColorMap={};
+async function loadWsColors(){try{const v=await storageGet(WS_COLORS_KEY);if(v)_wsColorMap=JSON.parse(v)}catch(e){}}
+async function saveWsColors(){await storageSet(WS_COLORS_KEY,JSON.stringify(_wsColorMap))}
+function wsColor(name){if(_wsColorMap[name])return _wsColorMap[name];let h=0;for(let i=0;i<(name||'').length;i++)h=(h*31+name.charCodeAt(i))%360;return`hsl(${h},55%,60%)`}
 async function rebuildWsDropdown(){const list=await listWorkspaces();const sel=document.getElementById('wsSel');if(!sel)return;
   sel.innerHTML=list.map(w=>`<option value="${esc(w)}" ${w===currentWs?'selected':''} style="color:${wsColor(w)}">${esc(w)}</option>`).join('');
   // Left-edge stripe + tint on the current workspace. Border-left color
@@ -398,12 +412,16 @@ async function load(){
   const step=(m,ok)=>{window.dbg&&window.dbg('SYS',(ok===false?'✗ ':'✓ ')+m)};
   step('load() started');
   try{currentWs=await getCurrentWs();step('getCurrentWs: '+currentWs)}catch(e){step('getCurrentWs FAIL: '+e.message,false);currentWs='workspace'}
+  try{await loadWsColors();step('loadWsColors OK')}catch(e){step('loadWsColors FAIL: '+e.message,false)}
   let list;try{list=await listWorkspaces();step('listWorkspaces: '+JSON.stringify(list))}catch(e){step('listWorkspaces FAIL: '+e.message,false);list=['workspace']}
   if(!list.includes(currentWs)){list.push(currentWs);try{await saveWorkspaces(list);step('saveWorkspaces OK')}catch(e){step('saveWorkspaces FAIL: '+e.message,false)}}
   try{const existing=await storageGet('vault3-workspace');if(!existing){const legacy=await storageGet('vault3');if(legacy){await storageSet('vault3-workspace',legacy)}}step('legacy migration done')}catch(e){step('migration FAIL: '+e.message,false)}
   let loadOk=true;
   try{await loadState();step('loadState OK — zones: '+(S.canvases?.vault?.zones?.length||0)+' nodes: '+(S.canvases?.vault?.nodes?.length||0))}catch(e){loadOk=false;step('loadState FAIL: '+e.message,false);try{reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB();step('fallback render OK')}catch(e2){step('fallback render FAIL: '+e2.message,false)}}
   try{rebuildWsDropdown();step('rebuildWsDropdown OK')}catch(e){step('rebuildWsDropdown FAIL: '+e.message,false)}
+  // Phase 5b · sidebar starts minimized — less visual noise on first load.
+  // User can expand by clicking the sidebar header or the ☰ cycle button.
+  const _sb=document.getElementById('sb');if(_sb&&!_sb.classList.contains('co'))_sb.classList.add('mini');
   step('load() complete');
   const totalNodes=Object.values(S.canvases||{}).reduce((n,c)=>n+(c.nodes?.length||0),0);
   toast(loadOk?('Loaded '+currentWs+' · '+totalNodes+' node'+(totalNodes===1?'':'s')):'Load failed — check diag',{kind:loadOk?'ok':'err',ms:loadOk?1500:3000});
@@ -421,7 +439,7 @@ const T={
       save:'Save',close:'Close',del:'Delete',addedOn:'added',moreDetails:'More details',
       filterList:'Filter list…',searchCanvas:'Search canvas…',pasteUrl:'Paste URL…',
       newCanvas:'New canvas name:',newWs:'New workspace name (e.g. university, life):',
-      exportAll:'Export all (full state)',exportThis:'Export this canvas',importAll:'Import full state',importThis:'Import into this canvas',pastePatch:'Paste patch',quickLink:'Quick-add from URL',dedupe:'Dedupe nodes',cleanOrphan:'Clean orphan canvases',clearCanvas:'Clear canvas',deleteWs:'Delete this workspace',
+      exportAll:'Export all (full state)',exportThis:'Export this canvas',importAll:'Import full state',importThis:'Import into this canvas',pastePatch:'Paste patch',quickLink:'Quick-add from URL',dedupe:'Dedupe nodes',cleanOrphan:'Clean orphan canvases',clearCanvas:'Clear canvas',renameWs:'Rename workspace',recolorWs:'Change workspace color',deleteWs:'Delete this workspace',
       mhExport:'Export',mhImport:'Import',mhUtil:'Utilities',mhWs:'Workspace',
       ctxEdge:'Edge',ctxZone:'Zone',changeTo:'Change to',deleteEdge:'Delete edge',unlockZ:'🔓 Unlock (allow move/resize)',lockZ:'🔒 Lock position',renameZ:'Rename',recolorZ:'Recolor',deleteZ:'Delete zone',addNodeHere:'+ Add node here',addZoneHere:'+ Add zone here',customLabel:'Label for this connection:',untitled:'Untitled',clearCanvasConfirm:'Clear current canvas?',deleteSelected:'Delete N selected nodes?',openRoadmap:'Open roadmap',createRoadmap:'+ Create roadmap',copyToVault:'Copy to vault',pullFromVault:'Pull from vault',copiedFromVault:'copied from vault',
       ttWs:'Switch workspace',ttNewWs:'New workspace',ttHe:'Hebrew mode (toggle RTL + translated UI)',ttBack:'Back to parent canvas',ttAdd:'Add node (or double-click empty canvas)',ttZone:'Add zone (group of related nodes)',ttSearch:'Filter visible nodes by label / notes',ttFit:'Fit view to all nodes',ttUndo:'Undo (Ctrl+Z)',ttRedo:'Redo (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'Dim edges (focus on nodes)',ttPatch:'Paste patch JSON',ttImport:'Import full state JSON',ttMore:'More options (export / import / utilities / workspace)',ttLegend:'Legend · keyboard shortcuts',ttSbTog:'Cycle sidebar: Nodes · Edges · Zones',ttSbCollapse:'Collapse / expand all',ttSbMini:'Minimize to bottom',
@@ -436,7 +454,7 @@ const T={
       save:'שמירה',close:'סגירה',del:'מחיקה',addedOn:'נוסף',moreDetails:'עוד פרטים',
       filterList:'סנן רשימה…',searchCanvas:'חיפוש בקנבס…',pasteUrl:'הדבק קישור…',
       newCanvas:'שם הקנבס החדש:',newWs:'שם סביבה חדשה (לדוגמה: university, life):',
-      exportAll:'יצוא הכול (מלא)',exportThis:'יצוא הקנבס הזה',importAll:'יבוא מצב מלא',importThis:'יבוא לקנבס הזה',pastePatch:'הדבק patch',quickLink:'הוספה מהירה מקישור',dedupe:'מחיקת כפילויות',cleanOrphan:'ניקוי קנבסים יתומים',clearCanvas:'נקה קנבס',deleteWs:'מחיקת הסביבה',
+      exportAll:'יצוא הכול (מלא)',exportThis:'יצוא הקנבס הזה',importAll:'יבוא מצב מלא',importThis:'יבוא לקנבס הזה',pastePatch:'הדבק patch',quickLink:'הוספה מהירה מקישור',dedupe:'מחיקת כפילויות',cleanOrphan:'ניקוי קנבסים יתומים',clearCanvas:'נקה קנבס',renameWs:'שנה שם סביבה',recolorWs:'שנה צבע סביבה',deleteWs:'מחיקת הסביבה',
       mhExport:'יצוא',mhImport:'יבוא',mhUtil:'כלים',mhWs:'סביבה',
       ctxEdge:'קשר',ctxZone:'אזור',changeTo:'שנה ל',deleteEdge:'מחק קשר',unlockZ:'🔓 פתח (אפשר הזזה/שינוי גודל)',lockZ:'🔒 נעל מיקום',renameZ:'שנה שם',recolorZ:'שנה צבע',deleteZ:'מחק אזור',addNodeHere:'+ הוסף נקודה כאן',addZoneHere:'+ הוסף אזור כאן',customLabel:'תווית לקשר הזה:',untitled:'ללא כותרת',clearCanvasConfirm:'לנקות את הקנבס הנוכחי?',deleteSelected:'למחוק N נקודות שנבחרו?',openRoadmap:'פתח מפת דרכים',createRoadmap:'+ צור מפת דרכים',copyToVault:'העתק לוולט',pullFromVault:'משוך מהוולט',copiedFromVault:'הועתק מהוולט',
       ttWs:'החלפת סביבה',ttNewWs:'סביבה חדשה',ttHe:'מצב עברית (RTL וטקסט מתורגם)',ttBack:'חזרה לקנבס האב',ttAdd:'הוספת נקודה (או לחיצה כפולה על שטח ריק)',ttZone:'הוספת אזור (קבוצת נקודות קשורות)',ttSearch:'סינון נקודות לפי כותרת / הערות',ttFit:'התאם תצוגה לכל הנקודות',ttUndo:'בטל (Ctrl+Z)',ttRedo:'שחזר (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'עמעם קשרים (התמקד בנקודות)',ttPatch:'הדבקת patch בפורמט JSON',ttImport:'יבוא מצב מלא (JSON)',ttMore:'אפשרויות נוספות (יצוא / יבוא / כלים / סביבה)',ttLegend:'מקרא · קיצורי מקלדת',ttSbTog:'מעבר בסרגל: נקודות · קשרים · אזורים',ttSbCollapse:'כווץ / הרחב את כל האזורים',ttSbMini:'הקטן לתחתית',
@@ -470,7 +488,7 @@ function refreshUiText(){
   const ldH=document.getElementById('ld-hint');if(ldH)ldH.textContent=t('ldHint');
   const ldN=document.getElementById('ld-new');if(ldN)ldN.textContent=t('ldNew');
   const ldS=document.getElementById('ld-skip');if(ldS)ldS.textContent=t('ldSkip');
-  const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="window.dbg&&window.dbg('IMPORT','label[for=imp] tapped — browser should now forward click to #imp');hideMore()">${t('importAll')}</label><label for="impC" onclick="window.dbg&&window.dbg('IMPORT','label[for=impC] tapped');hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="clearCanvasConfirm();hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
+  const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="window.dbg&&window.dbg('IMPORT','label[for=imp] tapped — browser should now forward click to #imp');hideMore()">${t('importAll')}</label><label for="impC" onclick="window.dbg&&window.dbg('IMPORT','label[for=impC] tapped');hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="clearCanvasConfirm();hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="renameCurrentWorkspace();hideMore()">${t('renameWs')}</button><button onclick="recolorCurrentWorkspace();hideMore()">${t('recolorWs')}</button><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
   bF();renderSB();renderLegend();
 }
 async function toggleHebrew(){const on=!(S.hebrewMode);S.hebrewMode=on;document.body.classList.toggle('he',on);const btn=document.getElementById('heBtn');if(btn){btn.style.background=on?'var(--accent)':'';btn.style.color=on?'#0F0F0F':''}refreshUiText();sv();render()}
@@ -478,6 +496,11 @@ function applyHebrewState(){const on=!!S.hebrewMode;document.body.classList.togg
 function toggleDimEdges(){S.dimEdges=!S.dimEdges;sv();applyDimBtn();render()}
 function applyDimBtn(){const btn=document.getElementById('dimEdgesBtn');if(btn){btn.style.background=S.dimEdges?'var(--accent)':'';btn.style.color=S.dimEdges?'#0F0F0F':''}}
 async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){await uiNotice('Cannot delete the last workspace.');return}if(!await uiConfirm(`Delete workspace "${currentWs}" and ALL its data? This cannot be undone.`,{title:'Delete workspace',danger:true,okLabel:'Delete'}))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
+/* Phase 5b · rename workspace — migrate IDB data to new key, update list. */
+async function renameCurrentWorkspace(){const name=await uiPrompt(t('renameWs'),currentWs,{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean||clean===currentWs)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}const oldKey=KEY();const data=await storageGet(oldKey);const idx=list.indexOf(currentWs);if(idx>=0)list[idx]=clean;else list.push(clean);await saveWorkspaces(list);await setCurrentWs(clean);if(data)await storageSet(KEY(),data);try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(oldKey)}}catch(e){}if(_wsColorMap[currentWs]){_wsColorMap[clean]=_wsColorMap[currentWs];delete _wsColorMap[currentWs];await saveWsColors()}rebuildWsDropdown();refreshUiText();toast('Renamed to '+clean,{kind:'ok',ms:1500})}
+/* Phase 5b · recolor workspace — HSL swatch picker. */
+async function recolorCurrentWorkspace(){const SWATCHES=['#d97757','#c48a9b','#b07ba8','#8b7ba8','#6b8cb0','#5fa3a8','#7aa882','#c9896a','#e6b450','#a8a8a8'];const cur=wsColor(currentWs);const html=`<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:8px">${SWATCHES.map(c=>`<button onclick="applyWsColor('${c}')" style="width:36px;height:36px;border-radius:50%;border:3px solid ${c===cur?'#fff':'transparent'};background:${c};cursor:pointer" title="${c}"></button>`).join('')}</div><div style="display:flex;gap:8px;align-items:center;margin-top:8px;padding:0 8px"><label style="font-size:12px;color:var(--muted)">Custom:</label><input id="wsColorInput" type="color" value="${cur.startsWith('#')?cur:'#d97757'}" style="border:none;background:transparent;width:36px;height:28px;cursor:pointer"/><button onclick="applyWsColor(document.getElementById('wsColorInput').value)" style="font-size:12px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer">Apply</button></div>`;const m=document.getElementById('modal');const mc=document.getElementById('mcbody');mc.innerHTML=`<h3 style="margin:0 0 8px;font-size:14px">${t('recolorWs')}</h3>${html}<div style="text-align:right;margin-top:12px"><button onclick="closeModal()" style="padding:6px 16px;border-radius:6px;border:none;background:var(--panel2);color:var(--text);cursor:pointer">${t('close')}</button></div>`;m.classList.add('on')}
+function applyWsColor(c){_wsColorMap[currentWs]=c;saveWsColors();rebuildWsDropdown();closeModal();toast('Color updated',{kind:'ok',ms:1200})}
 function flashInd(id){const el=document.getElementById(id);if(!el)return;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')}
 function hideMore(){window.dbg&&window.dbg('IMPORT','hideMore() — removing .on from #more (may break iOS label→input chain)');document.getElementById('more').classList.remove('on')}
 /* Phase 1.8 — toggleMore() centralizes open/close and anchors via
@@ -606,14 +629,21 @@ function bB(){const chain=[];let c2=S.current;while(c2){chain.unshift({id:c2,nam
   // canvas + a chevron if the chain is deeper than 1. Tap expands the full
   // chain inline; tapping any ancestor navigates there. Depth-1 canvases
   // skip the chevron and always show just the name.
+  // Phase 5b — Hebrew RTL: swap separator direction, set dir attribute, and
+  // flip the expand chevron so the crumb reads right-to-left naturally.
+  const rtl=!!S.hebrewMode;
+  const sep=rtl?'‹':'›';
+  const expChev=rtl?'◂':'▾';
+  const colChev=rtl?'▸':'▴';
+  bc.dir=rtl?'rtl':'ltr';
   const last=chain[chain.length-1];
   const mini=chain.length>1
-    ?`<span class="bc-mini"><span class="bc-dots">…</span><span class="bc-sep">›</span><span class="cur">${esc(last.name)}</span><span class="bc-exp">▾</span></span>`
+    ?`<span class="bc-mini"><span class="bc-dots">…</span><span class="bc-sep">${sep}</span><span class="cur">${esc(last.name)}</span><span class="bc-exp">${expChev}</span></span>`
     :`<span class="bc-mini"><span class="cur">${esc(last.name)}</span></span>`;
   const full=chain.map((n,i)=>i===chain.length-1
     ?`<span class="cur">${esc(n.name)}</span>`
-    :`<a onclick="event.stopPropagation();switchTo('${n.id}')">${esc(n.name)}</a><span class="bc-sep">›</span>`).join(' ');
-  const fullWrap=chain.length>1?`<span class="bc-full">${full}<span class="bc-col">▴</span></span>`:'';
+    :`<a onclick="event.stopPropagation();switchTo('${n.id}')">${esc(n.name)}</a><span class="bc-sep">${sep}</span>`).join(' ');
+  const fullWrap=chain.length>1?`<span class="bc-full">${full}<span class="bc-col">${colChev}</span></span>`:'';
   bc.innerHTML=mini+fullWrap;
   // Tap anywhere on #bc (except an <a> inside the expanded chain) toggles.
   bc.onclick=e=>{if(e.target.tagName==='A')return;bc.classList.toggle('expanded')};
@@ -762,7 +792,13 @@ function render(){
     const hitR=drag?.k==='edge'?s+30:s+6;
     const rtl=/[\u0590-\u05FF]/.test(n.label||'');
     const isCompactFormula=n.shape==='formula'&&n.compact;
-    const showLabel=view.k>0.28&&(!['formula','note'].includes(n.shape)||isCompactFormula);
+    /* Phase 5b · semantic zoom — below this scale threshold, notes and
+       formulas swap their rich body content for just the label text so
+       the zoomed-out canvas stays legible instead of showing illegible
+       tiny text blobs. */
+    const semanticCompact=view.k<0.45&&['formula','note'].includes(n.shape)&&!isCompactFormula;
+    if(semanticCompact)richContent='';
+    const showLabel=view.k>0.28&&(!['formula','note'].includes(n.shape)||isCompactFormula||semanticCompact);
     const isBigShape=(n.shape==='formula'&&!n.compact)||n.shape==='note';
     const hitRect=isBigShape?`<rect class="th" x="${n.x-(n._w||100)}" y="${n.y-(n._h||60)}" width="${(n._w||100)*2}" height="${(n._h||60)*2}" rx="6" fill="transparent"/>`:`<circle class="th" cx="${n.x}" cy="${n.y}" r="${hitR}"/>`;
     // Outer SVG: just an invisible hit target wrapped in <g.node data-id> so
@@ -827,13 +863,23 @@ function render(){
   const _es=document.getElementById('emptyState');
   if(_es){const empty=ns().length===0&&zs().length===0;_es.classList.toggle('on',empty)}
 }
-function bF(){const mode=S.filterMode||'zone';const otherMode=mode==='zone'?'status':'zone';const switchLabel=S.hebrewMode?(mode==='zone'?'אזורים ⇄ מצב':'מצב ⇄ אזורים'):(mode==='zone'?'Zones ⇄ Status':'Status ⇄ Zones');let h=`<span class="pill mode" onclick="switchFilterMode()" style="background:var(--accent);color:#0F0F0F;font-weight:600;cursor:pointer">${switchLabel}</span>`;if(mode==='zone'){zs().forEach(z=>h+=`<span class="pill on" data-f="zone:${z.id}" onclick="tF(this)" ondblclick="soloF(this)">${esc(z.name)}</span>`)}else{ST.forEach(s=>h+=`<span class="pill on" data-f="status:${s}" onclick="tF(this)" ondblclick="soloF(this)">${esc(t(s))}</span>`)}document.getElementById('fl').innerHTML=h}
+function bF(){const fl=document.getElementById('fl');if(!fl)return;const mode=S.filterMode||'zone';const otherMode=mode==='zone'?'status':'zone';const switchLabel=S.hebrewMode?(mode==='zone'?'אזורים ⇄ מצב':'מצב ⇄ אזורים'):(mode==='zone'?'Zones ⇄ Status':'Status ⇄ Zones');
+  /* Phase 5b · filter bar starts collapsed. Toggle button expands/collapses. */
+  let h=`<span class="pill fl-toggle" onclick="document.getElementById('fl').classList.toggle('collapsed')" title="Toggle filter pills">⚡</span>`;
+  h+=`<span class="pill mode" onclick="switchFilterMode()" style="background:var(--accent);color:#0F0F0F;font-weight:600;cursor:pointer">${switchLabel}</span>`;if(mode==='zone'){zs().forEach(z=>h+=`<span class="pill on" data-f="zone:${z.id}" onclick="tF(this)" ondblclick="soloF(this)">${esc(z.name)}</span>`)}else{ST.forEach(s=>h+=`<span class="pill on" data-f="status:${s}" onclick="tF(this)" ondblclick="soloF(this)">${esc(t(s))}</span>`)}fl.innerHTML=h;if(!fl.dataset.init){fl.classList.add('collapsed');fl.dataset.init='1'}}
 function switchFilterMode(){S.filterMode=S.filterMode==='status'?'zone':'status';sv();bF();aF()}
 function renderLegend(){const lg=document.getElementById('lgBody');if(!lg)return;lg.innerHTML=`<h4>${t('shapes')}</h4><div class="row">★ ${t('project')} ● ${t('idea')} ◆ ${t('principle')}</div><div class="row">⬣ ${t('resource')} ? ${t('question')} ⚗ ${t('experiment')} ▭ ${t('library')} ▤ ${t('doc')}</div><h4>${t('status')}</h4><div class="row"><span class="sw" style="background:var(--done)"></span>${t('done')}</div><div class="row"><span class="sw" style="background:var(--prog)"></span>${t('progress')}</div><div class="row"><span class="sw" style="background:var(--pend)"></span>${t('pending')}</div><div class="row"><span class="sw" style="background:var(--block)"></span>${t('blocked')}</div><div class="row"><span class="sw" style="background:var(--idea)"></span>${t('idea')}</div><h4>${t('edges')}</h4><div class="row" style="color:var(--block)">━ ${t('blocker')}</div><div class="row" style="color:var(--muted)">━ ${t('feeds')}</div><div class="row" style="color:var(--prog)">━ ${t('related')}</div><div class="row" style="color:var(--done)">━ ${t('derived')}</div><div class="row" style="color:var(--text2)">━ ${t('arrow')}</div>`}
 function tF(el){el.classList.toggle('on');aF()}
 function soloF(el){const all=document.querySelectorAll('#fl .pill');const wasOff=!el.classList.contains('on');const onlyMeOn=el.classList.contains('on')&&[...all].every(p=>p===el||!p.classList.contains('on'));if(onlyMeOn){all.forEach(p=>p.classList.add('on'))}else{all.forEach(p=>p.classList.remove('on'));el.classList.add('on')}aF()}
 function aF(){const zonePresent=document.querySelector('#fl .pill[data-f^="zone:"]')!==null;const statusPresent=document.querySelector('#fl .pill[data-f^="status:"]')!==null;const a=new Set([...document.querySelectorAll('.pill.on')].map(p=>p.dataset.f));const q=document.getElementById('sr').value.toLowerCase();ns().forEach(n=>{const zOk=!zonePresent||a.has('zone:'+n.zone);const sOk=!statusPresent||a.has('status:'+n.status);const qOk=!q||((n.label||'')+(n.notes||'')+(n.tags||'')+(n.rationale||'')).toLowerCase().includes(q);n.dim=!(zOk&&sOk&&qOk)});const k=new Set(ns().filter(n=>!n.dim).map(n=>n.id));es().forEach(e=>e.dim=!(k.has(e.from)&&k.has(e.to)));render()}
-function addNode(x,y,d={},skip){if(!skip)sn();const id=S.nextId++;const n={label:'New',notes:'',tags:'',rationale:'',shape:'idea',status:'idea',url:'',docUrl:'',originId:null,childCanvas:null,confidence:null,latex:'',color:null,compact:false,...d,id,x,y,zone:d.zone||zoneAt(x,y),created:d.created||new Date().toISOString().slice(0,10)};ns().push(n);sv();render();renderSB();return n}
+function addNode(x,y,d={},skip){if(!skip)sn();const id=S.nextId++;
+  /* Phase 5b · clamp userW/userH to sensible bounds so malformed patches
+     don't blow up the canvas with giant or microscopic nodes. */
+  if(d.userW!=null)d.userW=Math.max(60,Math.min(800,+d.userW||100));
+  if(d.userH!=null)d.userH=Math.max(30,Math.min(600,+d.userH||60));
+  if(d._w!=null)d._w=Math.max(60,Math.min(800,+d._w||100));
+  if(d._h!=null)d._h=Math.max(30,Math.min(600,+d._h||60));
+  const n={label:'New',notes:'',tags:'',rationale:'',shape:'idea',status:'idea',url:'',docUrl:'',originId:null,childCanvas:null,confidence:null,latex:'',color:null,compact:false,...d,id,x,y,zone:d.zone||zoneAt(x,y),created:d.created||new Date().toISOString().slice(0,10)};ns().push(n);sv();render();renderSB();return n}
 /* Phase 5 P2 · smart placement: spiral outward from (cx,cy) until a spot has
    no other node within SPACING px. 8 directions per ring, max 20 rings. */
 function findFreeSpot(cx,cy){const SP=120;for(let ring=0;ring<20;ring++){const steps=ring===0?1:ring*8;for(let i=0;i<steps;i++){const a=(2*Math.PI*i)/steps;const px=cx+Math.cos(a)*SP*ring;const py=cy+Math.sin(a)*SP*ring;if(!ns().some(n=>Math.abs(n.x-px)<SP&&Math.abs(n.y-py)<SP))return{x:px,y:py};};}return{x:cx+SP*20,y:cy}}
@@ -1056,7 +1102,7 @@ function beginInteraction(e){
   if(nE){const n=ns().find(x=>x.id===+nE.dataset.id);
     if(mod){if(selSet.has(n.id))selSet.delete(n.id);else selSet.add(n.id);render();drag=null;return}
     if(e.shiftKey){drag={k:'edge',from:n,sx:e.clientX,sy:e.clientY,moved:false}}
-    else{const group=selSet.has(n.id)&&selSet.size>1?[...selSet].map(id=>ns().find(x=>x.id===id)).filter(Boolean):null;drag={k:'node',n,ox:w.x-n.x,oy:w.y-n.y,sx:e.clientX,sy:e.clientY,moved:false,group,groupStart:group?.map(x=>({id:x.id,x:x.x,y:x.y}))}}
+    else{const group=selSet.has(n.id)&&selSet.size>1?[...selSet].map(id=>ns().find(x=>x.id===id)).filter(Boolean):null;drag={k:'node',n,ox:w.x-n.x,oy:w.y-n.y,sx:e.clientX,sy:e.clientY,moved:false,group,groupStart:group?.map(x=>({id:x.id,x:x.x,y:x.y})),renderX:n.x,renderY:n.y}}
   }else if(zH){const z=zs().find(x=>x.id===zH.closest('.zone').dataset.zone);sn();drag={k:'resize',z,sx:e.clientX,sy:e.clientY,ow:z.w,oh:z.h}}
   else if(zE){const z=zs().find(x=>x.id===zE.closest('.zone').dataset.zone);drag={k:'zone',z,ox:w.x-z.x,oy:w.y-z.y,sx:e.clientX,sy:e.clientY,moved:false}}
   else if(mod){drag={k:'marquee',sx:e.clientX,sy:e.clientY,startW:w,curW:w};selSet.clear();render()}
@@ -1168,21 +1214,26 @@ document.addEventListener('pointermove',e=>{
     if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
   }
   if(drag.k==='node'&&drag.moved){if(!drag.snap){sn();drag.snap=true}const newNx=w.x-drag.ox,newNy=w.y-drag.oy;if(drag.group){const anchor=drag.groupStart.find(g=>g.id===drag.n.id);const dx=newNx-anchor.x,dy=newNy-anchor.y;for(const gs of drag.groupStart){const nn=ns().find(x=>x.id===gs.id);if(nn){nn.x=gs.x+dx;nn.y=gs.y+dy}}}else{drag.n.x=newNx;drag.n.y=newNy;drag.n.zone=zoneAt(drag.n.x,drag.n.y)}
-    /* Phase 5b · fix ghost trail. During node drag, patch only the moved
-       node slice + SVG hit-group positions instead of full innerHTML rebuild.
-       This avoids tearing the compositor layer on iOS (stale tiles leaked as
-       ghost trails with the old innerHTML path at 120Hz). Full render()
-       fires once on pointerup when drag completes. */
+    /* Phase 5b · fix ghost trail. CSS transform delta approach: instead of
+       mutating left/top + inner <g> transform (which leaves shape children
+       referencing stale world coords, causing visual offset), apply a single
+       CSS translate() on the whole slice and an SVG translate on the hit
+       group. All inner coordinates stay untouched. Full render() fires once
+       on pointerup, which rebuilds everything clean. */
     if(!drag.group){
-      const _sl=document.querySelector(`.nslice[data-nid="${drag.n.id}"]`);if(_sl){_sl.style.left=drag.n.x+'px';_sl.style.top=drag.n.y+'px';
-        const _g=_sl.querySelector('.nshape g');if(_g)_g.setAttribute('transform',`translate(${-drag.n.x},${-drag.n.y})`)}
-      const _hg=cv.querySelector(`g.node[data-id="${drag.n.id}"]`);if(_hg){const _th=_hg.querySelector('.th');if(_th){if(_th.tagName==='circle'){_th.setAttribute('cx',drag.n.x);_th.setAttribute('cy',drag.n.y)}else{const hw=(drag.n._w||100),hh=(drag.n._h||60);_th.setAttribute('x',drag.n.x-hw);_th.setAttribute('y',drag.n.y-hh)}}}
+      const dx=drag.n.x-drag.renderX,dy=drag.n.y-drag.renderY;
+      const _sl=document.querySelector(`.nslice[data-nid="${drag.n.id}"]`);if(_sl)_sl.style.transform=`translate(${dx}px,${dy}px)`;
+      const _hg=cv.querySelector(`g.node[data-id="${drag.n.id}"]`);if(_hg)_hg.setAttribute('transform',`translate(${dx},${dy})`);
     }else{render()}}
   else if(drag.k==='marquee'){drag.curW=w;render();drawMarquee(drag.startW,w)}
   else if(drag.k==='zone'&&drag.moved){if(!drag.snap){sn();drag.snap=true}drag.z.x=w.x-drag.ox;drag.z.y=w.y-drag.oy;render()}
   else if(drag.k==='resize'){drag.z.w=Math.max(200,drag.ow+(e.clientX-drag.sx)/view.k);drag.z.h=Math.max(150,drag.oh+(e.clientY-drag.sy)/view.k);render()}
   else if(drag.k==='nresize'){drag.n.userW=Math.max(80,drag.ow+(e.clientX-drag.sx)/view.k);drag.n.userH=Math.max(50,drag.oh+(e.clientY-drag.sy)/view.k);render()}
-  else if(drag.k==='pan'&&drag.moved){view.x=drag.vx+(e.clientX-drag.sx)/view.k;view.y=drag.vy+(e.clientY-drag.sy)/view.k;render()}
+  else if(drag.k==='pan'&&drag.moved){view.x=drag.vx+(e.clientX-drag.sx)/view.k;view.y=drag.vy+(e.clientY-drag.sy)/view.k;
+    /* Phase 5b · velocity tracking for swipe inertia (touch only). Record
+       the last two move events so pointerup can compute instantaneous vel. */
+    if(e.pointerType==='touch'){const now=performance.now();drag._prevX=drag._lastX;drag._prevY=drag._lastY;drag._prevT=drag._lastT;drag._lastX=e.clientX;drag._lastY=e.clientY;drag._lastT=now}
+    render()}
   else if(drag.k==='edge'&&drag.moved){const tE=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.node');edgeHover=tE?ns().find(x=>x.id===+tE.dataset.id):null;if(edgeHover&&edgeHover.id===drag.from.id)edgeHover=null;render();const l=document.createElementNS('http://www.w3.org/2000/svg','line');l.setAttribute('x1',drag.from.x);l.setAttribute('y1',drag.from.y);l.setAttribute('x2',w.x);l.setAttribute('y2',w.y);l.setAttribute('stroke','var(--accent)');l.setAttribute('stroke-width',2);l.setAttribute('stroke-dasharray','4,3');cv.appendChild(l)}
 });
 function drawMarquee(a,b){const x1=Math.min(a.x,b.x),y1=Math.min(a.y,b.y),x2=Math.max(a.x,b.x),y2=Math.max(a.y,b.y);const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',x1);r.setAttribute('y',y1);r.setAttribute('width',x2-x1);r.setAttribute('height',y2-y1);r.setAttribute('fill','var(--accent)');r.setAttribute('fill-opacity','0.1');r.setAttribute('stroke','var(--accent)');r.setAttribute('stroke-width','1');r.setAttribute('stroke-dasharray','4,3');cv.appendChild(r)}
@@ -1220,7 +1271,18 @@ document.addEventListener('pointerup',e=>{
   else if(drag.k==='marquee'){const a=drag.startW,b=drag.curW;const x1=Math.min(a.x,b.x),y1=Math.min(a.y,b.y),x2=Math.max(a.x,b.x),y2=Math.max(a.y,b.y);for(const n of ns()){if(n.x>=x1&&n.x<=x2&&n.y>=y1&&n.y<=y2)selSet.add(n.id)}render()}
   else if(drag.k==='node'&&!drag.moved){const n=drag.n;if(sel?.id===n.id)cp();else{sel=n;op(n)}}
   else if(drag.k==='pan'&&!drag.moved){cp()}
-  if(drag.snap||drag.k==='resize'||drag.k==='nresize')sv();drag=null;render();
+  /* Phase 5b · swipe inertia — if the pan ended with velocity on a touch
+     device, apply a decaying drift using rAF. Feels natural on iPad. */
+  if(drag&&drag.k==='pan'&&drag.moved&&e.pointerType==='touch'&&drag._lastT&&drag._prevT){
+    const dt=(drag._lastT-drag._prevT)||16;
+    let vx=(drag._lastX-drag._prevX)/dt;
+    let vy=(drag._lastY-drag._prevY)/dt;
+    const speed=Math.sqrt(vx*vx+vy*vy);
+    if(speed>0.15){const decay=0.92;let raf;const step=()=>{vx*=decay;vy*=decay;if(Math.abs(vx)<0.01&&Math.abs(vy)<0.01){render();return}view.x+=vx*16/view.k;view.y+=vy*16/view.k;render();raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);
+    // Any new pointerdown cancels the inertia.
+    const stop=()=>{cancelAnimationFrame(raf);cv.removeEventListener('pointerdown',stop)};cv.addEventListener('pointerdown',stop,{once:true})}
+  }
+  if(drag&&(drag.snap||drag.k==='resize'||drag.k==='nresize'))sv();drag=null;render();
 });
 
 cv.addEventListener('pointercancel',e=>{
