@@ -4,6 +4,75 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P1 · Item #6 — 8px grid audit · 2026-04-16
+
+Every spacing token in the chrome now lands on the 4/8/12/16/20/24
+ladder. Before: padding values drifted to 5, 6, 7, 9, 10, 11, 14, 18
+depending on when the element was written. After: exactly one step-size
+system, so alignment between toolbar, breadcrumbs, filter pills, panel,
+menus, and dialog reads as deliberate instead of incidental.
+
+**src/app.css sweep.** 40+ spots touched:
+- Toolbar: `#tb` padding 6→8 · gap 3→4 · radius 10→12; button padding
+  6/10→8/12 · radius 7→8.
+- Tabs: `.tab` padding 6/14→8/16 · radius 6→8 · gap 6→8; `.newtab`
+  6/10→8/12; `.x` padding 0/2→0/4.
+- Sidebar: `.sbhead` padding 10/12→12 square; `.sbsearch input`
+  padding 6/8→8 square; `.item` padding 6/12→8/12; `.dot` margin-top
+  3→4; `.item .urp` padding 1/6→2/8 · margin-top 2→4; `.zhdr` gained
+  `gap:8`.
+- More menu: button/label padding 7/12→8/12 · radius 5→4; `.mh`
+  padding 6/12/2→8/12/4; `.msep` margin 4/6→4/8; `#indicators` gap
+  6→8.
+- Breadcrumbs: `#bc` top 62→64 · padding 6/14→8/16 · radius 10→12 ·
+  gap 6→8; `.bc-sep` padding 0/1→0/2; `.bc-full` gap 6→8.
+- Filter row: `#fl` top 68→72 · gap 5→4.
+- Pills: `.pill` padding 4/10→4/12 · radius 14→16.
+- Legend: `#lg` top 54→56 · right 18→16 · padding 10/14→12/16 · radius
+  10→12; `.row` gap 6→8 · padding 1→2; `.sw` 10→12; `h4`
+  margin-bottom 3→4. `#lgBtn` right 18→16.
+- Panel: `#pn` padding 18→16 · radius 10→12 · translateY 6→8; `.meta`
+  margin-bottom 10→12; input padding 8/10→8/12 · radius 7→8; textarea
+  min-height 60→64; `details.pn-more` margin-top 14→16.
+- Brow: gap 6→8 · margin-top 14→16; button min-width 70→72 · padding
+  7→8 · radius 7→8.
+- Chips: `.urp` padding 4/10→4/12; `.origin` padding 2/7→2/8; `.port`
+  margin-left 6→8.
+- Ctx: `min-width` 180→184; button padding 6/12→8/12 · radius 5→4;
+  `.csep` margin 3→4; `.csub` padding 3/12→4/12.
+- Modal: `p` margin-bottom 10→12; textarea padding 10→12 · radius 7→8
+  · min-height 220→224; `.pitem` padding 8/10→8/12 · radius 6→8.
+- Dialog: `.dc` padding 18/20→20 square · width 420→424; `p.dmsg`
+  margin-bottom 14→16; `.dbody` 14→16; input padding 9/11→8/12 ·
+  radius 7→8; button padding 8/14→8/16 · radius 7→8.
+- Toast: `#toast` right/bottom 14→16 · gap 6→8 · max-width 340→344,
+  padding-allowance 28→32; `.ts` padding 8/14→8/12 · radius 7→8 ·
+  box-shadow 14→16.
+- Edge picker: button padding 7/14→8/16 · radius 5→4; `.sw` 22×3→24×4.
+- Hint: padding 6/11→8/12.
+- Coarse-pointer overrides: `#ctx/#ep/#more` button padding 10/14→12/16;
+  `.pill` 8/14→8/16; `#pn input/textarea/select` padding 10/12→12.
+- `.pn-close` 36×36→40×40 (mobile touch target).
+
+**Inline sweeps.** `public/app.js`: dbg-panel header padding 5/8→4/8 +
+gap 6→8 + radius 7→8 (also flipped `rgba(26,24,21)` debug background
+to `rgba(15,15,15)` matching the Phase-5-#5 neutral palette); dbg-body
+padding 6/8→8 square; dbg-overlay padding 6→8 + radius 6→8 + bottom
+100→104 + max-height 150→152; formula preview padding 14→16 + margin
+6→8 + min-height 50→48 + radius 7→8; color-picker swatch 50→48 width
++ radius 6→8; project + pull picker input padding 8/10→8/12 +
+margin-bottom 10→12 + radius 7→8; paste-patch `<code>` padding 1/4→2/4
++ radius 3→4; edge-label padding 2/5→2/8 + radius 3→4.
+`index.html`: `#wsSel` inline select padding 6/10→8/12 + radius 7→8.
+
+**Verification.** Pure spacing refactor — no functional or visual-behavior
+changes. 76/76 desktop-chrome full suite + 40/40 Phase-5 suite on
+ipad-safari + ipad-chrome green post-audit. No test assertion updates
+needed: the suites target class toggles, text content, and computed
+transitions, not raw pixel offsets.
+
+---
+
 ## Phase 5 P1 · Item #5 — layered dark surfaces · 2026-04-16
 
 The palette was a warm-brown leftover from the idea_vault prototype:
