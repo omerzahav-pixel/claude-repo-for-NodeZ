@@ -329,7 +329,7 @@ function mdProcess(escapedText){
 }
 const s2w=(x,y)=>({x:(x-innerWidth/2)/view.k-view.x,y:(y-innerHeight/2)/view.k-view.y});
 const C=()=>S.canvases[S.current],zs=()=>C().zones,ns=()=>C().nodes,es=()=>C().edges;
-const zoneAt=(x,y)=>{for(const z of zs())if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h)return z.id;return zs()[0].id};
+const zoneAt=(x,y)=>{for(const z of zs())if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h)return z.id;return zs()[0]?.id||null};
 const DB_NAME='ideaVault',DB_STORE='state';
 let currentWs='workspace';
 const KEY=()=>'vault3-'+currentWs;
@@ -397,7 +397,8 @@ const T={
       exportAll:'Export all (full state)',exportThis:'Export this canvas',importAll:'Import full state',importThis:'Import into this canvas',pastePatch:'Paste patch',quickLink:'Quick-add from URL',dedupe:'Dedupe nodes',cleanOrphan:'Clean orphan canvases',clearCanvas:'Clear canvas',deleteWs:'Delete this workspace',
       mhExport:'Export',mhImport:'Import',mhUtil:'Utilities',mhWs:'Workspace',
       ctxEdge:'Edge',ctxZone:'Zone',changeTo:'Change to',deleteEdge:'Delete edge',unlockZ:'🔓 Unlock (allow move/resize)',lockZ:'🔒 Lock position',renameZ:'Rename',recolorZ:'Recolor',deleteZ:'Delete zone',addNodeHere:'+ Add node here',addZoneHere:'+ Add zone here',customLabel:'Label for this connection:',untitled:'Untitled',clearCanvasConfirm:'Clear current canvas?',deleteSelected:'Delete N selected nodes?',openRoadmap:'Open roadmap',createRoadmap:'+ Create roadmap',copyToVault:'Copy to vault',pullFromVault:'Pull from vault',copiedFromVault:'copied from vault',
-      ttWs:'Switch workspace',ttNewWs:'New workspace',ttHe:'Hebrew mode (toggle RTL + translated UI)',ttBack:'Back to parent canvas',ttAdd:'Add node (or double-click empty canvas)',ttZone:'Add zone (group of related nodes)',ttSearch:'Filter visible nodes by label / notes',ttFit:'Fit view to all nodes',ttUndo:'Undo (Ctrl+Z)',ttRedo:'Redo (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'Dim edges (focus on nodes)',ttPatch:'Paste patch JSON',ttImport:'Import full state JSON',ttMore:'More options (export / import / utilities / workspace)',ttLegend:'Legend · keyboard shortcuts',ttSbTog:'Cycle sidebar: Nodes · Edges · Zones',ttSbCollapse:'Collapse / expand all',ttSbMini:'Minimize to bottom'},
+      ttWs:'Switch workspace',ttNewWs:'New workspace',ttHe:'Hebrew mode (toggle RTL + translated UI)',ttBack:'Back to parent canvas',ttAdd:'Add node (or double-click empty canvas)',ttZone:'Add zone (group of related nodes)',ttSearch:'Filter visible nodes by label / notes',ttFit:'Fit view to all nodes',ttUndo:'Undo (Ctrl+Z)',ttRedo:'Redo (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'Dim edges (focus on nodes)',ttPatch:'Paste patch JSON',ttImport:'Import full state JSON',ttMore:'More options (export / import / utilities / workspace)',ttLegend:'Legend · keyboard shortcuts',ttSbTog:'Cycle sidebar: Nodes · Edges · Zones',ttSbCollapse:'Collapse / expand all',ttSbMini:'Minimize to bottom',
+      esTitle:'This canvas is empty',esHint:'Tap <b>+ Add</b> to create your first node, or double-click the canvas anywhere to add one there.',esAdd:'+ Add first node'},
   he:{idea:'רעיון',progress:'בתהליך',pending:'ממתין',blocked:'חסום',done:'הושלם',
       project:'פרויקט',question:'שאלה',experiment:'ניסוי',principle:'עיקרון',resource:'משאב',library:'ספרייה',doc:'מסמך',formula:'נוסחה',note:'פתק',
       blocker:'חסימה',feeds:'מזין את',related:'קשור ל',derived:'נגזר מ',example:'דוגמה',proof:'הוכחה',arrow:'חץ',custom:'מותאם',
@@ -410,7 +411,8 @@ const T={
       exportAll:'יצוא הכול (מלא)',exportThis:'יצוא הקנבס הזה',importAll:'יבוא מצב מלא',importThis:'יבוא לקנבס הזה',pastePatch:'הדבק patch',quickLink:'הוספה מהירה מקישור',dedupe:'מחיקת כפילויות',cleanOrphan:'ניקוי קנבסים יתומים',clearCanvas:'נקה קנבס',deleteWs:'מחיקת הסביבה',
       mhExport:'יצוא',mhImport:'יבוא',mhUtil:'כלים',mhWs:'סביבה',
       ctxEdge:'קשר',ctxZone:'אזור',changeTo:'שנה ל',deleteEdge:'מחק קשר',unlockZ:'🔓 פתח (אפשר הזזה/שינוי גודל)',lockZ:'🔒 נעל מיקום',renameZ:'שנה שם',recolorZ:'שנה צבע',deleteZ:'מחק אזור',addNodeHere:'+ הוסף נקודה כאן',addZoneHere:'+ הוסף אזור כאן',customLabel:'תווית לקשר הזה:',untitled:'ללא כותרת',clearCanvasConfirm:'לנקות את הקנבס הנוכחי?',deleteSelected:'למחוק N נקודות שנבחרו?',openRoadmap:'פתח מפת דרכים',createRoadmap:'+ צור מפת דרכים',copyToVault:'העתק לוולט',pullFromVault:'משוך מהוולט',copiedFromVault:'הועתק מהוולט',
-      ttWs:'החלפת סביבה',ttNewWs:'סביבה חדשה',ttHe:'מצב עברית (RTL וטקסט מתורגם)',ttBack:'חזרה לקנבס האב',ttAdd:'הוספת נקודה (או לחיצה כפולה על שטח ריק)',ttZone:'הוספת אזור (קבוצת נקודות קשורות)',ttSearch:'סינון נקודות לפי כותרת / הערות',ttFit:'התאם תצוגה לכל הנקודות',ttUndo:'בטל (Ctrl+Z)',ttRedo:'שחזר (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'עמעם קשרים (התמקד בנקודות)',ttPatch:'הדבקת patch בפורמט JSON',ttImport:'יבוא מצב מלא (JSON)',ttMore:'אפשרויות נוספות (יצוא / יבוא / כלים / סביבה)',ttLegend:'מקרא · קיצורי מקלדת',ttSbTog:'מעבר בסרגל: נקודות · קשרים · אזורים',ttSbCollapse:'כווץ / הרחב את כל האזורים',ttSbMini:'הקטן לתחתית'}
+      ttWs:'החלפת סביבה',ttNewWs:'סביבה חדשה',ttHe:'מצב עברית (RTL וטקסט מתורגם)',ttBack:'חזרה לקנבס האב',ttAdd:'הוספת נקודה (או לחיצה כפולה על שטח ריק)',ttZone:'הוספת אזור (קבוצת נקודות קשורות)',ttSearch:'סינון נקודות לפי כותרת / הערות',ttFit:'התאם תצוגה לכל הנקודות',ttUndo:'בטל (Ctrl+Z)',ttRedo:'שחזר (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'עמעם קשרים (התמקד בנקודות)',ttPatch:'הדבקת patch בפורמט JSON',ttImport:'יבוא מצב מלא (JSON)',ttMore:'אפשרויות נוספות (יצוא / יבוא / כלים / סביבה)',ttLegend:'מקרא · קיצורי מקלדת',ttSbTog:'מעבר בסרגל: נקודות · קשרים · אזורים',ttSbCollapse:'כווץ / הרחב את כל האזורים',ttSbMini:'הקטן לתחתית',
+      esTitle:'הקנבס הזה ריק',esHint:'לחצו <b>+ הוספה</b> ליצירת הנקודה הראשונה, או לחיצה כפולה על שטח ריק.',esAdd:'+ הוסף נקודה ראשונה'}
 };
 function t(k){return T[S.hebrewMode?'he':'en'][k]||k}
 function refreshUiText(){
@@ -430,6 +432,10 @@ function refreshUiText(){
   const tog=document.querySelector('#sb .sbhead .sbtog[onclick*="cycleSb"]');if(tog)tog.title=t('ttSbTog');
   const togC=document.querySelector('#sb .sbhead .sbtog[onclick*="collapseAllZones"]');if(togC)togC.title=t('ttSbCollapse');
   const togM=document.querySelector('#sb .sbhead .sbtog[onclick*="mini"]');if(togM)togM.title=t('ttSbMini');
+  // Phase 5 P2 · empty-state i18n
+  const esT=document.getElementById('es-title');if(esT)esT.textContent=t('esTitle');
+  const esH=document.getElementById('es-hint');if(esH)esH.innerHTML=t('esHint');
+  const esA=document.getElementById('es-add');if(esA)esA.textContent=t('esAdd');
   const more=document.getElementById('moreBody');if(more){more.innerHTML=`<div class="mh">${t('mhExport')}</div><button onclick="ex();flashInd('expInd');hideMore()">${t('exportAll')}</button><button onclick="exCanvas();flashInd('expInd');hideMore()">${t('exportThis')}</button><div class="msep"></div><div class="mh">${t('mhImport')}</div><label for="imp" onclick="window.dbg&&window.dbg('IMPORT','label[for=imp] tapped — browser should now forward click to #imp');hideMore()">${t('importAll')}</label><label for="impC" onclick="window.dbg&&window.dbg('IMPORT','label[for=impC] tapped');hideMore()">${t('importThis')}</label><button onclick="showPatch();hideMore()">${t('pastePatch')}</button><div class="msep"></div><div class="mh">${t('mhUtil')}</div><button onclick="quickLink();hideMore()">${t('quickLink')}</button><button onclick="dd();hideMore()">${t('dedupe')}</button><button onclick="cleanOrphanCanvases();hideMore()">${t('cleanOrphan')}</button><button onclick="clearCanvasConfirm();hideMore()" style="color:var(--block)">${t('clearCanvas')}</button><div class="msep"></div><div class="mh">${t('mhWs')}</div><button onclick="deleteCurrentWorkspace();hideMore()" style="color:var(--block)">${t('deleteWs')}</button>`}
   bF();renderSB();renderLegend();
 }
@@ -773,6 +779,9 @@ function render(){
     window.dbg('SYS','overlay paint-check · slices='+ovSlices+' · fnode='+ovFormulaDivs+' · fnode-label='+ovLabelDivs+' · note-body='+ovNoteDivs+(ov?' · transform='+ov.style.transform.slice(0,60):' · #canvasOverlay MISSING'));
   }
   window._mdCallsThisRender=0;
+  // Phase 5 P2 · empty-state overlay — show when canvas is truly empty
+  const _es=document.getElementById('emptyState');
+  if(_es){const empty=ns().length===0&&zs().length===0;_es.classList.toggle('on',empty)}
 }
 function bF(){const mode=S.filterMode||'zone';const otherMode=mode==='zone'?'status':'zone';const switchLabel=S.hebrewMode?(mode==='zone'?'אזורים ⇄ מצב':'מצב ⇄ אזורים'):(mode==='zone'?'Zones ⇄ Status':'Status ⇄ Zones');let h=`<span class="pill mode" onclick="switchFilterMode()" style="background:var(--accent);color:#0F0F0F;font-weight:600;cursor:pointer">${switchLabel}</span>`;if(mode==='zone'){zs().forEach(z=>h+=`<span class="pill on" data-f="zone:${z.id}" onclick="tF(this)" ondblclick="soloF(this)">${esc(z.name)}</span>`)}else{ST.forEach(s=>h+=`<span class="pill on" data-f="status:${s}" onclick="tF(this)" ondblclick="soloF(this)">${esc(t(s))}</span>`)}document.getElementById('fl').innerHTML=h}
 function switchFilterMode(){S.filterMode=S.filterMode==='status'?'zone':'status';sv();bF();aF()}
@@ -781,7 +790,10 @@ function tF(el){el.classList.toggle('on');aF()}
 function soloF(el){const all=document.querySelectorAll('#fl .pill');const wasOff=!el.classList.contains('on');const onlyMeOn=el.classList.contains('on')&&[...all].every(p=>p===el||!p.classList.contains('on'));if(onlyMeOn){all.forEach(p=>p.classList.add('on'))}else{all.forEach(p=>p.classList.remove('on'));el.classList.add('on')}aF()}
 function aF(){const zonePresent=document.querySelector('#fl .pill[data-f^="zone:"]')!==null;const statusPresent=document.querySelector('#fl .pill[data-f^="status:"]')!==null;const a=new Set([...document.querySelectorAll('.pill.on')].map(p=>p.dataset.f));const q=document.getElementById('sr').value.toLowerCase();ns().forEach(n=>{const zOk=!zonePresent||a.has('zone:'+n.zone);const sOk=!statusPresent||a.has('status:'+n.status);const qOk=!q||((n.label||'')+(n.notes||'')+(n.tags||'')+(n.rationale||'')).toLowerCase().includes(q);n.dim=!(zOk&&sOk&&qOk)});const k=new Set(ns().filter(n=>!n.dim).map(n=>n.id));es().forEach(e=>e.dim=!(k.has(e.from)&&k.has(e.to)));render()}
 function addNode(x,y,d={},skip){if(!skip)sn();const id=S.nextId++;const n={label:'New',notes:'',tags:'',rationale:'',shape:'idea',status:'idea',url:'',docUrl:'',originId:null,childCanvas:null,confidence:null,latex:'',color:null,compact:false,...d,id,x,y,zone:d.zone||zoneAt(x,y),created:d.created||new Date().toISOString().slice(0,10)};ns().push(n);sv();render();renderSB();return n}
-function addC(){const w=s2w(innerWidth/2,innerHeight/2);const n=addNode(w.x,w.y);sel=n;op(n)}
+/* Phase 5 P2 · smart placement: spiral outward from (cx,cy) until a spot has
+   no other node within SPACING px. 8 directions per ring, max 20 rings. */
+function findFreeSpot(cx,cy){const SP=120;for(let ring=0;ring<20;ring++){const steps=ring===0?1:ring*8;for(let i=0;i<steps;i++){const a=(2*Math.PI*i)/steps;const px=cx+Math.cos(a)*SP*ring;const py=cy+Math.sin(a)*SP*ring;if(!ns().some(n=>Math.abs(n.x-px)<SP&&Math.abs(n.y-py)<SP))return{x:px,y:py};};}return{x:cx+SP*20,y:cy}}
+function addC(){const w=s2w(innerWidth/2,innerHeight/2);const p=findFreeSpot(w.x,w.y);const n=addNode(p.x,p.y);sel=n;op(n)}
 function delN(id){sn();C().nodes=ns().filter(n=>n.id!==id);C().edges=es().filter(e=>e.from!==id&&e.to!==id);if(sel?.id===id)cp();sv();render();renderSB()}
 function delE(id){sn();C().edges=es().filter(e=>e.id!==id);sv();render()}
 function clr(){C().nodes=[];C().edges=[];cp();sv();render()}
@@ -946,8 +958,8 @@ async function applyPatch(){
   if(nodeTotal>PATCH_MAX_NODES){await uiNotice(`Patch would add ${nodeTotal} nodes. Limit is ${PATCH_MAX_NODES}.`,{title:'Too many nodes'});return}
   if(nodeTotal>PATCH_WARN_NODES){const ok=await uiConfirm(`This patch will add ${nodeTotal} nodes. Continue?`,{title:'Many nodes',okLabel:'Apply anyway'});if(!ok)return}
   try{
-    if(raw.patches&&Array.isArray(raw.patches)){sn();let ok=0;for(const p of raw.patches){try{document.getElementById('pt').value=JSON.stringify(p);await applyPatchSingle(p);ok++}catch(e){console.error('patch failed:',p.canvasId,e)}}closeModal();await uiNotice('Applied '+ok+'/'+raw.patches.length+' patches.');return}
-    sn();await applyPatchSingle(raw);closeModal()
+    if(raw.patches&&Array.isArray(raw.patches)){sn();let ok=0;for(const p of raw.patches){try{document.getElementById('pt').value=JSON.stringify(p);await applyPatchSingle(p);ok++}catch(e){console.error('patch failed:',p.canvasId,e)}}closeModal();if(nodeTotal>=10)zF();await uiNotice('Applied '+ok+'/'+raw.patches.length+' patches.');return}
+    sn();await applyPatchSingle(raw);closeModal();if(nodeTotal>=10)zF()
   }catch(err){await uiNotice('Apply error: '+err.message,{title:'Patch failed'})}
 }
 async function applyPatchSingle(p){

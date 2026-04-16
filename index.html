@@ -83,6 +83,12 @@
 <div id="sb"><div class="sbhead" onclick="sbHeadClick(event)"><span class="sbtog" onclick="event.stopPropagation();cycleSb()" title="Cycle sidebar: Nodes · Edges · Zones">☰</span><span id="sbName">Nodes</span><span style="flex:1"></span><span class="sbtog" onclick="event.stopPropagation();collapseAllZones()" title="Collapse / expand all">⇕</span><span class="sbtog" onclick="event.stopPropagation();document.getElementById('sb').classList.toggle('mini')" title="Minimize to bottom">▾</span></div><div class="sbsearch"><input id="sbq" placeholder="Filter list…" oninput="renderSB()"/></div><div class="sbbody" id="sbbody"></div><div class="resize" onpointerdown="sbResize(event)"></div></div>
 <div id="tabs"></div>
 <svg id="cv"></svg>
+<!-- Phase 5 P2 · empty-state overlay. Visible when the current canvas
+     has zero nodes and zero zones (a truly blank canvas looks broken
+     otherwise). render() toggles `.on`. The accent button is the single
+     clearest first action; the hint lists the three most common
+     alternatives so the user isn't stuck wondering what to do. -->
+<div id="emptyState"><div class="es-inner"><div class="es-emoji">✦</div><h2 id="es-title">This canvas is empty</h2><p id="es-hint">Tap <b>+ Add</b> to create your first node, or double-click the canvas anywhere to add one there.</p><button class="es-cta" onclick="addC()" id="es-add">+ Add first node</button></div></div>
 <!-- D3 / Phase 1.6 — HTML overlay layer for rich content that iOS WebKit
      refuses to paint inside SVG <foreignObject>. Shares the canvas's
      transform (translate/scale of view.x/view.y/view.k) so children can use
