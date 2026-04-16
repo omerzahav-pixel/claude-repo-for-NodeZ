@@ -11,10 +11,10 @@
 #sb.mini .sbbody,#sb.mini .sbsearch,#sb.mini .resize{display:none}
 #sb.mini .sbhead{padding:8px 12px;border-bottom:none;cursor:pointer}
 #old_sb_placeholder{display:none}
-#sb .sbhead{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--border);font:600 11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+#sb .sbhead{display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--border);font:600 11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
 #sb .sbtog{cursor:pointer;color:var(--muted);padding:0 4px}#sb .sbtog:hover{color:var(--accent)}
-#sb .sbsearch{padding:8px 10px;border-bottom:1px solid var(--border)}
-#sb .sbsearch input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text)}
+#sb .sbsearch{padding:8px 12px;border-bottom:1px solid var(--border)}
+#sb .sbsearch input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--text)}
 #sb .sbbody{flex:1;overflow-y:auto;padding:4px 0;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
 #sb .sbbody::-webkit-scrollbar{width:8px}
 #sb .sbbody::-webkit-scrollbar-track{background:transparent}
@@ -23,23 +23,23 @@
 #pn,#more,#ctx,#modal textarea,.plist{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 #pn::-webkit-scrollbar,#more::-webkit-scrollbar,#ctx::-webkit-scrollbar,#modal textarea::-webkit-scrollbar,.plist::-webkit-scrollbar{width:8px}
 #pn::-webkit-scrollbar-thumb,#more::-webkit-scrollbar-thumb,#ctx::-webkit-scrollbar-thumb,#modal textarea::-webkit-scrollbar-thumb,.plist::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-#sb .zhdr{padding:8px 12px 4px;font:600 10px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.6px;cursor:pointer;display:flex;justify-content:space-between}
+#sb .zhdr{padding:8px 12px 4px;font:600 10px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.6px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
 #sb .zhdr:hover{color:var(--text)}
 #sb .zhdr .ct{color:var(--muted);font-weight:500}
-#sb .item{padding:6px 12px;cursor:pointer;border-left:2px solid transparent;display:flex;gap:8px;align-items:flex-start}
+#sb .item{padding:8px 12px;cursor:pointer;border-left:2px solid transparent;display:flex;gap:8px;align-items:flex-start}
 #sb .item:hover{background:var(--bg2);border-left-color:var(--accent)}
-#sb .item .dot{flex-shrink:0;margin-top:3px;width:10px;height:10px}
+#sb .item .dot{flex-shrink:0;margin-top:4px;width:10px;height:10px}
 #sb .item .txt{flex:1;min-width:0}
 #sb .item .lbl{font-size:12px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #sb .item .desc{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
-#sb .item .urp{font-size:9px;color:var(--accent);margin-top:2px;display:inline-block;background:var(--bg2);border:1px solid var(--border);padding:1px 6px;border-radius:8px;text-decoration:none}
+#sb .item .urp{font-size:9px;color:var(--accent);margin-top:4px;display:inline-block;background:var(--bg2);border:1px solid var(--border);padding:2px 8px;border-radius:8px;text-decoration:none}
 #sb .resize{position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:ew-resize}
-#tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel);border-top:1px solid var(--border);display:flex;gap:2px;padding:4px 8px;overflow-x:auto}
-#tabs .tab{padding:6px 14px;border-radius:6px 6px 0 0;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);border:1px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:6px}
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel);border-top:1px solid var(--border);display:flex;gap:4px;padding:4px 8px;overflow-x:auto}
+#tabs .tab{padding:8px 16px;border-radius:8px 8px 0 0;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);border:1px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:8px}
 #tabs .tab:hover{background:var(--bg2);color:var(--text)}
 #tabs .tab.cur{background:var(--bg2);color:var(--text);border-color:var(--border);border-bottom-color:var(--bg2)}
-#tabs .tab .x{color:var(--muted);padding:0 2px}#tabs .tab .x:hover{color:var(--block)}
-#tabs .newtab{padding:6px 10px;color:var(--muted);cursor:pointer;font-size:13px}
+#tabs .tab .x{color:var(--muted);padding:0 4px}#tabs .tab .x:hover{color:var(--block)}
+#tabs .newtab{padding:8px 12px;color:var(--muted);cursor:pointer;font-size:13px}
 #tabs .newtab:hover{color:var(--accent)}
 /* Phase 1.8 — position:fixed so JS placePopover() can anchor + flip. The
    old absolute+right:0 required #more to be inside a position:relative
@@ -47,11 +47,11 @@
    viewports (menu ended up under the wrong row). */
 #more{position:fixed;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:220px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow-y:auto;z-index:60;-webkit-overflow-scrolling:touch}
 #more.on{display:block}
-#more .mh{padding:6px 12px 2px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
-#more button,#more label{display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 12px;border-radius:5px;cursor:pointer;font-size:12px;color:var(--text2);box-sizing:border-box}
+#more .mh{padding:8px 12px 4px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+#more button,#more label{display:block;width:100%;text-align:left;background:transparent;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text2);box-sizing:border-box}
 #more button:hover,#more label:hover{background:var(--panel2);color:var(--text)}
-#more .msep{height:1px;background:var(--border);margin:4px 6px}
-#indicators{display:flex;gap:6px;align-items:center;margin-left:4px}
+#more .msep{height:1px;background:var(--border);margin:4px 8px}
+#indicators{display:flex;gap:8px;align-items:center;margin-left:4px}
 .ind{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s}
 .ind.s-ok{background:var(--done)}.ind.s-pend{background:var(--pend)}.ind.s-err{background:var(--block)}
 .ind.flash{animation:flash 1s}
@@ -73,8 +73,8 @@ body.he .node text{direction:rtl}
 #pn input,#pn textarea,#modal textarea,#modal input,#tb input,#toolbar input,#sb input{user-select:text;-webkit-user-select:text}
 .zr.locked{cursor:default}
 button,input,select,textarea{font:inherit;color:inherit}
-#tb{position:fixed;top:12px;left:12px;z-index:30;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;gap:3px;flex-wrap:wrap;max-width:calc(100vw - 24px);box-shadow:0 2px 12px rgba(0,0,0,.3)}
-#tb button,#tb input,#tb .tbLabel{background:transparent;border:1px solid transparent;border-radius:7px;padding:6px 10px;font-size:13px;cursor:pointer;color:var(--text2);display:inline-flex;align-items:center;justify-content:center}
+#tb{position:fixed;top:12px;left:12px;z-index:30;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px;display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100vw - 24px);box-shadow:0 2px 12px rgba(0,0,0,.3)}
+#tb button,#tb input,#tb .tbLabel{background:transparent;border:1px solid transparent;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text2);display:inline-flex;align-items:center;justify-content:center}
 #tb button:hover,#tb .tbLabel:hover{background:var(--panel2);color:var(--text)}
 /* tbLabel is a <label for="..."> that behaves like a button. The native
    label element forwards clicks to its hidden file input, preserving the
@@ -82,7 +82,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 #tb .tbLabel{user-select:none;-webkit-user-select:none;min-width:32px}
 #tb .ac{background:var(--accent);color:#0F0F0F;font-weight:600}
 #tb input{border-color:var(--border);background:var(--bg2);cursor:text;min-width:130px}
-.sep{width:1px;background:var(--border);margin:3px 4px}
+.sep{width:1px;background:var(--border);margin:4px}
 /* Phase 1.8 · collapsible breadcrumbs.
    Default state = thin one-line indicator: "… › current ▾".
    Tap to expand → full "Vault › Projects › Trading ▴" chain.
@@ -90,49 +90,49 @@ button,input,select,textarea{font:inherit;color:inherit}
    Positioned at the right edge BELOW the toolbar so the widening toolbar
    (iPad has 10+ coarse-pointer buttons at min-width 44px) cannot overlap
    and swallow taps the way it did before Phase 1.8 D6. */
-#bc{position:fixed;top:62px;right:12px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 14px;font:500 13px var(--sans);color:var(--text2);display:flex;gap:6px;align-items:center;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none;transition:background .15s}
+#bc{position:fixed;top:64px;right:12px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 16px;font:500 13px var(--sans);color:var(--text2);display:flex;gap:8px;align-items:center;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none;transition:background .15s}
 #bc:hover{background:var(--panel2)}
 #bc a{color:var(--muted);cursor:pointer;text-decoration:none}#bc a:hover{color:var(--accent)}
 #bc .cur{color:var(--text);font-weight:600}
-#bc .bc-sep{color:var(--muted);padding:0 1px}
+#bc .bc-sep{color:var(--muted);padding:0 2px}
 #bc .bc-dots{color:var(--muted);letter-spacing:1px}
 #bc .bc-exp,#bc .bc-col{color:var(--muted);font-size:10px;margin-left:4px;transition:transform .15s}
 #bc:hover .bc-exp,#bc:hover .bc-col{color:var(--accent)}
 #bc .bc-full{display:none}
 #bc.expanded .bc-mini{display:none}
-#bc.expanded .bc-full{display:inline-flex;gap:6px;align-items:center}
-#fl{position:fixed;top:68px;left:12px;z-index:20;display:flex;gap:5px;flex-wrap:wrap;max-width:calc(100vw - 280px)}
+#bc.expanded .bc-full{display:inline-flex;gap:8px;align-items:center}
+#fl{position:fixed;top:72px;left:12px;z-index:20;display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100vw - 280px)}
 
-.pill{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:14px;font-size:11px;font-weight:500;cursor:pointer;user-select:none}
+.pill{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:16px;font-size:11px;font-weight:500;cursor:pointer;user-select:none}
 .pill.on{background:var(--text2);color:var(--bg);border-color:var(--text2)}
 #lg.on{display:block}
-#lgBtn{position:fixed;top:12px;right:18px;z-index:26;width:32px;height:32px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+#lgBtn{position:fixed;top:12px;right:16px;z-index:26;width:32px;height:32px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
 #lgBtn:hover{color:var(--accent);border-color:var(--accent)}
 #lg.on+#lgBtn{display:none}
-#lg{position:fixed;top:54px;right:18px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;width:240px;font-size:11px;box-shadow:0 2px 12px rgba(0,0,0,.3);display:none;max-height:70vh;overflow-y:auto}
-#lg h4{font:600 10px var(--sans);margin:8px 0 3px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
-#lg h4:first-of-type{margin-top:0}#lg .row{display:flex;align-items:center;gap:6px;padding:1px 0;color:var(--text2)}
-#lg .sw{width:10px;height:10px;border-radius:2px}
+#lg{position:fixed;top:56px;right:16px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;width:240px;font-size:11px;box-shadow:0 2px 12px rgba(0,0,0,.3);display:none;max-height:70vh;overflow-y:auto}
+#lg h4{font:600 10px var(--sans);margin:8px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+#lg h4:first-of-type{margin-top:0}#lg .row{display:flex;align-items:center;gap:8px;padding:2px 0;color:var(--text2)}
+#lg .sw{width:12px;height:12px;border-radius:2px}
 #lg.co .body{display:none}#lg .tog{float:right;cursor:pointer;color:var(--muted)}
 /* Phase 5 P1 #4 — smooth motion on open/close. The panel is always in
    the DOM; we toggle opacity + transform + visibility + pointer-events
    via the .on class. Delaying `visibility` on close keeps the fade-out
    visible before the element drops from hit-testing. */
-#pn{position:fixed;top:12px;right:12px;z-index:40;width:340px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(6px);transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms}
+#pn{position:fixed;top:12px;right:12px;z-index:40;width:340px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms}
 #pn.on{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity 220ms ease-out,transform 220ms ease-out,visibility 0ms linear 0ms}
 @media (prefers-reduced-motion: reduce){
   #pn,#pn.on{transition:opacity 0ms,transform 0ms,visibility 0ms}
 }
 #pn h2{font:600 20px var(--serif);line-height:1.25;margin-bottom:4px}
-#pn .meta{color:var(--muted);font-size:11px;margin-bottom:10px}
+#pn .meta{color:var(--muted);font-size:11px;margin-bottom:12px}
 #pn label{display:block;font:600 10px var(--sans);color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.6px}
-#pn input,#pn textarea,#pn select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:13px;color:var(--text)}
-#pn textarea{resize:vertical;min-height:60px;font-family:var(--serif);line-height:1.5}
+#pn input,#pn textarea,#pn select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text)}
+#pn textarea{resize:vertical;min-height:64px;font-family:var(--serif);line-height:1.5}
 #pn input:focus,#pn textarea:focus,#pn select:focus{outline:none;border-color:var(--accent)}
 /* Phase 5 P1 #3 — progressive disclosure. "More details" section groups
    the less-used fields behind a native <details> element so the default
    panel stays focused on label/body/shape/status/zone. */
-#pn details.pn-more{margin-top:14px;border-top:1px solid var(--border);padding-top:4px}
+#pn details.pn-more{margin-top:16px;border-top:1px solid var(--border);padding-top:4px}
 #pn details.pn-more summary{list-style:none;cursor:pointer;font:600 10px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:8px 0;user-select:none;display:flex;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent}
 #pn details.pn-more summary::-webkit-details-marker{display:none}
 #pn details.pn-more summary::before{content:'›';display:inline-block;transition:transform 140ms ease-out;color:var(--muted);font-size:14px;width:10px;text-align:center}
@@ -142,18 +142,18 @@ button,input,select,textarea{font:inherit;color:inherit}
 #pn details.pn-more .pn-more-body{padding-top:2px}
 body.he #pn details.pn-more summary::before{content:'‹'}
 body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
-.urp{display:inline-block;background:var(--bg2);border:1px solid var(--border);color:var(--accent);padding:4px 10px;border-radius:12px;font-size:11px;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brow{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
-.brow button{flex:1;min-width:70px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:7px;cursor:pointer;font-weight:500;font-size:12px}
+.urp{display:inline-block;background:var(--bg2);border:1px solid var(--border);color:var(--accent);padding:4px 12px;border-radius:12px;font-size:11px;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.brow button{flex:1;min-width:72px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer;font-weight:500;font-size:12px}
 .brow button.pr{background:var(--accent);color:#0F0F0F;border-color:var(--accent);font-weight:600}
 .brow button.dn{color:var(--block);border-color:transparent}
-.port{display:inline-block;margin-left:6px;color:var(--accent);font-size:11px;cursor:pointer;text-decoration:underline}
-.origin{display:inline-block;background:var(--bg2);color:var(--muted);padding:2px 7px;border-radius:8px;font-size:10px;margin-top:4px}
-#ctx{position:fixed;z-index:50;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:180px;max-height:80vh;overflow-y:auto}
-#ctx button{display:block;width:100%;text-align:left;background:transparent;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:12px;color:var(--text2)}
+.port{display:inline-block;margin-left:8px;color:var(--accent);font-size:11px;cursor:pointer;text-decoration:underline}
+.origin{display:inline-block;background:var(--bg2);color:var(--muted);padding:2px 8px;border-radius:8px;font-size:10px;margin-top:4px}
+#ctx{position:fixed;z-index:50;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:184px;max-height:80vh;overflow-y:auto}
+#ctx button{display:block;width:100%;text-align:left;background:transparent;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text2)}
 #ctx button:hover{background:var(--panel2);color:var(--text)}
-#ctx .csep{height:1px;background:var(--border);margin:3px 0}
-#ctx .csub{padding:3px 12px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+#ctx .csep{height:1px;background:var(--border);margin:4px 0}
+#ctx .csub{padding:4px 12px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
 /* Phase 5 P1 #4 — modal backdrop fade + inner scale-up. Backdrop fades
    180ms; inner .mc translates 8px + scales from 0.98 to give the dialog
    a settled-in feel instead of a hard snap. */
@@ -165,28 +165,28 @@ body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
   #modal,#modal.on,#modal .mc,#modal.on .mc{transition:opacity 0ms,visibility 0ms,transform 0ms}
 }
 #modal h3{font:600 18px var(--serif);margin-bottom:8px}
-#modal p{color:var(--muted);font-size:12px;margin-bottom:10px}
-#modal textarea{width:100%;min-height:220px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px;font:12px/1.5 monospace;color:var(--text)}
+#modal p{color:var(--muted);font-size:12px;margin-bottom:12px}
+#modal textarea{width:100%;min-height:224px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font:12px/1.5 monospace;color:var(--text)}
 #modal .plist{max-height:50vh;overflow-y:auto}
-#modal .pitem{padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer;font-size:12px}
+#modal .pitem{padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer;font-size:12px}
 #modal .pitem:hover{border-color:var(--accent);background:var(--bg2)}
 /* Phase 1.7 · dark-themed dialog — replaces native prompt/confirm/alert.
    z-index 70 so it stacks above #modal (60) when e.g. applyPatch needs to
    confirm a missing parent node from inside the paste-patch modal. */
 #dlg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 #dlg.on{display:flex}
-#dlg .dc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;width:420px;max-width:90vw;box-shadow:0 12px 36px rgba(0,0,0,.55);font-family:'Inter','Assistant',system-ui,sans-serif;box-sizing:border-box}
+#dlg .dc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:424px;max-width:90vw;box-shadow:0 12px 36px rgba(0,0,0,.55);font-family:'Inter','Assistant',system-ui,sans-serif;box-sizing:border-box}
 body.he #dlg .dc{direction:rtl;font-family:'Assistant','Inter',system-ui,sans-serif}
 #dlg h3{font:600 17px var(--serif);margin:0 0 8px;color:var(--text)}
 body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
-#dlg p.dmsg{color:var(--text);font-size:13px;margin:0 0 14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+#dlg p.dmsg{color:var(--text);font-size:13px;margin:0 0 16px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 #dlg p{color:var(--muted);font-size:12px;margin:0 0 12px;line-height:1.45}
-#dlg .dbody{margin:0 0 14px}
-#dlg input[type="text"],#dlg textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:9px 11px;font:13px/1.4 'Inter','Assistant',system-ui,sans-serif;color:var(--text);box-sizing:border-box;-webkit-appearance:none;appearance:none}
+#dlg .dbody{margin:0 0 16px}
+#dlg input[type="text"],#dlg textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font:13px/1.4 'Inter','Assistant',system-ui,sans-serif;color:var(--text);box-sizing:border-box;-webkit-appearance:none;appearance:none}
 #dlg textarea{font-family:'Inter','Assistant',system-ui,sans-serif;resize:vertical}
 #dlg input[type="text"]:focus,#dlg textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
 #dlg .drow{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
-#dlg button{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:7px;cursor:pointer;font:500 12px 'Inter','Assistant',system-ui,sans-serif;min-width:72px}
+#dlg button{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:8px;cursor:pointer;font:500 12px 'Inter','Assistant',system-ui,sans-serif;min-width:72px}
 #dlg button.pr{background:var(--accent);color:#0F0F0F;font-weight:600;border:1px solid var(--accent)}
 #dlg button.dn{background:var(--block);color:#fff;border:1px solid var(--block);font-weight:600}
 #dlg button:hover{filter:brightness(1.12)}
@@ -196,12 +196,12 @@ body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
    init steps at the top of the screen. toast() re-positions the host
    element each call to stack above the ◆ diag panel (right:8px bottom:8px)
    so they never sit on top of each other. Hebrew flips to bottom-left. */
-#toast{position:fixed;right:14px;bottom:14px;z-index:55;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none;max-width:min(340px,calc(100vw - 28px))}
-#toast .ts{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px 14px;font:500 12px 'Inter','Assistant',system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast{position:fixed;right:16px;bottom:16px;z-index:55;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:min(344px,calc(100vw - 32px))}
+#toast .ts{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font:500 12px 'Inter','Assistant',system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #toast .ts.on{opacity:1;transform:translateY(0)}
 #toast .ts.ok{border-color:#7db36a}
 #toast .ts.err{border-color:#d96b5a}
-body.he #toast{right:auto;left:14px;align-items:flex-start;font-family:'Assistant','Inter',system-ui,sans-serif}
+body.he #toast{right:auto;left:16px;align-items:flex-start;font-family:'Assistant','Inter',system-ui,sans-serif}
 #cv{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;cursor:grab;display:block;touch-action:none;background:var(--bg);z-index:0}
 #cv.gr{cursor:grabbing}
 /* D3 / Phase 1.6 — HTML overlay for rich content that iOS WebKit refuses
@@ -255,9 +255,9 @@ body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spaci
 .node.tgt .ring{stroke:var(--accent);stroke-width:3;fill:none;stroke-dasharray:4,3}
 .edge{fill:none;stroke-width:1.8;pointer-events:stroke;cursor:pointer}.edge:hover{stroke-width:3}.edge.dim{opacity:.1}
 #ep{position:fixed;z-index:55;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none}
-#ep button{display:block;width:100%;text-align:left;background:transparent;border:none;padding:7px 14px;border-radius:5px;cursor:pointer;font-size:12px;color:var(--text2)}
-#ep button:hover{background:var(--panel2)}#ep .sw{display:inline-block;width:22px;height:3px;margin-right:8px;vertical-align:middle;border-radius:2px}
-.hint{position:fixed;bottom:12px;left:12px;color:var(--muted);font-size:11px;background:var(--panel);padding:6px 11px;border-radius:8px;border:1px solid var(--border)}
+#ep button{display:block;width:100%;text-align:left;background:transparent;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text2)}
+#ep button:hover{background:var(--panel2)}#ep .sw{display:inline-block;width:24px;height:4px;margin-right:8px;vertical-align:middle;border-radius:2px}
+.hint{position:fixed;bottom:12px;left:12px;color:var(--muted);font-size:11px;background:var(--panel);padding:8px 12px;border-radius:8px;border:1px solid var(--border)}
 /* === Mobile / iPad enhancements === */
 /* iPad hardening (Phase 1 · 1.6a): lock the app shell to the visual viewport
    so iOS rubber-band, pull-to-refresh, and scroll-chaining can't yank the
@@ -278,10 +278,10 @@ input,textarea,select,button{touch-action:manipulation}
   #tb button,#tb select,#tb input,#tb .tbLabel{min-height:44px;min-width:44px;padding:8px 12px;font-size:14px}
   #tabs .tab{min-height:44px;padding:8px 16px;font-size:13px}
   #tabs .newtab{min-height:44px;min-width:44px;padding:8px 12px}
-  #ctx button,#ep button,#more button,#more label{min-height:44px;padding:10px 14px;font-size:14px}
-  .pill{min-height:36px;padding:8px 14px;font-size:12px;display:inline-flex;align-items:center}
+  #ctx button,#ep button,#more button,#more label{min-height:44px;padding:12px 16px;font-size:14px}
+  .pill{min-height:36px;padding:8px 16px;font-size:12px;display:inline-flex;align-items:center}
   #pn .brow button{min-height:44px;font-size:14px}
-  #pn input,#pn textarea,#pn select{min-height:44px;font-size:14px;padding:10px 12px}
+  #pn input,#pn textarea,#pn select{min-height:44px;font-size:14px;padding:12px}
   .hint{display:none}
 }
 /* Responsive: narrow screens (<768px) · Phase 1.8 D6 — "overflow into More".
@@ -309,7 +309,7 @@ input,textarea,select,button{touch-action:manipulation}
   #ctx,#ep{max-width:calc(100vw - 16px);max-height:calc(100vh - 16px)}
 }
 /* Close button for mobile panel */
-.pn-close{display:none;position:absolute;top:12px;right:12px;background:var(--panel2);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;font-size:18px;color:var(--text);cursor:pointer;z-index:5;align-items:center;justify-content:center}
+.pn-close{display:none;position:absolute;top:12px;right:12px;background:var(--panel2);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;font-size:18px;color:var(--text);cursor:pointer;z-index:5;align-items:center;justify-content:center}
 @media(max-width:767px){.pn-close{display:flex}}
 /* Apple Pencil: treat as precise pointer */
 @media(pointer:fine)and(hover:none){#cv{cursor:crosshair}}
