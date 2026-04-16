@@ -39,19 +39,19 @@
 </head>
 <body>
 <div id="tb">
-<select id="wsSel" onchange="switchWorkspace(this.value)" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer"></select>
+<select id="wsSel" onchange="switchWorkspace(this.value)" title="Switch workspace" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer"></select>
 <button onclick="newWorkspace()" title="New workspace">＋ WS</button>
-<button id="heBtn" onclick="toggleHebrew()" title="Hebrew mode">א/A</button>
+<button id="heBtn" onclick="toggleHebrew()" title="Hebrew mode (toggle RTL + translated UI)">א/A</button>
 <span class="sep"></span>
-<button id="backBtn" onclick="goBack()" style="display:none;background:var(--accent);color:#0F0F0F;font-weight:600;border:none">← Back</button>
-<button class="ac" id="addBtn" onclick="addC()">+ Add</button>
-<button id="zoneBtn" onclick="addZoneCenter()">+ Zone</button>
+<button id="backBtn" onclick="goBack()" title="Back to parent canvas" style="display:none;background:var(--accent);color:#0F0F0F;font-weight:600;border:none">← Back</button>
+<button class="ac" id="addBtn" onclick="addC()" title="Add node (or double-click empty canvas)">+ Add</button>
+<button id="zoneBtn" onclick="addZoneCenter()" title="Add zone (group of related nodes)">+ Zone</button>
 <span class="sep"></span>
-<input id="sr" placeholder="Search canvas…" oninput="aF()" style="min-width:110px"/>
+<input id="sr" placeholder="Search canvas…" oninput="aF()" title="Filter visible nodes by label / notes" style="min-width:110px"/>
 <span class="sep"></span>
-<button id="fitBtn" onclick="zF()">Fit</button>
+<button id="fitBtn" onclick="zF()" title="Fit view to all nodes">Fit</button>
 <button id="undoBtn" onclick="un()" title="Undo (Ctrl+Z)">↶</button>
-<button id="redoBtn" onclick="re()" title="Redo (Ctrl+Y)">↷</button>
+<button id="redoBtn" onclick="re()" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷</button>
 <button id="dimEdgesBtn" onclick="toggleDimEdges()" title="Dim edges (focus on nodes)">⌇</button>
 <span class="sep"></span>
 <!-- Phase 1.8 · promoted to top toolbar.
@@ -62,7 +62,7 @@
 <button id="patchBtn" onclick="showPatch()" title="Paste patch JSON">⇲</button>
 <label id="importBtn" for="imp" class="tbLabel" title="Import full state JSON" onclick="window.dbg&&window.dbg('IMPORT','toolbar ⇅ tapped — label forwards to #imp')">⇅</label>
 <span class="sep"></span>
-<button id="moreBtn" onclick="toggleMore();window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()">⋯ More</button>
+<button id="moreBtn" onclick="toggleMore();window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()" title="More options (export / import / utilities / workspace)">⋯ More</button>
 <div id="more"><div id="moreBody"></div></div>
 <div id="indicators"><span class="ind s-ok" id="saveInd" title="Save status"></span><span class="ind" id="expInd" title="Export flash"></span></div>
 <!-- iOS Safari blocks synthetic .click() on a hidden file input called from
@@ -80,7 +80,7 @@
 <div id="lg"><span class="tog" onclick="hideLegend()">×</span>
 <div class="body" id="lgBody"></div></div>
 <div id="pn"></div><div id="ctx"></div><div id="ep"></div><div id="modal"><div class="mc" id="mcbody"></div></div>
-<div id="sb"><div class="sbhead" onclick="sbHeadClick(event)"><span class="sbtog" onclick="event.stopPropagation();cycleSb()">☰</span><span id="sbName">Nodes</span><span style="flex:1"></span><span class="sbtog" onclick="event.stopPropagation();collapseAllZones()" title="Collapse / expand all">⇕</span><span class="sbtog" onclick="event.stopPropagation();document.getElementById('sb').classList.toggle('mini')" title="Minimize to bottom">▾</span></div><div class="sbsearch"><input id="sbq" placeholder="Filter list…" oninput="renderSB()"/></div><div class="sbbody" id="sbbody"></div><div class="resize" onpointerdown="sbResize(event)"></div></div>
+<div id="sb"><div class="sbhead" onclick="sbHeadClick(event)"><span class="sbtog" onclick="event.stopPropagation();cycleSb()" title="Cycle sidebar: Nodes · Edges · Zones">☰</span><span id="sbName">Nodes</span><span style="flex:1"></span><span class="sbtog" onclick="event.stopPropagation();collapseAllZones()" title="Collapse / expand all">⇕</span><span class="sbtog" onclick="event.stopPropagation();document.getElementById('sb').classList.toggle('mini')" title="Minimize to bottom">▾</span></div><div class="sbsearch"><input id="sbq" placeholder="Filter list…" oninput="renderSB()"/></div><div class="sbbody" id="sbbody"></div><div class="resize" onpointerdown="sbResize(event)"></div></div>
 <div id="tabs"></div>
 <svg id="cv"></svg>
 <!-- D3 / Phase 1.6 — HTML overlay layer for rich content that iOS WebKit
