@@ -4,6 +4,34 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P2 · Auto-fit + smart placement + empty states · 2026-04-16
+
+Three small polish items bundled into one pass:
+
+**Empty-state overlay** — A blank canvas now shows a centered overlay
+with a ✦ emoji, "This canvas is empty" title, a hint paragraph, and
+an accent "+ Add first node" CTA button. Hides the moment the first
+node or zone appears. Full Hebrew i18n. Fade-in animation (250ms)
+respects prefers-reduced-motion.
+
+**Smart placement** — `findFreeSpot(cx, cy)` spirals outward from the
+requested center with 120px spacing. Consecutive "+ Add" taps no
+longer stack nodes on top of each other — each new node lands in the
+nearest free spot.
+
+**Auto-fit after large paste-patch** — When a patch adds ≥ 10 nodes,
+`zF()` fires automatically so the user sees all imported content
+without having to manually zoom out.
+
+Also: `zoneAt()` now returns null instead of crashing when the canvas
+has zero zones — a state that was impossible before the empty-state
+overlay but is now valid.
+
+Tests: 7-test spec `tests/phase5_polish.spec.ts`, 119/119 desktop +
+232/232 iPad regression green.
+
+---
+
 ## Phase 5 P2 · Tooltips pass · 2026-04-16
 
 Walked every toolbar button, input, and sidebar toggle and asked: if I
