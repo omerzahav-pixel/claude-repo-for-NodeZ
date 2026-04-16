@@ -4,6 +4,65 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P2 · Expandable description field · 2026-04-16
+
+The property panel's textareas were a tiny 64px tall regardless of
+content. On iPad, writing even a few lines of a description felt
+cramped and made you fight a small scrollable box. Two changes fix it:
+auto-grow, and an expand-to-modal affordance for focused writing.
+
+**`aGrow(el)` helper (`public/app.js`).** Sets `el.style.height =
+Math.min(scrollHeight, 0.5 * innerHeight)` and toggles `overflowY`
+between `hidden` and `auto` based on whether content fits. Called:
+- Once from `op()` right after `pn.innerHTML = …` so existing content
+  opens at the right height.
+- Inline from every textarea's `oninput` (alongside the existing
+  `aField(...)`) so typing grows continuously.
+
+**`expandField(fieldId, nodeKey, label)` / `closeExpanded(…)`.** Opens
+the existing `#modal` with a 60vh-tall textarea pre-filled from
+`sel[nodeKey]`. Typing in the expanded view runs through the same
+`aField()` autosave path the panel textarea uses — no data-fork, the
+node mutates in place. `closeExpanded()` flushes autosave, closes the
+modal, copies the live `sel[nodeKey]` back into the panel's textarea
+value, and re-grows it so height is correct before the user sees the
+panel again. The Done button label is inline `hebrewMode?'סיום':'Done'`
+(not worth a dictionary entry for one micro-string).
+
+**Where the buttons live.** Notes (`f_notes`), rationale
+(`f_rationale`), and latex (`f_latex`) each get a `⇱` expand button
+injected into a new `<label class="flabel">` flex row. `.expandBtn` is
+transparent by default, tints to accent on hover, and bumps from 2/6
+to 6/10 padding under `@media(pointer:coarse)` for comfortable iPad
+tapping. The old plain `<label>…</label>` pattern is kept for
+non-expandable fields (tags, confidence, zone, etc.).
+
+**CSS changes.** `#pn textarea` switched from `resize:vertical;
+min-height:64px` to `resize:none; min-height:64px; max-height:50vh;
+overflow-y:hidden` — the vertical resize handle was unusable on touch
+and now `aGrow()` drives the height. `min-height` still acts as the
+floor so an empty textarea doesn't collapse.
+
+**Tests.** `tests/phase5_expand.spec.ts` — 6 tests × 3 projects = 18
+new assertions:
+- 5P2.E1 empty `f_notes` opens at ~min-height (30–120px), not pre-grown.
+- 5P2.E2 seeding 20 lines of notes then opening the panel grows
+  `f_notes` past 180px, capped below `50vh + 4`.
+- 5P2.E3 typing 10 lines via keyboard in `f_notes` makes it grow vs.
+  the pre-type height.
+- 5P2.E4 calling the expand button opens `#modal.on #ef_body` with
+  the node's pre-existing notes pre-filled.
+- 5P2.E5 fill `#ef_body` with new text → 300ms settle → `sel.notes`
+  matches the new text; then `closeExpanded` → panel `f_notes.value`
+  re-syncs to the new text.
+- 5P2.E6 default shape + Details open → `#pn .expandBtn` count ≥ 2
+  (notes + rationale both got the affordance).
+
+**Regression.** 87/87 desktop-chrome + 168/168 iPad engines green
+(6 pre-existing WebKit-SW PWA skips).
+
+---
+
 ## Phase 5 P2 · Selection glow + drag visual feedback · 2026-04-16
 
 First item in the P2 (ship-if-time) bucket. The drawn SVG ring on a
