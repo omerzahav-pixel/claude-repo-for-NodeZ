@@ -372,9 +372,9 @@ input,textarea,select,button{touch-action:manipulation}
    the glow brightens to reinforce "you're moving this". Placed BEFORE
    `.holding` so the stronger press-and-hold glow wins during the brief
    overlap when a selected node is held for drag. */
-.nslice.sel{filter:drop-shadow(0 0 6px rgba(217,119,87,.45)) drop-shadow(0 0 2px rgba(217,119,87,.7));transition:filter 160ms ease-out}
-body.dragging .nslice.sel{filter:drop-shadow(0 0 12px rgba(217,119,87,.8)) drop-shadow(0 0 3px rgba(217,119,87,1));transition:filter 80ms ease-out}
-@media (prefers-reduced-motion: reduce){.nslice.sel,body.dragging .nslice.sel{transition:none}}
+.nslice.sel{filter:drop-shadow(0 0 10px rgba(217,119,87,.6)) drop-shadow(0 0 3px rgba(217,119,87,.85));transform:scale(1.04);transition:filter 160ms ease-out,transform 160ms ease-out}
+body.dragging .nslice.sel{filter:drop-shadow(0 0 14px rgba(217,119,87,.85)) drop-shadow(0 0 4px rgba(217,119,87,1));transform:scale(1.06);transition:none}
+@media (prefers-reduced-motion: reduce){.nslice.sel,body.dragging .nslice.sel{transition:none;transform:none}}
 /* Phase 5 P1 — press-and-hold drag on touch. When the 350ms hold gate
    opens, both the SVG hit-group AND the overlay slice gain `.holding`.
    We apply a warm accent-color glow to the slice so the user sees "drag

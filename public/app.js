@@ -521,6 +521,13 @@ document.addEventListener('pointerdown',e=>{
   if(more&&more.classList.contains('on')&&!more.contains(e.target)&&!(e.target.closest&&e.target.closest('#moreBtn')))hideMore();
   const lg=document.getElementById('lg');
   if(lg&&lg.classList.contains('on')&&!lg.contains(e.target)&&!(e.target.closest&&e.target.closest('#lgBtn')))hideLegend();
+  /* Phase 5b — context menu + edge picker outside-click. These were on
+     'click' (line ~1020) which is suppressed by the canvas's pointerdown
+     preventDefault + setPointerCapture combo. Move them here. */
+  const _ctx=document.getElementById('ctx');
+  if(_ctx&&_ctx.style.display!=='none'&&!_ctx.contains(e.target))hideCtx();
+  const _ep=document.getElementById('ep');
+  if(_ep&&_ep.style.display!=='none'&&!_ep.contains(e.target))_ep.style.display='none';
 },true);
 function urlDomain(u){try{const p=new URL(u);const h=p.hostname.replace('www.','');if(h.includes('tradingview'))return 'tradingview';if(h.includes('github'))return 'github';if(h.includes('arxiv'))return 'arxiv';if(h.includes('notion'))return 'notion';if(h.includes('youtube'))return 'youtube';if(h.includes('x.com')||h.includes('twitter'))return 'x';return h.split('.')[0]}catch(e){return 'link'}}
 function renderSB(){const body=document.getElementById('sbbody');if(!body)return;const q=(document.getElementById('sbq')?.value||'').toLowerCase();const groups={};for(const n of ns()){if(q&&!((n.label||'')+(n.notes||'')+(n.tags||'')).toLowerCase().includes(q))continue;const zid=n.zone;if(!groups[zid])groups[zid]=[];groups[zid].push(n)}
@@ -587,6 +594,14 @@ window.__testAddChildCanvas=(id,name,parent)=>{
 };
 function bB(){const chain=[];let c2=S.current;while(c2){chain.unshift({id:c2,name:S.canvasMeta[c2]?.name||c2});const p=S.canvasMeta[c2]?.parentCanvas;c2=p||null}
   const backBtn=document.getElementById('backBtn');if(backBtn){if(chain.length>1){backBtn.style.display='inline-block';backBtn.setAttribute('data-parent',chain[chain.length-2].id)}else{backBtn.style.display='none'}}
+  // Phase 5 P2 — undo/redo button disable state (must run before any return)
+  const ub=document.getElementById('undoBtn'),rb=document.getElementById('redoBtn');
+  if(ub)ub.disabled=!hist.length;
+  if(rb)rb.disabled=!redoStack.length;
+  /* Phase 5b — hide breadcrumb chip on root canvas. Showing "Vault" alone
+     is visual noise; the breadcrumb only adds value when navigated deeper. */
+  if(chain.length<=1){bc.style.display='none';return}
+  bc.style.display='';
   // Phase 1.8 — collapsible breadcrumbs. Default "thin": just the current
   // canvas + a chevron if the chain is deeper than 1. Tap expands the full
   // chain inline; tapping any ancestor navigates there. Depth-1 canvases
@@ -602,12 +617,7 @@ function bB(){const chain=[];let c2=S.current;while(c2){chain.unshift({id:c2,nam
   bc.innerHTML=mini+fullWrap;
   // Tap anywhere on #bc (except an <a> inside the expanded chain) toggles.
   bc.onclick=e=>{if(e.target.tagName==='A')return;bc.classList.toggle('expanded')};
-  // Phase 5 P2 — reflect undo/redo stack state on toolbar buttons. Disabled
-  // buttons still receive tap events (don't hide — feedback matters) but
-  // look greyed so the user sees "nothing to undo/redo" at a glance.
-  const ub=document.getElementById('undoBtn'),rb=document.getElementById('redoBtn');
-  if(ub)ub.disabled=!hist.length;
-  if(rb)rb.disabled=!redoStack.length;}
+  /* undo/redo disable moved to top of bB() so it runs even on early return */}
 function goBack(){const p=document.getElementById('backBtn').getAttribute('data-parent');if(p)switchTo(p)}
 function switchTo(id){if(!S.canvases[id])return;S.current=id;sel=null;cp();view={x:0,y:0,k:.5};sv();render();bF();bB();renderTabs();renderSB();zF()}
 function render(){
@@ -827,7 +837,10 @@ function addNode(x,y,d={},skip){if(!skip)sn();const id=S.nextId++;const n={label
 /* Phase 5 P2 · smart placement: spiral outward from (cx,cy) until a spot has
    no other node within SPACING px. 8 directions per ring, max 20 rings. */
 function findFreeSpot(cx,cy){const SP=120;for(let ring=0;ring<20;ring++){const steps=ring===0?1:ring*8;for(let i=0;i<steps;i++){const a=(2*Math.PI*i)/steps;const px=cx+Math.cos(a)*SP*ring;const py=cy+Math.sin(a)*SP*ring;if(!ns().some(n=>Math.abs(n.x-px)<SP&&Math.abs(n.y-py)<SP))return{x:px,y:py};};}return{x:cx+SP*20,y:cy}}
-function addC(){const w=s2w(innerWidth/2,innerHeight/2);const p=findFreeSpot(w.x,w.y);const n=addNode(p.x,p.y);sel=n;op(n)}
+function addC(){/* Phase 5b — use SVG bounding rect for true visual center (iPad PWA
+  viewport-fit:cover makes innerWidth/Height include safe-area insets) */
+  const r=cv.getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;
+  const w=s2w(cx,cy);const p=findFreeSpot(w.x,w.y);const n=addNode(p.x,p.y);sel=n;op(n)}
 function delN(id){sn();C().nodes=ns().filter(n=>n.id!==id);C().edges=es().filter(e=>e.from!==id&&e.to!==id);if(sel?.id===id)cp();sv();render();renderSB()}
 function delE(id){sn();C().edges=es().filter(e=>e.id!==id);sv();render()}
 function clr(){C().nodes=[];C().edges=[];cp();sv();render()}
@@ -1084,6 +1097,11 @@ cv.addEventListener('pointerdown',e=>{
       holdTimer=null;
       if(!drag||drag.k!=='node'||!drag.holdPending)return;
       drag.holdPending=false;
+      /* Phase 5b — once the hold gate opens, cancel the context-menu timer.
+         Movement after this point = drag, not menu. The 500ms context-menu
+         threshold is only 150ms past HOLD_MS; without this cancel, a tiny
+         movement delay lets the menu fire during a legitimate drag. */
+      if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
       // Visual + haptic cue so the user knows the gate opened.
       document.body.classList.add('holding');
       const slice=document.querySelector(`.nslice[data-nid="${nid}"]`);if(slice)slice.classList.add('holding');
@@ -1149,7 +1167,17 @@ document.addEventListener('pointermove',e=>{
     drag.moved=true;document.body.classList.add('dragging');
     if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
   }
-  if(drag.k==='node'&&drag.moved){if(!drag.snap){sn();drag.snap=true}const newNx=w.x-drag.ox,newNy=w.y-drag.oy;if(drag.group){const anchor=drag.groupStart.find(g=>g.id===drag.n.id);const dx=newNx-anchor.x,dy=newNy-anchor.y;for(const gs of drag.groupStart){const nn=ns().find(x=>x.id===gs.id);if(nn){nn.x=gs.x+dx;nn.y=gs.y+dy}}}else{drag.n.x=newNx;drag.n.y=newNy;drag.n.zone=zoneAt(drag.n.x,drag.n.y)}render()}
+  if(drag.k==='node'&&drag.moved){if(!drag.snap){sn();drag.snap=true}const newNx=w.x-drag.ox,newNy=w.y-drag.oy;if(drag.group){const anchor=drag.groupStart.find(g=>g.id===drag.n.id);const dx=newNx-anchor.x,dy=newNy-anchor.y;for(const gs of drag.groupStart){const nn=ns().find(x=>x.id===gs.id);if(nn){nn.x=gs.x+dx;nn.y=gs.y+dy}}}else{drag.n.x=newNx;drag.n.y=newNy;drag.n.zone=zoneAt(drag.n.x,drag.n.y)}
+    /* Phase 5b · fix ghost trail. During node drag, patch only the moved
+       node slice + SVG hit-group positions instead of full innerHTML rebuild.
+       This avoids tearing the compositor layer on iOS (stale tiles leaked as
+       ghost trails with the old innerHTML path at 120Hz). Full render()
+       fires once on pointerup when drag completes. */
+    if(!drag.group){
+      const _sl=document.querySelector(`.nslice[data-nid="${drag.n.id}"]`);if(_sl){_sl.style.left=drag.n.x+'px';_sl.style.top=drag.n.y+'px';
+        const _g=_sl.querySelector('.nshape g');if(_g)_g.setAttribute('transform',`translate(${-drag.n.x},${-drag.n.y})`)}
+      const _hg=cv.querySelector(`g.node[data-id="${drag.n.id}"]`);if(_hg){const _th=_hg.querySelector('.th');if(_th){if(_th.tagName==='circle'){_th.setAttribute('cx',drag.n.x);_th.setAttribute('cy',drag.n.y)}else{const hw=(drag.n._w||100),hh=(drag.n._h||60);_th.setAttribute('x',drag.n.x-hw);_th.setAttribute('y',drag.n.y-hh)}}}
+    }else{render()}}
   else if(drag.k==='marquee'){drag.curW=w;render();drawMarquee(drag.startW,w)}
   else if(drag.k==='zone'&&drag.moved){if(!drag.snap){sn();drag.snap=true}drag.z.x=w.x-drag.ox;drag.z.y=w.y-drag.oy;render()}
   else if(drag.k==='resize'){drag.z.w=Math.max(200,drag.ow+(e.clientX-drag.sx)/view.k);drag.z.h=Math.max(150,drag.oh+(e.clientY-drag.sy)/view.k);render()}

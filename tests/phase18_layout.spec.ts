@@ -24,10 +24,11 @@ async function openApp(page: Page) {
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector("#addBtn", { state: "visible", timeout: 15_000 });
-  // Wait for load() to reach bB() — proves by non-empty #bc. On ipad-safari
-  // WebKit this can trail the #addBtn paint by 200-400ms on first reload.
+  // Wait for load() to finish — __E2E is defined at end of app.js (sync),
+  // so its presence proves the script has executed. Phase 5b hides #bc on
+  // root canvas, so the old bc-mini check no longer works.
   await page.waitForFunction(
-    () => !!document.querySelector("#bc .bc-mini"),
+    () => !!(window as any).__E2E,
     null,
     { timeout: 5_000 }
   );
@@ -158,13 +159,17 @@ test.describe("Phase 1.8 · #4 Collapsible breadcrumbs", () => {
   test("1.8.9 Default collapsed state shows mini indicator only", async ({ page }) => {
     await openApp(page);
     const bc = page.locator("#bc");
+    // Phase 5b: breadcrumb is hidden on root canvas (depth 1).
+    // Navigate to a child canvas to verify the mini state.
+    await page.evaluate(() => {
+      (window as any).__testAddChildCanvas("bc9child", "Test", "vault");
+    });
     await expect(bc).toBeVisible();
-    // On fresh load, only one canvas (Vault) → no chain to collapse; just cur.
     const hasMini = await bc.locator(".bc-mini").count();
     expect(hasMini).toBe(1);
-    // Depth-1: no bc-full, no expansion chevron.
+    // Depth>1: bc-full exists (for the expanded view).
     const fullCount = await bc.locator(".bc-full").count();
-    expect(fullCount).toBe(0);
+    expect(fullCount).toBe(1);
   });
 
   test("1.8.10 Depth>1 chain: tap toggles expanded class", async ({ page }) => {
