@@ -344,7 +344,22 @@ async function listWorkspaces(){const v=await storageGet(WS_LIST_KEY);if(v)try{r
 async function saveWorkspaces(list){await storageSet(WS_LIST_KEY,JSON.stringify(list))}
 async function getCurrentWs(){const v=await storageGet('vault3-current-ws');return v||'workspace'}
 async function setCurrentWs(ws){await storageSet('vault3-current-ws',ws);currentWs=ws}
-async function rebuildWsDropdown(){const list=await listWorkspaces();const sel=document.getElementById('wsSel');if(!sel)return;sel.innerHTML=list.map(w=>`<option value="${esc(w)}" ${w===currentWs?'selected':''}>${esc(w)}</option>`).join('')}
+/* Phase 5 P2 — workspace color coding. Derive a stable hue from the name
+   so every workspace has an instant-recognition color across devices,
+   without any per-workspace picker or storage migration. Same string →
+   same hue, always. Saturation + lightness stay fixed so colors stay
+   distinct from canvas content without clashing against dark panels. */
+function wsColor(name){let h=0;for(let i=0;i<(name||'').length;i++)h=(h*31+name.charCodeAt(i))%360;return`hsl(${h},55%,60%)`}
+async function rebuildWsDropdown(){const list=await listWorkspaces();const sel=document.getElementById('wsSel');if(!sel)return;
+  sel.innerHTML=list.map(w=>`<option value="${esc(w)}" ${w===currentWs?'selected':''} style="color:${wsColor(w)}">${esc(w)}</option>`).join('');
+  // Left-edge stripe + tint on the current workspace. Border-left color
+  // is the stripe; a subtle tinted text color hints at the workspace
+  // identity even when the dropdown is closed. paddingLeft shrinks by the
+  // extra 2px so the text stays put instead of jumping right when the
+  // stripe thickens from 1px to 3px.
+  sel.style.borderLeftColor=wsColor(currentWs);
+  sel.style.borderLeftWidth='3px';
+  sel.style.paddingLeft='10px';}
 async function switchWorkspace(ws){await sv();await setCurrentWs(ws);S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:{vault:{name:'Vault',parentNodeId:null}},nextId:1,hebrewMode:false};hist=[];selSet.clear();sel=null;await loadState();rebuildWsDropdown()}
 async function newWorkspace(){const name=await uiPrompt('New workspace name','university',{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}list.push(clean);await saveWorkspaces(list);await switchWorkspace(clean)}
 async function loadState(){try{const v=await storageGet(KEY());if(v){const o=JSON.parse(v);S={...S,...o}}}catch(e){console.error('load',e)}reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB()}
