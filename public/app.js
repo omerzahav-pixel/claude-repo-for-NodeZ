@@ -908,7 +908,35 @@ function showPullPicker(){const cid=S.current;const items=S.canvases.vault.nodes
 function renderPull(cid){const q=(document.getElementById('pq')?.value||'').toLowerCase();const items=S.canvases.vault.nodes.filter(n=>!q||(n.label||'').toLowerCase().includes(q));document.getElementById('pl').innerHTML=items.map(n=>`<div class="pitem" onclick="copyToCanvas(${n.id},'${cid}');closeModal()"><b>${esc(n.label)}</b><span style="color:var(--muted);font-size:11px"> · ${S.canvases.vault.zones.find(z=>z.id===n.zone)?.name||''}</span></div>`).join('')||'<div style="color:var(--muted);font-size:12px">No matches</div>'}
 function closeModal(){modal.classList.remove('on')}
 function showPatch(){modal.classList.add('on');document.getElementById('mcbody').innerHTML=`<h3>Paste patch</h3><p>Paste JSON from Claude: <code style="background:var(--bg2);padding:2px 4px;border-radius:4px">{"canvasId":"vault","nodes":[...],"edges":[...]}</code>. Nodes need label; other fields optional. Edges use label references (from/to = label) or IDs.</p><textarea id="pt" placeholder='{"canvasId":"vault","nodes":[{"label":"Example","zone":"inbox","shape":"idea","status":"idea","rationale":"why it is here"}],"edges":[]}'></textarea><div class="brow"><button class="pr" onclick="applyPatch()">Apply</button><button onclick="closeModal()">Cancel</button></div>`}
-async function applyPatch(){try{const raw=JSON.parse(document.getElementById('pt').value);if(raw.patches&&Array.isArray(raw.patches)){sn();let ok=0;for(const p of raw.patches){try{document.getElementById('pt').value=JSON.stringify(p);await applyPatchSingle(p);ok++}catch(e){console.error('patch failed:',p.canvasId,e)}}closeModal();await uiNotice('Applied '+ok+'/'+raw.patches.length+' patches.');return}sn();await applyPatchSingle(raw);closeModal()}catch(err){await uiNotice('Parse error: '+err.message,{title:'Patch failed'})}}
+/* Phase 5 P2 — paste-patch size sanity.
+   Pathologically large pastes freeze the main thread during JSON.parse
+   and the render storm that follows. Guard with a two-tier check:
+   bytes first (cheap, before parse), then node count (after parse).
+   Thresholds chosen so a typical 5–50-node Claude patch waves through
+   without friction; a 500KB+ paste asks to confirm; a 10MB+ paste is
+   refused outright. Same shape for node counts: 200 warn / 2000 reject. */
+const PATCH_MAX_BYTES=10*1024*1024, PATCH_WARN_BYTES=500*1024;
+const PATCH_MAX_NODES=2000, PATCH_WARN_NODES=200;
+// Non-module script: `const` at top level is NOT on window, so tests need
+// these attached explicitly. Harmless exposure — purely numeric thresholds.
+Object.assign(window,{PATCH_MAX_BYTES,PATCH_WARN_BYTES,PATCH_MAX_NODES,PATCH_WARN_NODES});
+function patchNodeCount(raw){
+  if(raw?.patches&&Array.isArray(raw.patches))return raw.patches.reduce((s,p)=>s+(p?.nodes?.length||0),0);
+  return raw?.nodes?.length||0;
+}
+async function applyPatch(){
+  const ta=document.getElementById('pt');const text=ta?.value||'';
+  if(text.length>PATCH_MAX_BYTES){await uiNotice(`Patch is ${(text.length/1024/1024).toFixed(1)}MB. Limit is ${(PATCH_MAX_BYTES/1024/1024).toFixed(0)}MB — split it into smaller patches or use Import full state.`,{title:'Patch too large'});return}
+  if(text.length>PATCH_WARN_BYTES){const ok=await uiConfirm(`This patch is ${(text.length/1024).toFixed(0)}KB. Very large patches can hang the UI for several seconds while parsing and rendering. Continue?`,{title:'Large patch',okLabel:'Apply anyway'});if(!ok)return}
+  let raw;try{raw=JSON.parse(text)}catch(err){await uiNotice('Parse error: '+err.message,{title:'Patch failed'});return}
+  const nodeTotal=patchNodeCount(raw);
+  if(nodeTotal>PATCH_MAX_NODES){await uiNotice(`Patch would add ${nodeTotal} nodes. Limit is ${PATCH_MAX_NODES}.`,{title:'Too many nodes'});return}
+  if(nodeTotal>PATCH_WARN_NODES){const ok=await uiConfirm(`This patch will add ${nodeTotal} nodes. Continue?`,{title:'Many nodes',okLabel:'Apply anyway'});if(!ok)return}
+  try{
+    if(raw.patches&&Array.isArray(raw.patches)){sn();let ok=0;for(const p of raw.patches){try{document.getElementById('pt').value=JSON.stringify(p);await applyPatchSingle(p);ok++}catch(e){console.error('patch failed:',p.canvasId,e)}}closeModal();await uiNotice('Applied '+ok+'/'+raw.patches.length+' patches.');return}
+    sn();await applyPatchSingle(raw);closeModal()
+  }catch(err){await uiNotice('Apply error: '+err.message,{title:'Patch failed'})}
+}
 async function applyPatchSingle(p){
   // Resolve parent node: prefer explicit parentNodeId, else look up by parentNodeLabel in parent canvas
   let resolvedParentId=p.parentNodeId||null;const parentCanvas=p.parentCanvas||'vault';
