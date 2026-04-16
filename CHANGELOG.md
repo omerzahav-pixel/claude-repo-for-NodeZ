@@ -4,6 +4,54 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P2 · Paste-patch size sanity · 2026-04-16
+
+`applyPatch()` used to `JSON.parse` whatever lived in `#pt` and dive
+straight into the apply loop. A pathologically large paste —
+20MB of text, or a 5000-node patch — would freeze the main thread
+for several seconds during parse and the render storm that followed.
+The app didn't crash, but it looked broken. This change guards both
+dimensions with a two-tier check.
+
+**Thresholds (`public/app.js`).**
+
+    PATCH_WARN_BYTES = 500KB   PATCH_MAX_BYTES = 10MB
+    PATCH_WARN_NODES = 200     PATCH_MAX_NODES = 2000
+
+Bytes-first (before parse) so truly huge pastes don't even get to
+`JSON.parse`. Nodes-second (after parse) because node count is what
+determines how long the render loop will take. At each tier:
+
+- Exceed WARN → `uiConfirm()` with a clear message and "Apply anyway"
+  override label — the user can bulldoze through if they know what
+  they're doing.
+- Exceed MAX → `uiNotice()` and return. Hard stop.
+
+**`patchNodeCount(raw)` helper.** Walks both the single-patch shape
+(`raw.nodes[]`) and the multi-patch bundle shape (`raw.patches[].nodes[]`)
+and returns the total. Same function used by the test spec so the
+boundaries are asserted against a single source of truth.
+
+**No behavioral change for normal patches.** A typical Claude-generated
+patch is 5–50 nodes / 1–50KB. Those wave through with zero prompts —
+the guard's purpose is to catch the rare abuser (accidental clipboard
+dump, runaway generator), not to interrupt everyday use.
+
+**Error path cleanup.** Split the original single-try/catch so
+"Parse error" (bad JSON) and "Apply error" (post-parse failure inside
+the loop) surface with the right dialog title, not both as "Patch
+failed".
+
+**Tests.** `tests/phase5_patchsize.spec.ts` — 7 assertions:
+thresholds-exposed, small-no-prompt, oversize-reject, warn-cancel
+rollback, warn-apply-anyway completes, too-many-nodes-reject,
+nodeCount-aggregation across `raw.patches[]`. 21/21 green across
+desktop-chrome + ipad-safari + ipad-chrome. 106/106 desktop-chrome
++ 206/206 iPad full-suite regression green (6 pre-existing
+ipad-safari PWA-test skips).
+
+---
+
 ## Phase 5 P2 · Workspace color coding · 2026-04-16
 
 Switching workspaces used to look identical regardless of which one
