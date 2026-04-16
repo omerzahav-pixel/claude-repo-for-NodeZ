@@ -74,7 +74,7 @@ const SH=['project','idea','principle','resource','question','experiment','libra
 const SC={done:'#7db36a',progress:'#6fa8d3',pending:'#d4a855',blocked:'#d96b5a',idea:'#8a8478'},SL={done:'Done',progress:'In Progress',pending:'Pending',blocked:'Blocked',idea:'Idea'};
 const ET={blocker:{c:'#d96b5a',d:'',l:'Blocker'},feeds:{c:'#8a8478',d:'',l:'Feeds into'},related:{c:'#6fa8d3',d:'',l:'Related'},derived:{c:'#7db36a',d:'',l:'Derived from'},example:{c:'#e6c84e',d:'',l:'Example'},proof:{c:'#b85450',d:'',l:'Proof'},arrow:{c:'#e8dfce',d:'',l:'Arrow'},custom:{c:'#d97757',d:'',l:'Custom'}};
 let S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:{vault:{name:'Vault',parentNodeId:null}},nextId:1,hebrewMode:false};
-let view={x:0,y:0,k:.5},hist=[],sel=null,drag=null,edgeHover=null,selSet=new Set(),marquee=null;
+let view={x:0,y:0,k:.5},hist=[],redoStack=[],sel=null,drag=null,edgeHover=null,selSet=new Set(),marquee=null;
 const cv=document.getElementById('cv'),pn=document.getElementById('pn'),ctx=document.getElementById('ctx'),ep=document.getElementById('ep'),bc=document.getElementById('bc'),modal=document.getElementById('modal');
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
@@ -498,8 +498,15 @@ async function quickLink(){const u=await uiPrompt('Add resource link','',{placeh
 // but that blocked wiring the new dark-themed dialog. Extracted to a named
 // async fn so the menu item can just call clearCanvasConfirm().
 async function clearCanvasConfirm(){if(!await uiConfirm('Clear current canvas?',{title:'Clear canvas',danger:true,okLabel:'Clear'}))return;sn();clr()}
-function sn(){hist.push(JSON.stringify(S));if(hist.length>40)hist.shift()}
-function un(){if(!hist.length)return;S=JSON.parse(hist.pop());const sid=sel?.id;sel=sid?ns().find(n=>n.id===sid):null;sv();render();bF();bB();sel?op(sel):cp()}
+/* Phase 5 P2 — undo/redo. sn() snapshots before any mutation and
+   ALSO clears redoStack: a fresh user action invalidates any redo
+   history. un() saves the current state to redoStack before popping
+   the last hist entry; re() is the mirror — pop redoStack, push
+   current to hist, restore. Panels/toolbar update via bB() at the
+   end so the disabled/enabled state of ↶/↷ is always fresh. */
+function sn(){hist.push(JSON.stringify(S));if(hist.length>40)hist.shift();redoStack.length=0;bB()}
+function un(){if(!hist.length)return;redoStack.push(JSON.stringify(S));if(redoStack.length>40)redoStack.shift();S=JSON.parse(hist.pop());const sid=sel?.id;sel=sid?ns().find(n=>n.id===sid):null;sv();render();bF();bB();sel?op(sel):cp()}
+function re(){if(!redoStack.length)return;hist.push(JSON.stringify(S));if(hist.length>40)hist.shift();S=JSON.parse(redoStack.pop());const sid=sel?.id;sel=sid?ns().find(n=>n.id===sid):null;sv();render();bF();bB();sel?op(sel):cp()}
 /* Phase 1.8 — test hook. Spec files that need to construct deep canvas
    chains without driving addNode + dblclick use this. The app itself
    never reads it. One line here beats adding a full "open child canvas"
@@ -526,7 +533,13 @@ function bB(){const chain=[];let c2=S.current;while(c2){chain.unshift({id:c2,nam
   const fullWrap=chain.length>1?`<span class="bc-full">${full}<span class="bc-col">▴</span></span>`:'';
   bc.innerHTML=mini+fullWrap;
   // Tap anywhere on #bc (except an <a> inside the expanded chain) toggles.
-  bc.onclick=e=>{if(e.target.tagName==='A')return;bc.classList.toggle('expanded')};}
+  bc.onclick=e=>{if(e.target.tagName==='A')return;bc.classList.toggle('expanded')};
+  // Phase 5 P2 — reflect undo/redo stack state on toolbar buttons. Disabled
+  // buttons still receive tap events (don't hide — feedback matters) but
+  // look greyed so the user sees "nothing to undo/redo" at a glance.
+  const ub=document.getElementById('undoBtn'),rb=document.getElementById('redoBtn');
+  if(ub)ub.disabled=!hist.length;
+  if(rb)rb.disabled=!redoStack.length;}
 function goBack(){const p=document.getElementById('backBtn').getAttribute('data-parent');if(p)switchTo(p)}
 function switchTo(id){if(!S.canvases[id])return;S.current=id;sel=null;cp();view={x:0,y:0,k:.5};sv();render();bF();bB();renderTabs();renderSB();zF()}
 function render(){
@@ -1158,7 +1171,7 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clien
    panel (not inline on the canvas), so blocking touch defaults here is safe. */
 cv.addEventListener('touchstart',e=>{e.preventDefault()},{passive:false});
 cv.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
-window.addEventListener('keydown',async e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(await uiConfirm(`Delete ${selSet.size} selected nodes?`,{title:'Bulk delete',danger:true,okLabel:'Delete'})){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';hideLegend();hideMore();render()}});
+window.addEventListener('keydown',async e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(await uiConfirm(`Delete ${selSet.size} selected nodes?`,{title:'Bulk delete',danger:true,okLabel:'Delete'})){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.shiftKey&&(e.key==='z'||e.key==='Z')){e.preventDefault();re()}else if((e.ctrlKey||e.metaKey)&&(e.key==='y'||e.key==='Y')){e.preventDefault();re()}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';hideLegend();hideMore();render()}});
 function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h})),...ns().map(n=>({x1:n.x-60,y1:n.y-60,x2:n.x+60,y2:n.y+60}))];if(!items.length){view={x:0,y:0,k:.5};render();return}const x1=Math.min(...items.map(i=>i.x1)),y1=Math.min(...items.map(i=>i.y1)),x2=Math.max(...items.map(i=>i.x2)),y2=Math.max(...items.map(i=>i.y2)),pad=80;view.k=Math.min(innerWidth/(x2-x1+pad*2),innerHeight/(y2-y1+pad*2),.7);view.x=-(x1+x2)/2;view.y=-(y1+y2)/2;render()}
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}
 function imF(e){

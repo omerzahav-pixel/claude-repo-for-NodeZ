@@ -76,6 +76,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 #tb{position:fixed;top:12px;left:12px;z-index:30;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px;display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100vw - 24px);box-shadow:0 2px 12px rgba(0,0,0,.3)}
 #tb button,#tb input,#tb .tbLabel{background:transparent;border:1px solid transparent;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text2);display:inline-flex;align-items:center;justify-content:center}
 #tb button:hover,#tb .tbLabel:hover{background:var(--panel2);color:var(--text)}
+/* Phase 5 P2 — redo/undo buttons get disabled=true when the stack is
+   empty so the greyed look communicates "nothing to undo/redo". */
+#tb button:disabled{opacity:.35;cursor:default;color:var(--muted)}
+#tb button:disabled:hover{background:transparent;color:var(--muted)}
 /* tbLabel is a <label for="..."> that behaves like a button. The native
    label element forwards clicks to its hidden file input, preserving the
    iOS user-gesture chain that synthetic .click() would lose. */
