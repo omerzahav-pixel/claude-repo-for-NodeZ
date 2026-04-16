@@ -4,6 +4,27 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5 P2 · Landing screen + recent workspaces · 2026-04-16
+
+On first load, if the user has two or more workspaces, a full-viewport
+overlay lists them as cards with color stripes (reusing wsColor) and
+node counts. The current workspace is highlighted with an accent ring.
+Click a card to switch to that workspace; "Continue with current" or
+Escape to dismiss without switching; "+ New workspace" to create one.
+
+The overlay skips silently when only one workspace exists — single-
+workspace users never see it. Node counts are fetched via a
+lightweight IDB peek per workspace (no full state load).
+
+Full Hebrew i18n. z-index: 200 (above emptyState, modal, everything).
+
+Tests: 7-test spec `tests/phase5_landing.spec.ts`, 126/126 desktop +
+246/246 iPad regression green.
+
+**Phase 5 P2 is now complete — all 8 items shipped.**
+
+---
+
 ## Phase 5 P2 · Auto-fit + smart placement + empty states · 2026-04-16
 
 Three small polish items bundled into one pass:
