@@ -4,6 +4,41 @@ Newest first. One entry per phase completed.
 
 ---
 
+## Phase 5b · Real-iPad UX fix pass · 2026-04-16
+
+Comprehensive 24-item polish pass after full-day real-iPad usage.
+
+**Critical fixes (1-8):**
+- Drag ghost trail eliminated — CSS transform delta approach instead of
+  mutating inner coordinates during drag. Shapes no longer offset.
+- Node placement at visual center using `cv.getBoundingClientRect()`.
+- Vault breadcrumb hidden on root canvas (only shows depth >1).
+- Redo icon uses scaleX(-1) mirrored undo glyph.
+- More menu width capped at 280px.
+- Workspace delete, rename, and recolor with swatch picker + custom
+  color storage in IDB.
+
+**Interaction fixes (9-12):**
+- Context menu outside-click via pointerdown capture phase.
+- Hold-drag vs context-menu: holdTimer cancels longPressTimer.
+- Selection feedback boosted (scale 1.04 + larger accent glow).
+- Hebrew breadcrumb uses flipped separators and dir="rtl".
+
+**UX improvements (13-24):**
+- Diag overlay hidden by default (opt-in via ?diag=1 or Ctrl+Shift+D).
+- Semantic zoom: notes/formulas show label below 0.45 scale threshold.
+- Swipe inertia on canvas pan (touch-only, 0.92 decay, rAF loop).
+- Collapsible tab groups nesting child canvases under parents.
+- Filter bar starts collapsed with ⚡ toggle button.
+- Sidebar starts minimized on boot.
+- Import/patch toolbar buttons use text labels instead of cryptic symbols.
+- Transition tokens standardized: 140ms UI, 180ms panels, 220ms overlays.
+- Paste-patch node sizes clamped to 60-800 × 30-600.
+
+Tests: 126/126 desktop-chrome green.
+
+---
+
 ## Phase 5 P2 · Landing screen + recent workspaces · 2026-04-16
 
 On first load, if the user has two or more workspaces, a full-viewport
