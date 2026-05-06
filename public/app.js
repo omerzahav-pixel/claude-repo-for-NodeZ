@@ -1240,9 +1240,47 @@ async function applyPatchSingle(p){
   // Force use current canvas if explicitly requested
   if(p.useCurrentCanvas)cid=S.current;
   if(!S.canvases[cid]){if(p.createCanvas){S.canvases[cid]={nodes:[],edges:[],zones:[]};S.canvasMeta[cid]={name:p.canvasName||cid,parentNodeId:resolvedParentId,parentCanvas};if(resolvedParentId){const pn=S.canvases[parentCanvas].nodes.find(n=>n.id===resolvedParentId);if(pn)pn.childCanvas=cid}}else{await uiNotice('Unknown canvas: '+cid+'. Add "createCanvas":true to create it.');return}}
-  const prev=S.current;S.current=cid;if(p.zones){if(p.replaceZones)C().zones=[];for(const z of p.zones){if(!C().zones.find(x=>x.id===z.id))C().zones.push(z)}}
-  const added={};for(const nd of(p.nodes||[])){const z=zs().find(x=>x.id===nd.zone)||zs()[0];const x=nd.x!==undefined?nd.x:z.x+60+Math.random()*(z.w-140),y=nd.y!==undefined?nd.y:z.y+70+Math.random()*(z.h-140);const n=addNode(x,y,nd,true);added[nd.label]=n.id}
-  for(const e of(p.edges||[])){const fi=typeof e.from==='number'?e.from:added[e.from]||ns().find(n=>n.label===e.from)?.id;const ti=typeof e.to==='number'?e.to:added[e.to]||ns().find(n=>n.label===e.to)?.id;if(fi&&ti)es().push({id:S.nextId++,from:fi,to:ti,type:e.type||'feeds',customLabel:e.customLabel||null})}
+  const prev=S.current;S.current=cid;
+  /* Phase 6 · zones in update mode get merged: existing IDs update label/
+     color, new IDs are added. Default mode keeps the old "skip if id exists"
+     behavior so existing patches keep working. */
+  const updateMode=p.mode==='update';
+  if(p.zones){
+    if(p.replaceZones)C().zones=[];
+    for(const z of p.zones){
+      const existing=C().zones.find(x=>x.id===z.id);
+      if(existing){if(updateMode)Object.assign(existing,z)}
+      else C().zones.push(z);
+    }
+  }
+  const added={};
+  for(const nd of(p.nodes||[])){
+    /* Phase 6 · update mode. Look for an existing node by label; if found,
+       merge the patch fields (preserving x/y/id/created so the node stays
+       in place visually). If not found, fall through to the original
+       create-new-node path. */
+    if(updateMode&&nd.label){
+      const existing=ns().find(n=>(n.label||'').trim()===nd.label.trim());
+      if(existing){
+        sn();
+        const {id:_,x:_x,y:_y,created:_c,...patchFields}=nd;
+        Object.assign(existing,patchFields);
+        added[nd.label]=existing.id;
+        continue;
+      }
+    }
+    const z=zs().find(x=>x.id===nd.zone)||zs()[0];const x=nd.x!==undefined?nd.x:z.x+60+Math.random()*(z.w-140),y=nd.y!==undefined?nd.y:z.y+70+Math.random()*(z.h-140);const n=addNode(x,y,nd,true);added[nd.label]=n.id;
+  }
+  for(const e of(p.edges||[])){
+    const fi=typeof e.from==='number'?e.from:added[e.from]||ns().find(n=>n.label===e.from)?.id;
+    const ti=typeof e.to==='number'?e.to:added[e.to]||ns().find(n=>n.label===e.to)?.id;
+    if(!fi||!ti)continue;
+    /* Phase 6 · in update mode, skip duplicate edges (same from+to+type). */
+    const ty=e.type||'feeds';
+    const dupe=updateMode&&es().find(x=>x.from===fi&&x.to===ti&&x.type===ty);
+    if(dupe)continue;
+    es().push({id:S.nextId++,from:fi,to:ti,type:ty,customLabel:e.customLabel||null});
+  }
   S.current=prev;sv();render();bF();bB();renderTabs();renderSB();if(p.switchTo)switchTo(cid)}
 function showCtx(x,y,n){
   const rmList=Object.entries(S.canvasMeta).filter(([k,m])=>k!==S.current&&k!=='vault').map(([k,m])=>`<button onclick="copyToCanvas(${n.id},'${k}');hideCtx()">→ ${S.hebrewMode?'העתק אל':'Copy to'} ${esc(m.name)}</button>`).join('');
