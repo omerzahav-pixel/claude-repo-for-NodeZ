@@ -6,7 +6,7 @@
    cool/warm contrast is the core of the look. */
 :root{--bg:#0F0F0F;--bg2:#181A1B;--panel:#242424;--panel2:#2E2E2E;--border:#333333;--text:#f5f0e6;--text2:#e8dfce;--muted:#8a8478;--accent:#d97757;--accent2:#c9633f;--done:#7db36a;--prog:#6fa8d3;--pend:#d4a855;--block:#d96b5a;--idea:#8a8478;--z-sys:#8b7ba8;--z-alg:#6b8cb0;--z-ind:#5fa3a8;--z-scr:#7aa882;--z-mac:#c48a9b;--z-proj:#c9896a;--z-inb:#7d7569;--serif:'Source Serif 4','Frank Ruhl Libre',Georgia,serif;--sans:'Inter','Assistant',system-ui,sans-serif}
 #sb{position:fixed;top:148px;left:12px;bottom:48px;z-index:18;width:280px;background:var(--panel);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.3);transition:width .18s,height .18s,bottom .18s,top .18s}
-#sb.co{width:36px}#sb.co .sbbody,#sb.co .sbsearch{display:none}#sb.co .sbhead{padding:10px 8px;justify-content:center}
+#sb.co{width:32px}#sb.co .sbbody,#sb.co .sbsearch{display:none}#sb.co .sbhead{padding:8px;justify-content:center}
 #sb.mini{width:140px;height:36px;top:auto;bottom:52px;left:12px}
 #sb.mini .sbbody,#sb.mini .sbsearch,#sb.mini .resize{display:none}
 #sb.mini .sbhead{padding:8px 12px;border-bottom:none;cursor:pointer}
@@ -34,7 +34,7 @@
 #sb .item .desc{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
 #sb .item .urp{font-size:9px;color:var(--accent);margin-top:4px;display:inline-block;background:var(--bg2);border:1px solid var(--border);padding:2px 8px;border-radius:8px;text-decoration:none}
 #sb .resize{position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:ew-resize}
-#tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel);border-top:1px solid var(--border);display:flex;gap:4px;padding:4px 8px;overflow-x:auto}
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel);border-top:1px solid var(--border);display:flex;gap:4px;padding:4px 8px;overflow-x:auto;box-shadow:0 -2px 8px rgba(0,0,0,.25)}
 #tabs .tab{padding:8px 16px;border-radius:8px 8px 0 0;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);border:1px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:8px}
 #tabs .tab:hover{background:var(--bg2);color:var(--text)}
 #tabs .tab.cur{background:var(--bg2);color:var(--text);border-color:var(--border);border-bottom-color:var(--bg2)}
@@ -46,8 +46,11 @@
    old absolute+right:0 required #more to be inside a position:relative
    wrapper, which broke when the toolbar wrapped to two rows on narrow
    viewports (menu ended up under the wrong row). */
-#more{position:fixed;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:220px;width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow-y:auto;z-index:60;-webkit-overflow-scrolling:touch}
-#more.on{display:block}
+/* Phase 6 · unified popover motion. Every menu / dialog / overlay enters
+   with opacity 0→1 + scale(0.96)→1 over 240ms ease-out, exits in 140ms
+   ease-in. Tokens keep the whole UI feeling like one piece. */
+#more{position:fixed;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.4);min-width:220px;width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow-y:auto;z-index:60;-webkit-overflow-scrolling:touch;opacity:0;visibility:hidden;transform:scale(.96);transform-origin:top right;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms;display:block}
+#more.on{opacity:1;visibility:visible;transform:scale(1);transition:opacity 240ms ease-out,transform 240ms ease-out,visibility 0ms linear 0ms}
 #more .mh{padding:8px 12px 4px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
 #more button,#more label{display:block;width:100%;text-align:left;background:transparent;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text2);box-sizing:border-box}
 #more button:hover,#more label:hover{background:var(--panel2);color:var(--text)}
@@ -112,11 +115,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 .pill{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:16px;font-size:11px;font-weight:500;cursor:pointer;user-select:none}
 .pill.on{background:var(--text2);color:var(--bg);border-color:var(--text2)}
-#lg.on{display:block}
+#lg.on{opacity:1;visibility:visible;transform:scale(1);transition:opacity 240ms ease-out,transform 240ms ease-out,visibility 0ms linear 0ms}
 #lgBtn{position:fixed;top:12px;right:16px;z-index:26;width:32px;height:32px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
 #lgBtn:hover{color:var(--accent);border-color:var(--accent)}
-#lg.on+#lgBtn{display:none}
-#lg{position:fixed;top:56px;right:16px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;width:240px;font-size:11px;box-shadow:0 2px 12px rgba(0,0,0,.3);display:none;max-height:70vh;overflow-y:auto}
+#lg.on+#lgBtn{opacity:.4;pointer-events:none}
+#lg{position:fixed;top:56px;right:16px;z-index:25;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;width:240px;font-size:11px;box-shadow:0 4px 12px rgba(0,0,0,.4);max-height:70vh;overflow-y:auto;opacity:0;visibility:hidden;transform:scale(.96);transform-origin:top right;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms;display:block}
 #lg h4{font:600 10px var(--sans);margin:8px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
 #lg h4:first-of-type{margin-top:0}#lg .row{display:flex;align-items:center;gap:8px;padding:2px 0;color:var(--text2)}
 #lg .sw{width:12px;height:12px;border-radius:2px}
@@ -125,8 +128,8 @@ button,input,select,textarea{font:inherit;color:inherit}
    the DOM; we toggle opacity + transform + visibility + pointer-events
    via the .on class. Delaying `visibility` on close keeps the fade-out
    visible before the element drops from hit-testing. */
-#pn{position:fixed;top:12px;right:12px;z-index:40;width:340px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms}
-#pn.on{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity 220ms ease-out,transform 220ms ease-out,visibility 0ms linear 0ms}
+#pn{position:fixed;top:12px;right:12px;z-index:40;width:340px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.4);opacity:0;visibility:hidden;pointer-events:none;transform:scale(.96) translateY(8px);transform-origin:top right;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms}
+#pn.on{opacity:1;visibility:visible;pointer-events:auto;transform:scale(1) translateY(0);transition:opacity 240ms ease-out,transform 240ms ease-out,visibility 0ms linear 0ms}
 @media (prefers-reduced-motion: reduce){
   #pn,#pn.on{transition:opacity 0ms,transform 0ms,visibility 0ms}
 }
@@ -138,10 +141,10 @@ button,input,select,textarea{font:inherit;color:inherit}
    keeps label's typography from the selector above; justify-between pushes
    the button to the far edge, matching native OS "expand" affordances. */
 #pn label.flabel{display:flex;align-items:center;justify-content:space-between;gap:8px}
-#pn .expandBtn{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:2px 6px;font-size:14px;border-radius:4px;line-height:1;-webkit-tap-highlight-color:transparent}
+#pn .expandBtn{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:4px 8px;font-size:14px;border-radius:4px;line-height:1;-webkit-tap-highlight-color:transparent}
 #pn .expandBtn:hover{color:var(--accent);background:var(--bg2)}
 #pn .expandBtn:active{background:var(--panel2)}
-@media(pointer:coarse){#pn .expandBtn{padding:6px 10px;font-size:16px}}
+@media(pointer:coarse){#pn .expandBtn{padding:8px 12px;font-size:16px}}
 #pn input,#pn textarea,#pn select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text)}
 /* Phase 5 P2 — resize:none on auto-grow textareas; height is managed by
    aGrow() which sets it in response to content. min-height is the floor
@@ -168,7 +171,8 @@ body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
 .brow button.dn{color:var(--block);border-color:transparent}
 .port{display:inline-block;margin-left:8px;color:var(--accent);font-size:11px;cursor:pointer;text-decoration:underline}
 .origin{display:inline-block;background:var(--bg2);color:var(--muted);padding:2px 8px;border-radius:8px;font-size:10px;margin-top:4px}
-#ctx{position:fixed;z-index:50;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;min-width:184px;max-height:80vh;overflow-y:auto}
+#ctx{position:fixed;z-index:50;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.4);min-width:184px;max-height:80vh;overflow-y:auto;opacity:0;visibility:hidden;transform:scale(.96);transform-origin:top left;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms;display:block}
+#ctx.on{opacity:1;visibility:visible;transform:scale(1);transition:opacity 240ms ease-out,transform 240ms ease-out,visibility 0ms linear 0ms}
 #ctx button{display:block;width:100%;text-align:left;background:transparent;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text2)}
 #ctx button:hover{background:var(--panel2);color:var(--text)}
 #ctx .csep{height:1px;background:var(--border);margin:4px 0}
@@ -176,10 +180,10 @@ body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
 /* Phase 5 P1 #4 — modal backdrop fade + inner scale-up. Backdrop fades
    180ms; inner .mc translates 8px + scales from 0.98 to give the dialog
    a settled-in feel instead of a hard snap. */
-#modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity 180ms ease-out,visibility 0ms linear 180ms}
-#modal.on{opacity:1;visibility:visible;transition:opacity 180ms ease-out,visibility 0ms linear 0ms}
-#modal .mc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto;transform:translateY(8px) scale(.98);transition:transform 180ms ease-out}
-#modal.on .mc{transform:translateY(0) scale(1)}
+#modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity 140ms ease-in,visibility 0ms linear 140ms}
+#modal.on{opacity:1;visibility:visible;transition:opacity 240ms ease-out,visibility 0ms linear 0ms}
+#modal .mc{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:24px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto;transform:translateY(8px) scale(.96);transition:transform 140ms ease-in;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+#modal.on .mc{transform:translateY(0) scale(1);transition:transform 240ms ease-out}
 @media (prefers-reduced-motion: reduce){
   #modal,#modal.on,#modal .mc,#modal.on .mc{transition:opacity 0ms,visibility 0ms,transform 0ms}
 }
@@ -192,9 +196,10 @@ body.he #pn details.pn-more[open] summary::before{transform:rotate(-90deg)}
 /* Phase 1.7 · dark-themed dialog — replaces native prompt/confirm/alert.
    z-index 70 so it stacks above #modal (60) when e.g. applyPatch needs to
    confirm a missing parent node from inside the paste-patch modal. */
-#dlg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-#dlg.on{display:flex}
-#dlg .dc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:424px;max-width:90vw;box-shadow:0 12px 36px rgba(0,0,0,.55);font-family:'Inter','Assistant',system-ui,sans-serif;box-sizing:border-box}
+#dlg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;visibility:hidden;transition:opacity 140ms ease-in,visibility 0ms linear 140ms}
+#dlg.on{opacity:1;visibility:visible;transition:opacity 240ms ease-out,visibility 0ms linear 0ms}
+#dlg .dc{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:24px;width:416px;max-width:90vw;box-shadow:0 4px 12px rgba(0,0,0,.4);font-family:'Inter','Assistant',system-ui,sans-serif;box-sizing:border-box;transform:scale(.96) translateY(8px);transition:transform 140ms ease-in}
+#dlg.on .dc{transform:scale(1) translateY(0);transition:transform 240ms ease-out}
 body.he #dlg .dc{direction:rtl;font-family:'Assistant','Inter',system-ui,sans-serif}
 #dlg h3{font:600 17px var(--serif);margin:0 0 8px;color:var(--text)}
 body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
@@ -216,8 +221,8 @@ body.he #dlg h3{font-family:'Frank Ruhl Libre','Source Serif 4',Georgia,serif}
    element each call to stack above the ◆ diag panel (right:8px bottom:8px)
    so they never sit on top of each other. Hebrew flips to bottom-left. */
 #toast{position:fixed;right:16px;bottom:16px;z-index:55;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:min(344px,calc(100vw - 32px))}
-#toast .ts{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font:500 12px 'Inter','Assistant',system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity 180ms ease-out,transform 180ms ease-out;pointer-events:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#toast .ts.on{opacity:1;transform:translateY(0)}
+#toast .ts{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font:500 12px 'Inter','Assistant',system-ui,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.4);opacity:0;transform:translateY(8px) scale(.96);transition:opacity 140ms ease-in,transform 140ms ease-in;pointer-events:auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast .ts.on{opacity:1;transform:translateY(0) scale(1);transition:opacity 240ms ease-out,transform 240ms ease-out}
 #toast .ts.ok{border-color:#7db36a}
 #toast .ts.err{border-color:#d96b5a}
 body.he #toast{right:auto;left:16px;align-items:flex-start;font-family:'Assistant','Inter',system-ui,sans-serif}
@@ -273,7 +278,8 @@ body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spaci
 .node.dim{opacity:.18}.node .th{fill:transparent}
 .node.tgt .ring{stroke:var(--accent);stroke-width:3;fill:none;stroke-dasharray:4,3}
 .edge{fill:none;stroke-width:1.8;pointer-events:stroke;cursor:pointer}.edge:hover{stroke-width:3}.edge.dim{opacity:.1}
-#ep{position:fixed;z-index:55;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none}
+#ep{position:fixed;z-index:55;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.4);opacity:0;visibility:hidden;transform:scale(.96);transform-origin:top left;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms;display:block}
+#ep.on{opacity:1;visibility:visible;transform:scale(1);transition:opacity 240ms ease-out,transform 240ms ease-out,visibility 0ms linear 0ms}
 #ep button{display:block;width:100%;text-align:left;background:transparent;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text2)}
 #ep button:hover{background:var(--panel2)}#ep .sw{display:inline-block;width:24px;height:4px;margin-right:8px;vertical-align:middle;border-radius:2px}
 .hint{position:fixed;bottom:12px;left:12px;color:var(--muted);font-size:11px;background:var(--panel);padding:8px 12px;border-radius:8px;border:1px solid var(--border)}
@@ -282,22 +288,22 @@ body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spaci
    outer box means the overlay never eats taps on the canvas behind it even
    when .on-transition opacity is mid-flight; the inner panel re-enables so
    the CTA is still clickable. Centered over the viewport, above the hint. */
-#emptyState{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:40;pointer-events:none;opacity:0;transition:opacity 220ms ease-out}
-#emptyState.on{display:flex;opacity:1}
-#emptyState .es-inner{pointer-events:auto;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:28px 36px;text-align:center;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+#emptyState{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:40;pointer-events:none;opacity:0;visibility:hidden;transition:opacity 140ms ease-in,visibility 0ms linear 140ms}
+#emptyState.on{opacity:1;visibility:visible;transition:opacity 240ms ease-out,visibility 0ms linear 0ms}
+#emptyState .es-inner{pointer-events:auto;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center;max-width:416px;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 #emptyState .es-emoji{font-size:40px;color:var(--accent);margin-bottom:8px;line-height:1}
 #emptyState h2{margin:0 0 8px;font-size:18px;font-weight:600;color:var(--text)}
-#emptyState p{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.45}
-#emptyState .es-cta{background:var(--accent);color:#0F0F0F;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;min-height:40px}
+#emptyState p{margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.45}
+#emptyState .es-cta{background:var(--accent);color:#0F0F0F;border:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;min-height:48px}
 #emptyState .es-cta:hover{filter:brightness(1.08)}
-@media (pointer:coarse){#emptyState .es-inner{padding:24px 28px;max-width:88vw}#emptyState .es-cta{min-height:44px;padding:12px 22px}}
+@media (pointer:coarse){#emptyState .es-inner{padding:24px;max-width:88vw}#emptyState .es-cta{min-height:48px;padding:12px 24px}}
 @media (prefers-reduced-motion:reduce){#emptyState{transition:none}}
 /* Phase 5 P2 · Landing screen. Full-viewport overlay, z-index above
    everything including the empty-state. Backdrop dims the canvas so the
    workspace cards pop. Cards show a colored left-stripe matching wsColor(). */
-#landing{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:200;background:rgba(0,0,0,.6);opacity:0;transition:opacity 220ms ease-out}
-#landing.on{display:flex;opacity:1}
-#landing .ld-inner{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:28px 36px;text-align:center;max-width:460px;width:92vw;box-shadow:0 16px 48px rgba(0,0,0,.5)}
+#landing{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:200;background:rgba(0,0,0,.6);opacity:0;visibility:hidden;transition:opacity 140ms ease-in,visibility 0ms linear 140ms}
+#landing.on{opacity:1;visibility:visible;transition:opacity 240ms ease-out,visibility 0ms linear 0ms}
+#landing .ld-inner{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center;max-width:464px;width:92vw;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 #landing .ld-emoji{font-size:40px;color:var(--accent);margin-bottom:4px;line-height:1}
 #landing h2{margin:0 0 4px;font-size:22px;font-weight:700;color:var(--text)}
 #landing p{margin:0 0 16px;color:var(--muted);font-size:13px}
@@ -312,7 +318,7 @@ body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spaci
 .ld-new:hover{border-color:var(--accent);color:var(--text)}
 .ld-skip{background:transparent;border:none;padding:8px 16px;font-size:12px;color:var(--muted);cursor:pointer}
 .ld-skip:hover{color:var(--text)}
-@media (pointer:coarse){.ld-card{padding:14px 16px;min-height:48px}.ld-new{min-height:44px;padding:12px 22px}}
+@media (pointer:coarse){.ld-card{padding:16px;min-height:48px}.ld-new{min-height:48px;padding:12px 24px}}
 @media (prefers-reduced-motion:reduce){#landing{transition:none}}
 /* === Mobile / iPad enhancements === */
 /* iPad hardening (Phase 1 · 1.6a): lock the app shell to the visual viewport

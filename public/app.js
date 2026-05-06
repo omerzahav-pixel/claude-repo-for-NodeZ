@@ -76,6 +76,32 @@
     dbg('SYS','load · window.katex: '+(window.katex?'present':'MISSING')+' · renderMathInElement: '+(window.renderMathInElement?'present':'MISSING'));
   });
 })();
+/* Phase 6 · version + error-boundary glue. EDGESPACE_VERSION bumps on every
+   user-facing release; EDGESPACE_BUILD is wired to git short SHA at deploy
+   time (TODO: vite plugin). For now bumped manually on each phase. */
+const EDGESPACE_VERSION='2.1.0';
+const EDGESPACE_BUILD='phase-6';
+window.EDGESPACE_VERSION=EDGESPACE_VERSION;window.EDGESPACE_BUILD=EDGESPACE_BUILD;
+(function(){const tag=document.getElementById('versionTag');if(tag)tag.textContent='v'+EDGESPACE_VERSION+' · '+EDGESPACE_BUILD})();
+/* Boot-time error boundary. If app.js fails to parse / execute the inline
+   <script src="./app.js"> never finishes; window.onerror catches it and
+   shows the fallback UI so the user has somewhere to go besides a blank
+   screen. The fallback also offers cache-clear-and-reload as a recovery. */
+let _bootCompleted=false;
+window.addEventListener('error',function(e){
+  if(_bootCompleted)return;
+  const eb=document.getElementById('errorBoundary');const msg=document.getElementById('errorBoundaryMsg');
+  if(!eb||!msg)return;
+  msg.textContent=(e.message||'Unknown error')+'\nv'+EDGESPACE_VERSION+' · '+EDGESPACE_BUILD+'\n'+(e.filename||'')+(e.lineno?':'+e.lineno:'')+'\nUA: '+navigator.userAgent.slice(0,160);
+  eb.style.display='block';
+  document.getElementById('errorBoundaryReload').onclick=async function(){
+    try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs)await r.unregister()}}catch(e){}
+    try{indexedDB.deleteDatabase('ideaVault')}catch(e){}
+    try{localStorage.clear();sessionStorage.clear()}catch(e){}
+    location.reload();
+  };
+  document.getElementById('errorBoundaryDismiss').onclick=function(){eb.style.display='none'};
+});
 const DZ={vault:[{id:'ideas',name:'Ideas',x:-1100,y:-500,w:700,h:520,color:'#6fa8d3'},{id:'projects',name:'Projects',x:-350,y:-500,w:700,h:520,color:'#c9896a'},{id:'inbox',name:'Inbox',x:400,y:-500,w:520,h:520,color:'#7d7569'}]};
 const RMZ=[{id:'blockers',name:'Blockers',x:-1000,y:-500,w:600,h:400,color:'#d96b5a'},{id:'flight',name:'In Flight',x:-350,y:-500,w:600,h:400,color:'#6fa8d3'},{id:'next',name:'Next Up',x:300,y:-500,w:550,h:400,color:'#d4a855'},{id:'backlog',name:'Backlog',x:-1000,y:-70,w:600,h:400,color:'#8a8478'},{id:'done',name:'Done',x:-350,y:-70,w:600,h:400,color:'#7db36a'},{id:'principles',name:'Principles',x:300,y:-70,w:550,h:400,color:'#c48a9b'}];
 const SH=['project','idea','principle','resource','question','experiment','library','doc','formula','note'],ST=['done','progress','pending','blocked','idea'];
@@ -378,8 +404,35 @@ async function switchWorkspace(ws){await sv();await setCurrentWs(ws);S={canvases
 async function newWorkspace(){const name=await uiPrompt('New workspace name','university',{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}list.push(clean);await saveWorkspaces(list);await switchWorkspace(clean)}
 async function loadState(){try{const v=await storageGet(KEY());if(v){const o=JSON.parse(v);S={...S,...o}}}catch(e){console.error('load',e)}reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB()}
 /* Phase 5 P2 · Landing screen — shown on first load when ≥ 2 workspaces. */
+/* Phase 6 · landing-screen logic survives Safari tab close.
+   Decision tree:
+     1. No data in IDB at all → show landing (first-time user, even with 1 ws)
+     2. Last-session timestamp < 4 hours old → skip landing (continuing work)
+     3. Otherwise → show landing with all workspaces + Continue button
+   The timestamp lives in localStorage (NOT sessionStorage which Safari nukes). */
+const SESSION_TS_KEY='edgespace-last-session-ts';
+const SESSION_FRESH_MS=4*60*60*1000;
+function nowTs(){return Date.now()}
+async function getLastSessionTs(){try{const v=localStorage.getItem(SESSION_TS_KEY);return v?+v:0}catch(e){return 0}}
+async function setLastSessionTs(){try{localStorage.setItem(SESSION_TS_KEY,String(nowTs()))}catch(e){}}
+let _sessionTickHandle=null;
+function startSessionTick(){if(_sessionTickHandle)return;_sessionTickHandle=setInterval(()=>setLastSessionTs(),60*1000);
+  // Also write on visibility change so closing the tab leaves a recent ts.
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')setLastSessionTs()})}
 async function showLanding(){
-  const list=await listWorkspaces();if(list.length<2)return;
+  const list=await listWorkspaces();
+  // Detect: does the user have any data worth presenting in the landing?
+  let hasData=false;
+  for(const ws of list){try{const raw=await storageGet('vault3-'+ws);if(raw){const o=JSON.parse(raw);if(Object.values(o.canvases||{}).reduce((n,c)=>n+(c.nodes?.length||0),0)>0){hasData=true;break}}}catch(e){}}
+  /* Phase 6 · landing decision tree:
+     - Trivial (1 workspace, no data) → skip; user sees empty canvas + empty
+       state. Showing a 1-card landing is annoying.
+     - Recent session (<4hr) AND has data → skip; user is mid-flow.
+     - Otherwise → show. Multiple workspaces, or returning after 4hr+. */
+  if(list.length<2&&!hasData){startSessionTick();await setLastSessionTs();return}
+  const lastTs=await getLastSessionTs();
+  const fresh=lastTs>0&&(nowTs()-lastTs)<SESSION_FRESH_MS;
+  if(hasData&&fresh){await setLastSessionTs();startSessionTick();return}
   const ld=document.getElementById('landing');if(!ld)return;
   const ldList=document.getElementById('ld-list');if(!ldList)return;
   // Gather node counts per workspace by peeking at IDB
@@ -392,16 +445,18 @@ async function showLanding(){
     return `<div class="ld-card${cur?' cur':''}" onclick="closeLanding();if('${esc(ws)}'!==currentWs)switchWorkspace('${esc(ws)}')" data-ws="${esc(ws)}"><div class="ld-stripe" style="background:${col}"></div><div><div class="ld-name">${esc(ws)}</div><div class="ld-meta">${cnt} ${t('ldNodes')}${cur?' · '+t('ldCurrent'):''}</div></div></div>`
   }).join('');
   document.getElementById('ld-title').textContent=t('ldTitle');
-  document.getElementById('ld-hint').textContent=t('ldHint');
+  document.getElementById('ld-hint').textContent=lastTs>0?t('ldHintReturning'):t('ldHint');
   document.getElementById('ld-new').textContent=t('ldNew');
-  document.getElementById('ld-skip').textContent=t('ldSkip');
+  // Show "Continue where I left off" instead of "Continue with current" for returning users
+  document.getElementById('ld-skip').textContent=lastTs>0?t('ldContinue'):t('ldSkip');
   ld.classList.add('on');
   // Escape to dismiss
   const escH=(e)=>{if(e.key==='Escape'){closeLanding();document.removeEventListener('keydown',escH)}};
   document.addEventListener('keydown',escH);
   ld._escH=escH;
+  startSessionTick();
 }
-function closeLanding(){const ld=document.getElementById('landing');if(!ld)return;ld.classList.remove('on');if(ld._escH){document.removeEventListener('keydown',ld._escH);delete ld._escH}}
+function closeLanding(){const ld=document.getElementById('landing');if(!ld)return;ld.classList.remove('on');if(ld._escH){document.removeEventListener('keydown',ld._escH);delete ld._escH}setLastSessionTs()}
 async function load(){
   // Phase 1.7 · Item #8 — replaced the v1 full-width #bootLog banner
   // (green monospace across the viewport top) with a subtle bottom-right
@@ -427,6 +482,9 @@ async function load(){
   toast(loadOk?('Loaded '+currentWs+' · '+totalNodes+' node'+(totalNodes===1?'':'s')):'Load failed — check diag',{kind:loadOk?'ok':'err',ms:loadOk?1500:3000});
   // Phase 5 P2 · show landing screen if ≥ 2 workspaces
   try{await showLanding()}catch(e){window.dbg&&window.dbg('SYS','showLanding error: '+e.message)}
+  /* Phase 6 · mark boot complete so the error boundary stops swallowing
+     post-boot exceptions (those should bubble normally). */
+  _bootCompleted=true;window._bootCompleted=true;
 }
 async function sv(){const si=document.getElementById('saveInd');if(si)si.className='ind s-pend';try{const ok=await storageSet(KEY(),JSON.stringify(S));if(si)si.className=ok?'ind s-ok':'ind s-err'}catch(e){if(si){si.className='ind s-err';si.title='Save failed: '+e.message}}}
 const T={
@@ -444,7 +502,7 @@ const T={
       ctxEdge:'Edge',ctxZone:'Zone',changeTo:'Change to',deleteEdge:'Delete edge',unlockZ:'🔓 Unlock (allow move/resize)',lockZ:'🔒 Lock position',renameZ:'Rename',recolorZ:'Recolor',deleteZ:'Delete zone',addNodeHere:'+ Add node here',addZoneHere:'+ Add zone here',customLabel:'Label for this connection:',untitled:'Untitled',clearCanvasConfirm:'Clear current canvas?',deleteSelected:'Delete N selected nodes?',openRoadmap:'Open roadmap',createRoadmap:'+ Create roadmap',copyToVault:'Copy to vault',pullFromVault:'Pull from vault',copiedFromVault:'copied from vault',
       ttWs:'Switch workspace',ttNewWs:'New workspace',ttHe:'Hebrew mode (toggle RTL + translated UI)',ttBack:'Back to parent canvas',ttAdd:'Add node (or double-click empty canvas)',ttZone:'Add zone (group of related nodes)',ttSearch:'Filter visible nodes by label / notes',ttFit:'Fit view to all nodes',ttUndo:'Undo (Ctrl+Z)',ttRedo:'Redo (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'Dim edges (focus on nodes)',ttPatch:'Paste patch JSON',ttImport:'Import full state JSON',ttMore:'More options (export / import / utilities / workspace)',ttLegend:'Legend · keyboard shortcuts',ttSbTog:'Cycle sidebar: Nodes · Edges · Zones',ttSbCollapse:'Collapse / expand all',ttSbMini:'Minimize to bottom',
       esTitle:'This canvas is empty',esHint:'Tap <b>+ Add</b> to create your first node, or double-click the canvas anywhere to add one there.',esAdd:'+ Add first node',
-      ldTitle:'NodeZ',ldHint:'Pick a workspace to start',ldNew:'+ New workspace',ldSkip:'Continue with current',ldCurrent:'current',ldNodes:'nodes'},
+      ldTitle:'EdgeSpace',ldHint:'Pick a workspace to start',ldHintReturning:'Welcome back. Pick up where you left off, or switch workspaces.',ldNew:'+ New workspace',ldSkip:'Continue with current',ldContinue:'Continue where I left off',ldCurrent:'current',ldNodes:'nodes'},
   he:{idea:'רעיון',progress:'בתהליך',pending:'ממתין',blocked:'חסום',done:'הושלם',
       project:'פרויקט',question:'שאלה',experiment:'ניסוי',principle:'עיקרון',resource:'משאב',library:'ספרייה',doc:'מסמך',formula:'נוסחה',note:'פתק',
       blocker:'חסימה',feeds:'מזין את',related:'קשור ל',derived:'נגזר מ',example:'דוגמה',proof:'הוכחה',arrow:'חץ',custom:'מותאם',
@@ -459,7 +517,7 @@ const T={
       ctxEdge:'קשר',ctxZone:'אזור',changeTo:'שנה ל',deleteEdge:'מחק קשר',unlockZ:'🔓 פתח (אפשר הזזה/שינוי גודל)',lockZ:'🔒 נעל מיקום',renameZ:'שנה שם',recolorZ:'שנה צבע',deleteZ:'מחק אזור',addNodeHere:'+ הוסף נקודה כאן',addZoneHere:'+ הוסף אזור כאן',customLabel:'תווית לקשר הזה:',untitled:'ללא כותרת',clearCanvasConfirm:'לנקות את הקנבס הנוכחי?',deleteSelected:'למחוק N נקודות שנבחרו?',openRoadmap:'פתח מפת דרכים',createRoadmap:'+ צור מפת דרכים',copyToVault:'העתק לוולט',pullFromVault:'משוך מהוולט',copiedFromVault:'הועתק מהוולט',
       ttWs:'החלפת סביבה',ttNewWs:'סביבה חדשה',ttHe:'מצב עברית (RTL וטקסט מתורגם)',ttBack:'חזרה לקנבס האב',ttAdd:'הוספת נקודה (או לחיצה כפולה על שטח ריק)',ttZone:'הוספת אזור (קבוצת נקודות קשורות)',ttSearch:'סינון נקודות לפי כותרת / הערות',ttFit:'התאם תצוגה לכל הנקודות',ttUndo:'בטל (Ctrl+Z)',ttRedo:'שחזר (Ctrl+Y / Ctrl+Shift+Z)',ttDim:'עמעם קשרים (התמקד בנקודות)',ttPatch:'הדבקת patch בפורמט JSON',ttImport:'יבוא מצב מלא (JSON)',ttMore:'אפשרויות נוספות (יצוא / יבוא / כלים / סביבה)',ttLegend:'מקרא · קיצורי מקלדת',ttSbTog:'מעבר בסרגל: נקודות · קשרים · אזורים',ttSbCollapse:'כווץ / הרחב את כל האזורים',ttSbMini:'הקטן לתחתית',
       esTitle:'הקנבס הזה ריק',esHint:'לחצו <b>+ הוספה</b> ליצירת הנקודה הראשונה, או לחיצה כפולה על שטח ריק.',esAdd:'+ הוסף נקודה ראשונה',
-      ldTitle:'NodeZ',ldHint:'בחרו סביבת עבודה',ldNew:'+ סביבה חדשה',ldSkip:'המשך עם הנוכחית',ldCurrent:'נוכחית',ldNodes:'נקודות'}
+      ldTitle:'EdgeSpace',ldHint:'בחרו סביבת עבודה',ldHintReturning:'ברוכים השבים. המשיכו מאיפה שעצרתם, או החליפו סביבה.',ldNew:'+ סביבה חדשה',ldSkip:'המשך עם הנוכחית',ldContinue:'המשך מאיפה שעצרתי',ldCurrent:'נוכחית',ldNodes:'נקודות'}
 };
 function t(k){return T[S.hebrewMode?'he':'en'][k]||k}
 function refreshUiText(){
@@ -548,9 +606,9 @@ document.addEventListener('pointerdown',e=>{
      'click' (line ~1020) which is suppressed by the canvas's pointerdown
      preventDefault + setPointerCapture combo. Move them here. */
   const _ctx=document.getElementById('ctx');
-  if(_ctx&&_ctx.style.display!=='none'&&!_ctx.contains(e.target))hideCtx();
+  if(_ctx&&_ctx.classList.contains('on')&&!_ctx.contains(e.target))hideCtx();
   const _ep=document.getElementById('ep');
-  if(_ep&&_ep.style.display!=='none'&&!_ep.contains(e.target))_ep.style.display='none';
+  if(_ep&&_ep.classList.contains('on')&&!_ep.contains(e.target))_ep.classList.remove('on');
 },true);
 function urlDomain(u){try{const p=new URL(u);const h=p.hostname.replace('www.','');if(h.includes('tradingview'))return 'tradingview';if(h.includes('github'))return 'github';if(h.includes('arxiv'))return 'arxiv';if(h.includes('notion'))return 'notion';if(h.includes('youtube'))return 'youtube';if(h.includes('x.com')||h.includes('twitter'))return 'x';return h.split('.')[0]}catch(e){return 'link'}}
 function renderSB(){const body=document.getElementById('sbbody');if(!body)return;const q=(document.getElementById('sbq')?.value||'').toLowerCase();const groups={};for(const n of ns()){if(q&&!((n.label||'')+(n.notes||'')+(n.tags||'')).toLowerCase().includes(q))continue;const zid=n.zone;if(!groups[zid])groups[zid]=[];groups[zid].push(n)}
@@ -594,7 +652,12 @@ function renderTabs(){const t=document.getElementById('tabs');if(!t)return;
   for(const cid of roots)addTab(cid,false);
   h+='<div class="newtab" onclick="newTab()" title="New standalone canvas">＋</div>';t.innerHTML=h}
 function toggleTabGroup(cid){if(!S._tabCollapse)S._tabCollapse={};S._tabCollapse[cid]=!S._tabCollapse[cid];renderTabs()}
-function positionCtx(x,y){ctx.style.left='-9999px';ctx.style.top='-9999px';ctx.style.display='block';requestAnimationFrame(()=>{const r=ctx.getBoundingClientRect();const W=innerWidth,H=innerHeight,pad=8;let nx=x,ny=y;if(x+r.width+pad>W)nx=Math.max(pad,x-r.width);if(y+r.height+pad>H)ny=Math.max(pad,y-r.height);ctx.style.left=nx+'px';ctx.style.top=ny+'px'})}
+function positionCtx(x,y){
+  /* Phase 6 · keep #ctx in CSS class system. Make it measurable by removing
+     visibility off-screen, measure, place, then add .on so the entrance
+     animation plays from the corner where it appears. */
+  ctx.style.left='-9999px';ctx.style.top='-9999px';ctx.classList.add('on');
+  requestAnimationFrame(()=>{const r=ctx.getBoundingClientRect();const W=innerWidth,H=innerHeight,pad=8;let nx=x,ny=y;if(x+r.width+pad>W)nx=Math.max(pad,x-r.width);if(y+r.height+pad>H)ny=Math.max(pad,y-r.height);ctx.style.left=nx+'px';ctx.style.top=ny+'px'})}
 function showTabCtx(e,cid){const m=S.canvasMeta[cid]||{};
   const isLinked=!!m.parentNodeId;const linkLabel=isLinked?(S.hebrewMode?'חבר לפרויקט אחר':'Reconnect to project'):(S.hebrewMode?'חבר לפרויקט':'Connect to project');
   ctx.innerHTML=`<div class="csub">${esc(m.name||cid)}</div><button onclick="renameCanvas('${cid}');hideCtx()">${S.hebrewMode?'שנה שם':'Rename'}</button><button onclick="showProjectPicker('${cid}');hideCtx()">${esc(linkLabel)}</button>${isLinked?`<button onclick="unlinkCanvas('${cid}');hideCtx()">${S.hebrewMode?'נתק מפרויקט':'Unlink from project'}</button>`:''}${cid!=='vault'?`<div class="csep"></div><button onclick="hideCtx();closeCanvas('${cid}')" style="color:var(--block)">${S.hebrewMode?'מחק קנבס':'Delete canvas'}</button>`:''}`;positionCtx(e.clientX,e.clientY)}
@@ -669,6 +732,28 @@ function bB(){const chain=[];let c2=S.current;while(c2){chain.unshift({id:c2,nam
   /* undo/redo disable moved to top of bB() so it runs even on early return */}
 function goBack(){const p=document.getElementById('backBtn').getAttribute('data-parent');if(p)switchTo(p)}
 function switchTo(id){if(!S.canvases[id])return;S.current=id;sel=null;cp();view={x:0,y:0,k:.5};sv();render();bF();bB();renderTabs();renderSB();zF()}
+/* Phase 6 · view-state clamp. Prevents the "canvas flew to infinity" failure
+   mode where extreme transform values cause WebKit to drop the compositor
+   layer and render the canvas blank. Zoom locked to [0.1, 5.0]; pan is
+   clamped so the viewport center stays within 2× the content bounding box. */
+function clampView(){
+  view.k=Math.max(0.1,Math.min(5.0,view.k));
+  if(!isFinite(view.x))view.x=0;
+  if(!isFinite(view.y))view.y=0;
+  const items=ns();
+  if(!items.length){view.x=Math.max(-5000,Math.min(5000,view.x));view.y=Math.max(-5000,Math.min(5000,view.y));return}
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const n of items){if(n.x<minX)minX=n.x;if(n.x>maxX)maxX=n.x;if(n.y<minY)minY=n.y;if(n.y>maxY)maxY=n.y}
+  const w=Math.max(maxX-minX,200),h=Math.max(maxY-minY,200);
+  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
+  view.x=Math.max(-cx-2*w,Math.min(-cx+2*w,view.x));
+  view.y=Math.max(-cy-2*h,Math.min(-cy+2*h,view.y));
+}
+/* Phase 6 · force a synchronous layout flush after extreme transform updates
+   so WebKit doesn't drop the layer. Reading offsetHeight is cheap and
+   triggers reflow. Only used after pinch/pan/wheel — render() itself rebuilds
+   innerHTML which already flushes. */
+function forceRepaint(){const cv=document.getElementById('cv');if(cv)void cv.offsetHeight}
 function render(){
   const W=Math.max(innerWidth||document.documentElement.clientWidth||800,400),H=Math.max(innerHeight||document.documentElement.clientHeight||600,400);
   if(window.dlog&&location.search.includes('debug')&&!window._renderLogged){window._renderLogged=true;dlog('render W='+W+' H='+H+' zones='+(zs()?.length||0)+' nodes='+(ns()?.length||0))}
@@ -1093,13 +1178,13 @@ function showCtx(x,y,n){
   const compactBtn=n.shape==='formula'?`<button onclick="sF(${n.id},'compact',${!n.compact})">${n.compact?(S.hebrewMode?'הצג מורחב (מלבן עם נוסחה)':'Show expanded (rectangle + math)'):(S.hebrewMode?'הצג מצומצם (כצומת רגיל)':'Show compact (regular node)')}</button>`:'';
   ctx.innerHTML=`<div class="csub">${t('shape')}</div>${SH.map(s=>`<button onclick="sF(${n.id},'shape','${s}')">${esc(t(s))}${n.shape===s?' ✓':''}</button>`).join('')}${compactBtn?'<div class="csep"></div>'+compactBtn:''}<div class="csep"></div><div class="csub">${t('status')}</div>${ST.map(s=>`<button onclick="sF(${n.id},'status','${s}')"><span style="display:inline-block;width:10px;height:10px;background:${SC[s]};border-radius:2px;margin-right:6px;vertical-align:middle"></span>${esc(t(s))}${n.status===s?' ✓':''}</button>`).join('')}<div class="csep"></div><button onclick="hideCtx();op(ns().find(x=>x.id===${n.id}))">${S.hebrewMode?'ערוך פרטים…':'Edit details…'}</button>${n.shape==='project'&&S.current==='vault'?(n.childCanvas?`<button onclick="hideCtx();switchTo('${n.childCanvas}')">↗ ${t('openRoadmap')}</button>`:`<button onclick="hideCtx();createRoadmap(${n.id})">${t('createRoadmap')}</button>`):''}${rmList?'<div class="csep"></div>'+rmList:''}<div class="csep"></div><button onclick="hideCtx();delN(${n.id})" style="color:var(--block)">${t('del')}</button>`;
   positionCtx(x,y);}
-function hideCtx(){ctx.style.display='none'}
+function hideCtx(){ctx.classList.remove('on')}
 function sF(id,f,v){sn();const n=ns().find(x=>x.id===id);if(n){n[f]=v;sv();render();if(sel?.id===id)op(n)}hideCtx()}
-document.addEventListener('click',e=>{if(!ctx.contains(e.target))hideCtx();if(!ep.contains(e.target))ep.style.display='none'});
+document.addEventListener('click',e=>{if(!ctx.contains(e.target))hideCtx();if(!ep.contains(e.target))ep.classList.remove('on')});
 function etLabel(k){return t(k)||(ET[k]?.l)||k}
-function showEdgePicker(sx,sy,fromId,toId){ep.style.display='block';ep.style.left=sx+'px';ep.style.top=sy+'px';ep.innerHTML=Object.entries(ET).map(([k,v])=>`<button onclick="${k==='custom'?`createCustomEdge(${fromId},${toId})`:`createEdge(${fromId},${toId},'${k}')`}"><span class="sw" style="background:${v.c}"></span>${esc(etLabel(k))}</button>`).join('')}
-async function createCustomEdge(f,toId){const lbl=await uiPrompt(t('customLabel'),'');if(!lbl)return;sn();es().push({id:S.nextId++,from:f,to:toId,type:'custom',customLabel:lbl});ep.style.display='none';sv();render()}
-function createEdge(f,t,ty){sn();es().push({id:S.nextId++,from:f,to:t,type:ty});ep.style.display='none';sv();render()}
+function showEdgePicker(sx,sy,fromId,toId){ep.style.left=sx+'px';ep.style.top=sy+'px';ep.innerHTML=Object.entries(ET).map(([k,v])=>`<button onclick="${k==='custom'?`createCustomEdge(${fromId},${toId})`:`createEdge(${fromId},${toId},'${k}')`}"><span class="sw" style="background:${v.c}"></span>${esc(etLabel(k))}</button>`).join('');ep.classList.add('on')}
+async function createCustomEdge(f,toId){const lbl=await uiPrompt(t('customLabel'),'');if(!lbl)return;sn();es().push({id:S.nextId++,from:f,to:toId,type:'custom',customLabel:lbl});ep.classList.remove('on');sv();render()}
+function createEdge(f,t,ty){sn();es().push({id:S.nextId++,from:f,to:t,type:ty});ep.classList.remove('on');sv();render()}
 const TH=4;
 /* === UNIFIED POINTER INPUT (mouse + finger + Apple Pencil) === */
 const activePtrs=new Map();
@@ -1142,6 +1227,10 @@ cv.addEventListener('pointerdown',e=>{
     if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
     if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
     clearHoldFeedback();
+    /* Phase 6 · pan→pinch handoff. If swipe inertia is still decaying, kill
+       it BEFORE recording the pinch baseline so view.x/view.y don't drift
+       between baseline-snapshot and the first move event. */
+    if(window._inertiaActive&&window._cancelInertia){window._cancelInertia()}
     const [p1,p2]=[...activePtrs.values()];
     pinchState={dist:Math.hypot(p2.x-p1.x,p2.y-p1.y)||1,cx:(p1.x+p2.x)/2,cy:(p1.y+p2.y)/2,k:view.k};
     e.preventDefault();return;
@@ -1206,14 +1295,15 @@ document.addEventListener('pointermove',e=>{
       const d=Math.hypot(p2.x-p1.x,p2.y-p1.y);
       const cx=(p1.x+p2.x)/2,cy=(p1.y+p2.y)/2;
       const before=s2w(cx,cy);
-      view.k=Math.max(.08,Math.min(3,pinchState.k*(d/pinchState.dist)));
+      view.k=pinchState.k*(d/pinchState.dist);
       const after=s2w(cx,cy);
       view.x+=after.x-before.x;view.y+=after.y-before.y;
       // Slide the pinch center too (allow 2-finger pan while pinching)
       const dcx=cx-pinchState.cx,dcy=cy-pinchState.cy;
       view.x+=dcx/view.k;view.y+=dcy/view.k;
+      clampView();
       pinchState.cx=cx;pinchState.cy=cy;pinchState.dist=d;pinchState.k=view.k;
-      render();e.preventDefault();return;
+      render();forceRepaint();e.preventDefault();return;
     }
   }
   if(!drag)return;
@@ -1252,7 +1342,7 @@ document.addEventListener('pointermove',e=>{
     /* Phase 5b · velocity tracking for swipe inertia (touch only). Record
        the last two move events so pointerup can compute instantaneous vel. */
     if(e.pointerType==='touch'){const now=performance.now();drag._prevX=drag._lastX;drag._prevY=drag._lastY;drag._prevT=drag._lastT;drag._lastX=e.clientX;drag._lastY=e.clientY;drag._lastT=now}
-    render()}
+    clampView();render()}
   else if(drag.k==='edge'&&drag.moved){const tE=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.node');edgeHover=tE?ns().find(x=>x.id===+tE.dataset.id):null;if(edgeHover&&edgeHover.id===drag.from.id)edgeHover=null;render();const l=document.createElementNS('http://www.w3.org/2000/svg','line');l.setAttribute('x1',drag.from.x);l.setAttribute('y1',drag.from.y);l.setAttribute('x2',w.x);l.setAttribute('y2',w.y);l.setAttribute('stroke','var(--accent)');l.setAttribute('stroke-width',2);l.setAttribute('stroke-dasharray','4,3');cv.appendChild(l)}
 });
 function drawMarquee(a,b){const x1=Math.min(a.x,b.x),y1=Math.min(a.y,b.y),x2=Math.max(a.x,b.x),y2=Math.max(a.y,b.y);const r=document.createElementNS('http://www.w3.org/2000/svg','rect');r.setAttribute('x',x1);r.setAttribute('y',y1);r.setAttribute('width',x2-x1);r.setAttribute('height',y2-y1);r.setAttribute('fill','var(--accent)');r.setAttribute('fill-opacity','0.1');r.setAttribute('stroke','var(--accent)');r.setAttribute('stroke-width','1');r.setAttribute('stroke-dasharray','4,3');cv.appendChild(r)}
@@ -1291,15 +1381,21 @@ document.addEventListener('pointerup',e=>{
   else if(drag.k==='node'&&!drag.moved){const n=drag.n;if(sel?.id===n.id)cp();else{sel=n;op(n)}}
   else if(drag.k==='pan'&&!drag.moved){cp()}
   /* Phase 5b · swipe inertia — if the pan ended with velocity on a touch
-     device, apply a decaying drift using rAF. Feels natural on iPad. */
+     device, apply a decaying drift using rAF. Feels natural on iPad.
+     Phase 6 · expose handle on window so pinch-start can cancel cleanly. */
   if(drag&&drag.k==='pan'&&drag.moved&&e.pointerType==='touch'&&drag._lastT&&drag._prevT){
     const dt=(drag._lastT-drag._prevT)||16;
     let vx=(drag._lastX-drag._prevX)/dt;
     let vy=(drag._lastY-drag._prevY)/dt;
     const speed=Math.sqrt(vx*vx+vy*vy);
-    if(speed>0.15){const decay=0.92;let raf;const step=()=>{vx*=decay;vy*=decay;if(Math.abs(vx)<0.01&&Math.abs(vy)<0.01){render();return}view.x+=vx*16/view.k;view.y+=vy*16/view.k;render();raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);
-    // Any new pointerdown cancels the inertia.
-    const stop=()=>{cancelAnimationFrame(raf);cv.removeEventListener('pointerdown',stop)};cv.addEventListener('pointerdown',stop,{once:true})}
+    if(speed>0.15){const decay=0.92;let raf;
+      const step=()=>{if(window._inertiaCancelled){window._inertiaCancelled=false;return}vx*=decay;vy*=decay;if(Math.abs(vx)<0.01&&Math.abs(vy)<0.01){render();window._inertiaActive=false;return}view.x+=vx*16/view.k;view.y+=vy*16/view.k;clampView();render();raf=requestAnimationFrame(step)};
+      window._inertiaActive=true;
+      window._cancelInertia=()=>{cancelAnimationFrame(raf);window._inertiaCancelled=true;window._inertiaActive=false;vx=0;vy=0};
+      raf=requestAnimationFrame(step);
+      // Any new pointerdown cancels the inertia.
+      const stop=()=>{window._cancelInertia&&window._cancelInertia();cv.removeEventListener('pointerdown',stop)};
+      cv.addEventListener('pointerdown',stop,{once:true})}
   }
   if(drag&&(drag.snap||drag.k==='resize'||drag.k==='nresize'))sv();drag=null;render();
 });
@@ -1373,7 +1469,7 @@ function addZoneCenter(){const w=s2w(innerWidth/2,innerHeight/2);addZoneAt(w.x,w
 async function renameZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const n=await uiPrompt('Rename zone',z.name);if(n){sn();z.name=n;sv();render();bF()}hideCtx()}
 function toggleLock(zid){const z=zs().find(x=>x.id===zid);if(!z)return;sn();z.locked=z.locked===false?true:false;sv();render();hideCtx()}
 async function deleteZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const nodesInZone=ns().filter(n=>n.zone===zid).length;if(nodesInZone>0){if(!await uiConfirm(`${nodesInZone} nodes are in "${z.name}". They'll be reassigned to another zone. Continue?`,{title:'Delete zone',danger:true,okLabel:'Delete'})){hideCtx();return}}if(zs().length<=1){await uiNotice('Cannot delete the last zone.');hideCtx();return}sn();const fallback=zs().find(x=>x.id!==zid).id;ns().forEach(n=>{if(n.zone===zid)n.zone=fallback});C().zones=zs().filter(x=>x.id!==zid);sv();render();bF();hideCtx()}
-cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clientY),d=e.deltaY<0?1.12:.89;view.k=Math.max(.08,Math.min(3,view.k*d));const a=s2w(e.clientX,e.clientY);view.x+=a.x-b.x;view.y+=a.y-b.y;render()},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clientY),d=e.deltaY<0?1.12:.89;view.k=view.k*d;const a=s2w(e.clientX,e.clientY);view.x+=a.x-b.x;view.y+=a.y-b.y;clampView();render();forceRepaint()},{passive:false});
 /* Phase 1 · 1.6b — defense-in-depth for iPad Safari / Apple Pencil / Scribble.
    touch-action:none on #cv (CSS) already tells the browser we own the canvas
    gesture; these non-passive touchstart/move listeners claim the legacy touch
