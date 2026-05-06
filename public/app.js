@@ -1333,6 +1333,8 @@ function beginInteraction(e){
 cv.addEventListener('pointerdown',e=>{
   if(window.dlog&&location.search.includes('debug'))dlog('pointerdown type='+e.pointerType+' target='+(e.target.tagName||'?')+' cls='+(e.target.className?.baseVal||e.target.className||'-'));
   if(e.pointerType==='mouse'&&e.button===2)return; // right-click handled by contextmenu
+  // Phase 6 · suppress the deferred bootstrap zF after first user interaction.
+  window._userInteracted=true;
   try{cv.setPointerCapture(e.pointerId)}catch(err){}
   activePtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
 
@@ -1717,9 +1719,13 @@ window.addEventListener('error',e=>{const existing=document.getElementById('errB
 window.addEventListener('unhandledrejection',e=>{const existing=document.getElementById('errBanner');if(existing)return;const b=document.createElement('div');b.id='errBanner';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#d96b5a;color:white;padding:12px;font:12px/1.4 monospace;word-break:break-word;max-height:40vh;overflow:auto';b.textContent='PROMISE ERROR: '+(e.reason?.message||e.reason||'unknown')+'\\n'+(e.reason?.stack||'');b.onclick=()=>b.remove();document.body.appendChild(b)});
 
 load().then(()=>{try{zF()}catch(e){console.error('zF failed',e)}
-  // iOS Safari needs a re-render after layout settles
-  requestAnimationFrame(()=>{try{render();zF()}catch(e){}});
-  setTimeout(()=>{try{render();zF()}catch(e){}},300);
+  /* iOS Safari needs a re-render after layout settles. Belt-and-suspenders:
+     re-fit on the next rAF (after layout) and again at 300ms (after font/
+     KaTeX are likely loaded). Phase 6 · skip these if the user has already
+     interacted, so a programmatic addNodeRaw + pointerdown sequence (used
+     in our hold-drag tests) doesn't get its view yanked mid-test. */
+  requestAnimationFrame(()=>{if(window._userInteracted)return;try{render();zF()}catch(e){}});
+  setTimeout(()=>{if(window._userInteracted)return;try{render();zF()}catch(e){}},300);
 }).catch(e=>{console.error('load failed',e);const b=document.createElement('div');b.id='errBanner';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#d96b5a;color:white;padding:12px;font:12px/1.4 monospace;word-break:break-word;max-height:40vh;overflow:auto';b.textContent='LOAD FAILED: '+(e.message||e)+'\\n\\n'+(e.stack||'');b.onclick=()=>b.remove();document.body.appendChild(b);
   // Try to render a blank canvas anyway so buttons work
   try{reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB();rebuildWsDropdown()}catch(e2){console.error('fallback render failed',e2)}

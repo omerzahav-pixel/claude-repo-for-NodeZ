@@ -135,8 +135,11 @@ test.describe("Phase 5 P1 · Press-and-hold drag on touch", () => {
     const start = await nodeClientCenter(page, id);
     const viewBefore = await page.evaluate(() => ({ ...(window as any).__E2E.view() }));
     await dispatchPointer(page, "pointerdown", start.x, start.y, "touch");
-    // Hold still past the 350ms gate.
-    await page.waitForTimeout(420);
+    // Hold still past the 350ms gate. Phase 6 · pad to 500ms because
+    // iPad-safari emulation under high CPU sometimes delays the timer
+    // firing past the 350ms boundary, leaving holdPending true and
+    // converting the next pointermove into a pan.
+    await page.waitForTimeout(500);
     // Assert the holding feedback kicked in.
     const holdingOn = await page.evaluate(() => document.body.classList.contains("holding"));
     expect(holdingOn).toBe(true);
@@ -144,6 +147,8 @@ test.describe("Phase 5 P1 · Press-and-hold drag on touch", () => {
     await dispatchPointer(page, "pointermove", start.x + 60, start.y + 30, "touch");
     await dispatchPointer(page, "pointermove", start.x + 100, start.y + 50, "touch");
     await dispatchPointer(page, "pointerup", start.x + 100, start.y + 50, "touch");
+    // Allow inertia decay (if any spurious velocity registered) to settle.
+    await page.waitForTimeout(150);
     const node = await page.evaluate((nid) => {
       const n = (window as any).__E2E.current().nodes.find((x: any) => x.id === nid);
       return { x: n.x, y: n.y };

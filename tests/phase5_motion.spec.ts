@@ -98,8 +98,9 @@ test.describe("Phase 5 P1 · Smooth motion on open/close", () => {
     await openCleanApp(page);
     // Open modal via showPatch() so .mc exists.
     await page.evaluate(() => (window as any).showPatch());
-    // Wait past the modal transition so transform is settled.
-    await page.waitForTimeout(220);
+    // Wait past the modal transition so transform is settled. Phase 6
+    // bumped the open transition to 240ms; pad to 280 for slow runners.
+    await page.waitForTimeout(280);
     const xf = await page.evaluate(() => {
       const mc = document.querySelector("#modal .mc") as HTMLElement | null;
       if (!mc) return null;

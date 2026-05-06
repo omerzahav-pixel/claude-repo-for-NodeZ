@@ -113,7 +113,7 @@ button,input,select,textarea{font:inherit;color:inherit}
    Positioned at the right edge BELOW the toolbar so the widening toolbar
    (iPad has 10+ coarse-pointer buttons at min-width 44px) cannot overlap
    and swallow taps the way it did before Phase 1.8 D6. */
-#bc{position:fixed;top:64px;right:12px;z-index:25;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 16px;font:500 13px var(--sans);color:var(--text2);display:flex;gap:8px;align-items:center;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none;transition:background 140ms ease-out}
+#bc{position:fixed;top:64px;right:12px;z-index:31;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 16px;font:500 13px var(--sans);color:var(--text2);display:flex;gap:8px;align-items:center;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none;transition:background 140ms ease-out}
 #bc:hover{background:var(--panel2)}
 #bc a{color:var(--muted);cursor:pointer;text-decoration:none}#bc a:hover{color:var(--accent)}
 #bc .cur{color:var(--text);font-weight:600}
@@ -131,10 +131,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .pill{background:var(--panel);border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:16px;font-size:11px;font-weight:500;cursor:pointer;user-select:none}
 .pill.on{background:var(--text2);color:var(--bg);border-color:var(--text2)}
 #lg.on{opacity:1;visibility:visible;transform:scale(1);transition:opacity 240ms ease-out,transform 240ms ease-out,visibility 0ms linear 0ms}
-#lgBtn{position:fixed;top:12px;right:16px;z-index:26;width:32px;height:32px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+#lgBtn{position:fixed;top:12px;right:16px;z-index:31;width:32px;height:32px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
 #lgBtn:hover{color:var(--accent);border-color:var(--accent)}
 #lg.on+#lgBtn{opacity:.4;pointer-events:none}
-#lg{position:fixed;top:56px;right:16px;z-index:25;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;width:240px;font-size:11px;box-shadow:0 4px 12px rgba(0,0,0,.4);max-height:70vh;overflow-y:auto;opacity:0;visibility:hidden;transform:scale(.96);transform-origin:top right;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms;display:block}
+#lg{position:fixed;top:56px;right:16px;z-index:32;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;width:240px;font-size:11px;box-shadow:0 4px 12px rgba(0,0,0,.4);max-height:70vh;overflow-y:auto;opacity:0;visibility:hidden;transform:scale(.96);transform-origin:top right;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms;display:block}
 #lg h4{font:600 10px var(--sans);margin:8px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
 #lg h4:first-of-type{margin-top:0}#lg .row{display:flex;align-items:center;gap:8px;padding:2px 0;color:var(--text2)}
 #lg .sw{width:12px;height:12px;border-radius:2px}

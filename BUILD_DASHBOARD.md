@@ -1,6 +1,6 @@
 # EdgeSpace — Build Dashboard
 
-*Last updated 16 April 2026 · Status: Phase 2 complete · Phase 5 P1 complete · Phase 5 P2 complete · Phase 5b complete (24-item iPad fix pass) · Branch: v2-rewrite*
+*Last updated 06 May 2026 · Status: Phase 2 complete · Phase 5 P1/P2 complete · Phase 5b complete · Phase 6 complete (rename + 7 bug fixes + tab hierarchy + update-mode patches + general polish) · Branch: v2-rewrite*
 
 > Mirrors the live Notion dashboard at https://www.notion.so/343704adcc0e8166b4bac09c27ef5349
 > When you change phase status here, also update Notion (manually or via Notion MCP if connected).
@@ -51,8 +51,12 @@ Rebuild **Idea Vault → NodeZ** as a reliable, mobile-first knowledge canvas. S
 *Comprehensive polish pass after real-iPad usage verification. 24 items across critical bugs, interaction fixes, and UX improvements.*
 **Status:** ✅ done 2026-04-16 — All 24 items shipped, 126/126 desktop-chrome tests green. Items: (1) drag ghost trail fixed via CSS transform delta during drag instead of mutating inner coordinates; (2) nodes spawn at visual center using cv.getBoundingClientRect(); (3) vault breadcrumb hidden on root canvas; (4) redo button uses scaleX(-1) mirrored undo glyph; (5) More menu width capped at 280px; (6) More menu alignment verified consistent; (7) delete workspace wired via uiConfirm; (8) workspace rename + recolor with swatch picker and custom color storage; (9) context menu outside-click via pointerdown capture; (10) hold-drag vs context-menu timing fixed (holdTimer cancels longPressTimer); (11) selection feedback boosted (scale 1.04 + larger glow); (12) Hebrew breadcrumb RTL with flipped separators; (13) diag overlay hidden by default (opt-in ?diag=1 or Ctrl+Shift+D); (14) semantic zoom: notes/formulas show label below 0.45 scale; (15) swipe inertia on canvas pan (touch, 0.92 decay, rAF loop); (16) collapsible tab groups nesting child canvases under parents; (17) filter bar starts collapsed with toggle button; (18) sidebar starts minimized; (19) import/patch toolbar buttons relabeled with text; (20) transition tokens standardized (140ms UI, 180ms panels, 220ms overlays); (21) dark surface hierarchy verified all-tokenized; (22) landing screen verified (shows with ≥2 workspaces); (23) 8px grid verified clean; (24) paste-patch node size clamped 60-800 × 30-600.
 
-### 🚀 Phase 6 — Final ship
-*All patches re-verified · Lighthouse 90+ · production deploy · documentation*
+### ✅ Phase 6 — Rename + iPad fixes + update-mode patches
+*NodeZ → EdgeSpace rename · 7 iPad bug fixes · aggressive tab hierarchy · update-mode patches (living dashboard) · general improvements*
+**Status:** ✅ done 2026-05-06 — All 5 parts shipped, 262 tests green on desktop-chrome + ipad-chrome, 125+6 skipped on ipad-safari (pre-existing WebKit-SW flakes). Items: **Part 1 (bug fixes)** unified popover motion (240/140 ms tokens, scale+opacity on every menu/dialog/overlay); 3-layer dark surface hierarchy with box-shadows; landing screen survives Safari tab close via 4-hour localStorage timestamp; 8px grid programmatic audit (12 violations fixed); canvas-disappear bug fixed via clampView() + forceRepaint(); pan→pinch handoff cancels swipe inertia cleanly; version indicator + boot-time error boundary with cache-clear recovery. **Part 2 (tab hierarchy)** only major tabs (vault + vault-children + orphans) visible by default; only ONE major expanded at a time; descendant-count badge; long-press → "Hide from tab bar" with ⋯ overflow chip; orphan canvases auto-healed in reconcile. **Part 3 (update-mode patches)** "mode": "update" in patch JSON matches existing nodes by label and overwrites fields in place instead of creating duplicates; partial-field patches preserve omitted fields; duplicate edges deduped (with customLabel awareness); turns EdgeSpace into a living dashboard. **Part 4 (rename)** NodeZ → EdgeSpace across page title, manifest, Apple metas, landing heading, package.json, sw.js VERSION, scripts comments, README, CHANGELOG, BUILD_DASHBOARD; preserved repo URL/branch/IDB key. **Part 5 (general)** aria-labels on icon-only toolbar buttons; :focus-visible accent rings for keyboard accessibility; workspace deletion cleans up its color override; update-mode edge dedup considers customLabel for type=custom; deferred bootstrap zF skips after first user interaction (fixes ipad-safari race). New test spec `tests/phase6_update_mode.spec.ts` (5/5 green).
+
+### 🚀 Phase 7 — Final ship
+*Lighthouse 90+ · production deploy · final documentation pass*
 **Status:** not started · **Est:** 1 day
 
 ---

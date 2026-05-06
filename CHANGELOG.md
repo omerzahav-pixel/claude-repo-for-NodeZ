@@ -2,6 +2,80 @@
 
 (Previously named NodeZ — see Phase 6 rename entry below.)
 
+---
+
+## Phase 6 · EdgeSpace rename + iPad fixes + update-mode patches · 2026-05-06
+
+Five-part comprehensive update.
+
+**Part 1 — iPad bug fixes (7 items)**
+- Unified popover motion: every menu/dialog/overlay uses the same tokens
+  (240ms ease-out + scale 0.96→1 on open, 140ms ease-in on close).
+  Migrated #more, #lg, #ctx, #ep, #pn, #modal, #dlg, #toast off
+  display:none toggling.
+- 3-layer dark surface hierarchy: canvas (--bg #0F), raised panels
+  (--panel #24), overlays (--panel2 #2E). Box-shadows on every overlay.
+- Landing screen survives Safari tab close via localStorage timestamp.
+  4-hour fresh-session window: <4hr returning user goes straight to last
+  workspace; ≥4hr or first time with data sees the landing.
+- 8px grid programmatic audit, 12 violations fixed.
+- Canvas-disappear bug: clampView() locks zoom [0.1,5.0] and pans to
+  ±2× content bounds; forceRepaint() reads offsetHeight after every
+  transform update so WebKit doesn't drop the layer.
+- Pan-then-zoom scatter: pinch-start explicitly cancels swipe-inertia
+  rAF and zeroes velocity before recording the zoom baseline.
+- Version indicator (bottom-left "v2.1.0 · phase-6") + boot-time error
+  boundary with "Clear cache and reload" recovery for the case where
+  app.js fails to parse.
+
+**Part 2 — Aggressive tab hierarchy + orphan auto-heal**
+- Only "major" tabs (vault + vault-children + orphans) visible by
+  default. Each shows a descendant-count badge.
+- Only ONE major can be expanded at once. Tapping "Probability"
+  auto-collapses "Discrete Math". Bar stays bounded at 50+ canvases.
+- Active canvas's major auto-expands so the active sub-tab stays
+  reachable when other majors are collapsed.
+- Long-press / right-click → "Hide from tab bar" toggle. Hidden tabs
+  surface in a ⋯N overflow chip at the end.
+- Orphan canvases (parentCanvas pointing at deleted canvas) are auto-
+  promoted to vault in reconcileCanvases() so they don't vanish.
+
+**Part 3 — Update-mode patches (living dashboard)**
+- New "mode": "update" patch flag matches existing nodes by label and
+  overwrites fields in place instead of creating duplicates.
+- Partial-field patches preserve omitted fields (e.g. "{label, status}"
+  changes only status, leaves notes/url/etc untouched).
+- Duplicate edges deduped under update mode (with customLabel awareness
+  for type=custom).
+- Default mode (no flag) keeps the additive behavior so all existing
+  patches in the wild keep working unchanged.
+- 5-test spec tests/phase6_update_mode.spec.ts.
+
+**Part 4 — NodeZ → EdgeSpace rename**
+- User-facing surfaces: page title, manifest name + short_name + Apple
+  title meta, landing heading, README/CHANGELOG/BUILD_DASHBOARD headers,
+  service worker VERSION (cache-busts on next deploy), package.json.
+- Preserved: GitHub repo URL, Cloudflare project name, internal CSS
+  classes / function names / branch names, IndexedDB key prefix
+  (data migration would force a one-time upgrade flow).
+
+**Part 5 — General improvements**
+- aria-label on every icon-only toolbar button (heBtn, undoBtn, redoBtn,
+  dimEdgesBtn, moreBtn).
+- :focus-visible accent ring on toolbar buttons, More menu items,
+  context menu items, edge-picker, landing cards. Pointer interactions
+  stay clean (no ring on click); keyboard users see where they are.
+- Workspace deletion now also removes its color override.
+- Update-mode edge dedup considers customLabel for type=custom.
+- Deferred bootstrap zF (post-load auto-fit) skips after first user
+  interaction. Fixes a long-standing ipad-safari race where the 300ms
+  setTimeout(zF) would yank the view mid-test.
+
+**Tests**
+- 262/262 green on desktop-chrome + ipad-chrome.
+- 125 passed + 6 skipped on ipad-safari (skips are pre-existing
+  WebKit service-worker flakiness — not from Phase 6).
+
 Newest first. One entry per phase completed.
 
 ---
