@@ -95,6 +95,10 @@ button,input,select,textarea{font:inherit;color:inherit}
    empty so the greyed look communicates "nothing to undo/redo". */
 #tb button:disabled{opacity:.35;cursor:default;color:var(--muted)}
 #tb button:disabled:hover{background:transparent;color:var(--muted)}
+/* Phase 6 · keyboard focus rings. Most surfaces stripped focus visuals when
+   they shouldn't have. Add a subtle accent ring on :focus-visible so
+   keyboard users can see where they are; pointer interactions stay clean. */
+#tb button:focus-visible,#tb .tbLabel:focus-visible,#more button:focus-visible,#more label:focus-visible,#ctx button:focus-visible,#ep button:focus-visible,.ld-card:focus-visible,.ld-new:focus-visible,.ld-skip:focus-visible,#tabs .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
 /* tbLabel is a <label for="..."> that behaves like a button. The native
    label element forwards clicks to its hidden file input, preserving the
    iOS user-gesture chain that synthetic .click() would lose. */

@@ -553,7 +553,12 @@ async function toggleHebrew(){const on=!(S.hebrewMode);S.hebrewMode=on;document.
 function applyHebrewState(){const on=!!S.hebrewMode;document.body.classList.toggle('he',on);const btn=document.getElementById('heBtn');if(btn){btn.style.background=on?'var(--accent)':'';btn.style.color=on?'#0F0F0F':''}refreshUiText();applyDimBtn()}
 function toggleDimEdges(){S.dimEdges=!S.dimEdges;sv();applyDimBtn();render()}
 function applyDimBtn(){const btn=document.getElementById('dimEdgesBtn');if(btn){btn.style.background=S.dimEdges?'var(--accent)':'';btn.style.color=S.dimEdges?'#0F0F0F':''}}
-async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){await uiNotice('Cannot delete the last workspace.');return}if(!await uiConfirm(`Delete workspace "${currentWs}" and ALL its data? This cannot be undone.`,{title:'Delete workspace',danger:true,okLabel:'Delete'}))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
+async function deleteCurrentWorkspace(){const list=await listWorkspaces();if(list.length<=1){await uiNotice('Cannot delete the last workspace.');return}if(!await uiConfirm(`Delete workspace "${currentWs}" and ALL its data? This cannot be undone.`,{title:'Delete workspace',danger:true,okLabel:'Delete'}))return;try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(KEY())}}catch(e){}
+  /* Phase 6 · clean up the workspace's color override so the slot is free
+     for a future workspace with the same name (which would otherwise
+     unexpectedly inherit the deleted one's color). */
+  if(_wsColorMap[currentWs]){delete _wsColorMap[currentWs];await saveWsColors()}
+  const newList=list.filter(w=>w!==currentWs);await saveWorkspaces(newList);await switchWorkspace(newList[0])}
 /* Phase 5b · rename workspace — migrate IDB data to new key, update list. */
 async function renameCurrentWorkspace(){const name=await uiPrompt(t('renameWs'),currentWs,{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean||clean===currentWs)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}const oldKey=KEY();const data=await storageGet(oldKey);const idx=list.indexOf(currentWs);if(idx>=0)list[idx]=clean;else list.push(clean);await saveWorkspaces(list);await setCurrentWs(clean);if(data)await storageSet(KEY(),data);try{if('indexedDB' in window){const db=await idbOpen();const tx=db.transaction(DB_STORE,'readwrite').objectStore(DB_STORE);tx.delete(oldKey)}}catch(e){}if(_wsColorMap[currentWs]){_wsColorMap[clean]=_wsColorMap[currentWs];delete _wsColorMap[currentWs];await saveWsColors()}rebuildWsDropdown();refreshUiText();toast('Renamed to '+clean,{kind:'ok',ms:1500})}
 /* Phase 5b · recolor workspace — HSL swatch picker. */
@@ -1275,11 +1280,14 @@ async function applyPatchSingle(p){
     const fi=typeof e.from==='number'?e.from:added[e.from]||ns().find(n=>n.label===e.from)?.id;
     const ti=typeof e.to==='number'?e.to:added[e.to]||ns().find(n=>n.label===e.to)?.id;
     if(!fi||!ti)continue;
-    /* Phase 6 · in update mode, skip duplicate edges (same from+to+type). */
+    /* Phase 6 · in update mode, skip duplicate edges (same from+to+type
+       and matching customLabel for type=custom — two custom edges with
+       different labels are semantically different). */
     const ty=e.type||'feeds';
-    const dupe=updateMode&&es().find(x=>x.from===fi&&x.to===ti&&x.type===ty);
+    const cl=e.customLabel||null;
+    const dupe=updateMode&&es().find(x=>x.from===fi&&x.to===ti&&x.type===ty&&(ty!=='custom'||(x.customLabel||null)===cl));
     if(dupe)continue;
-    es().push({id:S.nextId++,from:fi,to:ti,type:ty,customLabel:e.customLabel||null});
+    es().push({id:S.nextId++,from:fi,to:ti,type:ty,customLabel:cl});
   }
   S.current=prev;sv();render();bF();bB();renderTabs();renderSB();if(p.switchTo)switchTo(cid)}
 function showCtx(x,y,n){

@@ -41,7 +41,7 @@
 <div id="tb">
 <select id="wsSel" onchange="switchWorkspace(this.value)" title="Switch workspace" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer"></select>
 <button onclick="newWorkspace()" title="New workspace">＋ WS</button>
-<button id="heBtn" onclick="toggleHebrew()" title="Hebrew mode (toggle RTL + translated UI)">א/A</button>
+<button id="heBtn" onclick="toggleHebrew()" aria-label="Toggle Hebrew (RTL) mode" title="Hebrew mode (toggle RTL + translated UI)">א/A</button>
 <span class="sep"></span>
 <button id="backBtn" onclick="goBack()" title="Back to parent canvas" style="display:none;background:var(--accent);color:#0F0F0F;font-weight:600;border:none">← Back</button>
 <button class="ac" id="addBtn" onclick="addC()" title="Add node (or double-click empty canvas)">+ Add</button>
@@ -50,9 +50,9 @@
 <input id="sr" placeholder="Search canvas…" oninput="aF()" title="Filter visible nodes by label / notes" style="min-width:110px"/>
 <span class="sep"></span>
 <button id="fitBtn" onclick="zF()" title="Fit view to all nodes">Fit</button>
-<button id="undoBtn" onclick="un()" title="Undo (Ctrl+Z)">↶</button>
-<button id="redoBtn" onclick="re()" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" style="display:inline-flex;transform:scaleX(-1)">↶</button>
-<button id="dimEdgesBtn" onclick="toggleDimEdges()" title="Dim edges (focus on nodes)">⌇</button>
+<button id="undoBtn" onclick="un()" aria-label="Undo" title="Undo (Ctrl+Z)">↶</button>
+<button id="redoBtn" onclick="re()" aria-label="Redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" style="display:inline-flex;transform:scaleX(-1)">↶</button>
+<button id="dimEdgesBtn" onclick="toggleDimEdges()" aria-label="Dim edges" title="Dim edges (focus on nodes)">⌇</button>
 <span class="sep"></span>
 <!-- Phase 1.8 · promoted to top toolbar. Phase 5b: text labels for clarity.
      Paste-patch = pure JS action (no file picker).
@@ -61,7 +61,7 @@
 <button id="patchBtn" onclick="showPatch()" title="Paste patch JSON">📋 Patch</button>
 <label id="importBtn" for="imp" class="tbLabel" title="Import full state JSON" onclick="window.dbg&&window.dbg('IMPORT','toolbar import tapped — label forwards to #imp')">📥 Import</label>
 <span class="sep"></span>
-<button id="moreBtn" onclick="toggleMore();window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()" title="More options (export / import / utilities / workspace)">⋯ More</button>
+<button id="moreBtn" onclick="toggleMore();window.dbg&&window.dbg('IMPORT','More tapped · now '+(document.getElementById('more').classList.contains('on')?'OPEN':'closed'));event.stopPropagation()" aria-label="More options" title="More options (export / import / utilities / workspace)">⋯ More</button>
 <div id="more"><div id="moreBody"></div></div>
 <div id="indicators"><span class="ind s-ok" id="saveInd" title="Save status"></span><span class="ind" id="expInd" title="Export flash"></span></div>
 <!-- iOS Safari blocks synthetic .click() on a hidden file input called from
