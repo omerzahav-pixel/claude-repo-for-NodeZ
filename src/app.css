@@ -42,6 +42,17 @@
 #tabs .newtab{padding:8px 12px;color:var(--muted);cursor:pointer;font-size:13px}
 #tabs .newtab:hover{color:var(--accent)}
 .tab-tog{font-size:9px;color:var(--muted);margin-right:2px;cursor:pointer;padding:0 2px}.tab-tog:hover{color:var(--accent)}
+/* Phase 6 · aggressive tab hierarchy. Major tabs (vault + vault-children)
+   are the only ones visible by default; sub tabs only render when their
+   major is expanded. Badge shows the descendant count so the user knows
+   how much is hidden behind a major. */
+#tabs .tab.major{font-weight:600}
+#tabs .tab.sub{opacity:.85;font-weight:400;border-radius:0 0 8px 8px}
+#tabs .tab.sub:hover{opacity:1;background:var(--bg2)}
+.tab-badge{display:inline-block;min-width:16px;padding:0 4px;font-size:9px;line-height:14px;color:var(--muted);background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-left:4px;font-weight:500;text-align:center}
+#tabs .tab.cur .tab-badge{color:var(--text);background:var(--panel)}
+#tabs .tab-overflow{font-size:11px;color:var(--muted);background:transparent;border:1px dashed var(--border);border-radius:8px;padding:4px 8px;margin-left:4px}
+#tabs .tab-overflow:hover{color:var(--accent);border-color:var(--accent)}
 /* Phase 1.8 — position:fixed so JS placePopover() can anchor + flip. The
    old absolute+right:0 required #more to be inside a position:relative
    wrapper, which broke when the toolbar wrapped to two rows on narrow

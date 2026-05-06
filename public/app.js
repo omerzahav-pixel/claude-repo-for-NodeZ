@@ -632,26 +632,92 @@ function cycleSb(){const sb=document.getElementById('sb');sb.classList.remove('m
 function sbHeadClick(e){const sb=document.getElementById('sb');if(sb.classList.contains('mini')){sb.classList.remove('mini')}}
 function sbResize(e){e.preventDefault();const sb=document.getElementById('sb');const sx=e.clientX,ow=sb.offsetWidth;const mm=ev=>{sb.style.width=Math.max(200,Math.min(500,ow+ev.clientX-sx))+'px'};const mu=()=>{document.removeEventListener('pointermove',mm);document.removeEventListener('pointerup',mu)};document.addEventListener('pointermove',mm);document.addEventListener('pointerup',mu)}
 function collapseAllZones(){if(!S.sbCollapse)S.sbCollapse={};const ck=S.current+':__';const allCollapsed=zs().every(z=>S.sbCollapse[S.current+':'+z.id]);for(const z of zs())S.sbCollapse[S.current+':'+z.id]=!allCollapsed;sv();renderSB()}
+/* Phase 6 · aggressive tab collapsing.
+   - Major canvas = vault OR direct child of vault. These are the only
+     tabs visible by default; every other canvas tucks under its ancestor.
+   - Only ONE major tab can be expanded at a time (S._tabExpanded). This
+     keeps the bar bounded even with 50+ canvases.
+   - The major tab containing the active canvas auto-expands so the active
+     sub-tab stays reachable.
+   - Hidden tabs (S.hiddenTabs[]) skip the bar entirely. Long-press →
+     "Hide from tab bar" toggles. Hidden tabs surface in an overflow
+     popover at the end of the bar.
+   - Major tabs show a child-count badge; tapping a major tab navigates
+     to it AND expands its children. Tapping again collapses. */
 function renderTabs(){const t=document.getElementById('tabs');if(!t)return;
-  /* Phase 5b · collapsible tab groups — nest child canvases under their
-     parent canvas tab. Clicking the toggle collapses/expands children. */
   const ids=Object.keys(S.canvases);
-  const children={};const roots=[];
-  for(const cid of ids){const m=S.canvasMeta[cid];const pc=m?.parentCanvas;
-    if(pc&&ids.includes(pc)){if(!children[pc])children[pc]=[];children[pc].push(cid)}
-    else roots.push(cid)}
-  if(!S._tabCollapse)S._tabCollapse={};
-  let h='';function addTab(cid,indent){
-    const name=S.canvasMeta[cid]?.name||cid;const cur=cid===S.current;
-    const hasKids=(children[cid]||[]).length>0;
-    const collapsed=!!S._tabCollapse[cid];
-    const tog=hasKids?`<span class="tab-tog" onclick="event.stopPropagation();toggleTabGroup('${cid}')">${collapsed?'▸':'▾'}</span>`:'';
+  const childrenOf={};for(const cid of ids){const pc=S.canvasMeta[cid]?.parentCanvas;if(pc&&ids.includes(pc)){if(!childrenOf[pc])childrenOf[pc]=[];childrenOf[pc].push(cid)}}
+  // A "major" canvas: vault, direct child of vault, OR orphan (no valid
+  // parent) so we don't lose canvases when their parent reference rots.
+  const isMajor=cid=>{
+    if(cid==='vault')return true;
+    const pc=S.canvasMeta[cid]?.parentCanvas;
+    if(pc==='vault')return true;
+    // Phase 6 · orphan promotion. parentCanvas missing OR points to a
+    // canvas that no longer exists → treat as major. Tab bar shows the
+    // canvas; sidebar Uncategorized group counts it.
+    if(!pc||!ids.includes(pc))return true;
+    return false;
+  };
+  // Walk up to the major ancestor (vault or vault-child).
+  function majorAncestorOf(cid){let cur=cid;let guard=20;while(cur&&guard-->0){if(isMajor(cur))return cur;cur=S.canvasMeta[cur]?.parentCanvas}return 'vault'}
+  // Auto-expand the major tab that contains the active canvas.
+  const activeMajor=majorAncestorOf(S.current);
+  if(!S._tabExpanded&&activeMajor!=='vault')S._tabExpanded=activeMajor;
+  if(!S.hiddenTabs)S.hiddenTabs=[];
+  const hidden=new Set(S.hiddenTabs);
+  // Count descendants (not just direct children) for the badge.
+  function descendantCount(cid){let total=0;const stack=[cid];while(stack.length){const n=stack.pop();const kids=(childrenOf[n]||[]);for(const k of kids){if(hidden.has(k))continue;total++;stack.push(k)}}return total}
+  // Major tabs to render: all majors NOT hidden.
+  const majors=ids.filter(c=>isMajor(c)&&!hidden.has(c));
+  let h='';
+  for(const cid of majors){
+    const name=S.canvasMeta[cid]?.name||cid;
+    const cur=cid===S.current;
+    const expanded=S._tabExpanded===cid&&cid!=='vault';
+    const cnt=descendantCount(cid);
+    const badge=cnt>0?` <span class="tab-badge">${cnt}</span>`:'';
+    const tog=cnt>0?`<span class="tab-tog">${expanded?'▾':'▸'}</span>`:'';
     const closeBtn=cid==='vault'?'':`<span class="x" onclick="event.stopPropagation();closeCanvas('${cid}')" title="Delete canvas">×</span>`;
-    h+=`<div class="tab${cur?' cur':''}" style="${indent?'padding-left:24px;font-size:11px':''}" onclick="switchTo('${cid}')" oncontextmenu="event.preventDefault();showTabCtx(event,'${cid}')">${tog}${esc(name)}${closeBtn}</div>`;
-    if(!collapsed&&children[cid]){for(const kid of children[cid])addTab(kid,true)}}
-  for(const cid of roots)addTab(cid,false);
-  h+='<div class="newtab" onclick="newTab()" title="New standalone canvas">＋</div>';t.innerHTML=h}
+    h+=`<div class="tab${cur?' cur':''}${cnt>0?' major':''}" onclick="onTabTap('${cid}')" oncontextmenu="event.preventDefault();showTabCtx(event,'${cid}')">${tog}${esc(name)}${badge}${closeBtn}</div>`;
+    // Children only render when this major is expanded.
+    if(expanded){
+      // BFS through descendants (skip hidden), indent by depth.
+      const queue=[[cid,0]];const seen=new Set([cid]);
+      while(queue.length){const [parent,depth]=queue.shift();const kids=(childrenOf[parent]||[]).filter(k=>!hidden.has(k)&&!seen.has(k));
+        for(const k of kids){seen.add(k);
+          const kn=S.canvasMeta[k]?.name||k;const kcur=k===S.current;
+          const kKids=(childrenOf[k]||[]).filter(x=>!hidden.has(x));
+          const kHasKids=kKids.length>0;
+          const kCollapsed=!!S._tabCollapse?.[k];
+          const kTog=kHasKids?`<span class="tab-tog" onclick="event.stopPropagation();toggleTabGroup('${k}')">${kCollapsed?'▸':'▾'}</span>`:'';
+          const kClose=`<span class="x" onclick="event.stopPropagation();closeCanvas('${k}')" title="Delete canvas">×</span>`;
+          h+=`<div class="tab sub${kcur?' cur':''}" style="padding-left:${16+(depth+1)*12}px;font-size:11px" onclick="switchTo('${k}')" oncontextmenu="event.preventDefault();showTabCtx(event,'${k}')">${kTog}${esc(kn)}${kClose}</div>`;
+          if(!kCollapsed)queue.push([k,depth+1]);
+        }}
+    }
+  }
+  h+='<div class="newtab" onclick="newTab()" title="New standalone canvas">＋</div>';
+  // Hidden-tabs overflow chip
+  if(hidden.size){h+=`<div class="newtab tab-overflow" onclick="showHiddenTabs(event)" title="Show hidden tabs">⋯ ${hidden.size}</div>`}
+  t.innerHTML=h}
+/* Tap on a major tab: switch to it AND toggle expansion.
+   - If you tap the active major, just collapse. - Otherwise switch + expand. */
+function onTabTap(cid){
+  const isMajor=cid==='vault'||S.canvasMeta[cid]?.parentCanvas==='vault';
+  if(!isMajor){switchTo(cid);return}
+  if(S._tabExpanded===cid&&cid===S.current){S._tabExpanded=null;renderTabs();return}
+  S._tabExpanded=cid==='vault'?null:cid;
+  if(cid!==S.current)switchTo(cid);else renderTabs();
+}
 function toggleTabGroup(cid){if(!S._tabCollapse)S._tabCollapse={};S._tabCollapse[cid]=!S._tabCollapse[cid];renderTabs()}
+function hideFromTabBar(cid){if(!S.hiddenTabs)S.hiddenTabs=[];if(!S.hiddenTabs.includes(cid))S.hiddenTabs.push(cid);sv();renderTabs()}
+function unhideTab(cid){if(!S.hiddenTabs)return;S.hiddenTabs=S.hiddenTabs.filter(x=>x!==cid);sv();renderTabs()}
+function showHiddenTabs(ev){
+  const list=(S.hiddenTabs||[]).filter(c=>S.canvases[c]);
+  ctx.innerHTML=`<div class="csub">${S.hebrewMode?'טאבים מוסתרים':'Hidden tabs'}</div>${list.length?list.map(c=>`<button onclick="unhideTab('${c}');hideCtx()">↺ ${esc(S.canvasMeta[c]?.name||c)}</button>`).join(''):`<div style="padding:8px 12px;color:var(--muted);font-size:11px">${S.hebrewMode?'אין':'None'}</div>`}`;
+  positionCtx(ev.clientX,ev.clientY);
+}
 function positionCtx(x,y){
   /* Phase 6 · keep #ctx in CSS class system. Make it measurable by removing
      visibility off-screen, measure, place, then add .on so the entrance
@@ -660,7 +726,12 @@ function positionCtx(x,y){
   requestAnimationFrame(()=>{const r=ctx.getBoundingClientRect();const W=innerWidth,H=innerHeight,pad=8;let nx=x,ny=y;if(x+r.width+pad>W)nx=Math.max(pad,x-r.width);if(y+r.height+pad>H)ny=Math.max(pad,y-r.height);ctx.style.left=nx+'px';ctx.style.top=ny+'px'})}
 function showTabCtx(e,cid){const m=S.canvasMeta[cid]||{};
   const isLinked=!!m.parentNodeId;const linkLabel=isLinked?(S.hebrewMode?'חבר לפרויקט אחר':'Reconnect to project'):(S.hebrewMode?'חבר לפרויקט':'Connect to project');
-  ctx.innerHTML=`<div class="csub">${esc(m.name||cid)}</div><button onclick="renameCanvas('${cid}');hideCtx()">${S.hebrewMode?'שנה שם':'Rename'}</button><button onclick="showProjectPicker('${cid}');hideCtx()">${esc(linkLabel)}</button>${isLinked?`<button onclick="unlinkCanvas('${cid}');hideCtx()">${S.hebrewMode?'נתק מפרויקט':'Unlink from project'}</button>`:''}${cid!=='vault'?`<div class="csep"></div><button onclick="hideCtx();closeCanvas('${cid}')" style="color:var(--block)">${S.hebrewMode?'מחק קנבס':'Delete canvas'}</button>`:''}`;positionCtx(e.clientX,e.clientY)}
+  /* Phase 6 · Hide-from-tab-bar option. Vault can't be hidden (it's the
+     anchor); other canvases get a "Hide" toggle so the user can
+     declutter without deleting data. Hidden tabs surface in the ⋯
+     overflow chip at the end of the bar. */
+  const hideLabel=cid==='vault'?'':`<button onclick="hideFromTabBar('${cid}');hideCtx()">${S.hebrewMode?'הסתר מסרגל הטאבים':'Hide from tab bar'}</button>`;
+  ctx.innerHTML=`<div class="csub">${esc(m.name||cid)}</div><button onclick="renameCanvas('${cid}');hideCtx()">${S.hebrewMode?'שנה שם':'Rename'}</button><button onclick="showProjectPicker('${cid}');hideCtx()">${esc(linkLabel)}</button>${isLinked?`<button onclick="unlinkCanvas('${cid}');hideCtx()">${S.hebrewMode?'נתק מפרויקט':'Unlink from project'}</button>`:''}${hideLabel}${cid!=='vault'?`<div class="csep"></div><button onclick="hideCtx();closeCanvas('${cid}')" style="color:var(--block)">${S.hebrewMode?'מחק קנבס':'Delete canvas'}</button>`:''}`;positionCtx(e.clientX,e.clientY)}
 async function renameCanvas(cid){const m=S.canvasMeta[cid];if(!m)return;const newName=await uiPrompt(S.hebrewMode?'שם חדש לקנבס':'Rename canvas',m.name||cid);if(!newName)return;sn();m.name=newName.trim();sv();renderTabs();bB()}
 function unlinkCanvas(cid){const m=S.canvasMeta[cid];if(!m||!m.parentNodeId)return;sn();const pn=S.canvases[m.parentCanvas||'vault']?.nodes.find(n=>n.id===m.parentNodeId);if(pn)pn.childCanvas=null;m.parentNodeId=null;sv();render();renderTabs()}
 function showProjectPicker(cid){modal.classList.add('on');const projectNodes=[];for(const[ck,cv2]of Object.entries(S.canvases)){if(ck===cid)continue;for(const n of cv2.nodes||[]){if(n.shape==='project')projectNodes.push({n,canvasId:ck,canvasName:S.canvasMeta[ck]?.name||ck})}}
@@ -1532,6 +1603,16 @@ function reconcileCanvases(){
   }
   for(const cid of Object.keys(S.canvases)){for(const n of S.canvases[cid].nodes||[]){if(n.childCanvas&&!S.canvases[n.childCanvas]){n.childCanvas=null}}}
   for(const [cid,m] of Object.entries(S.canvasMeta)){if(m.parentNodeId){const pc=m.parentCanvas||'vault';const pn=S.canvases[pc]?.nodes.find(n=>n.id===m.parentNodeId);if(pn&&!pn.childCanvas)pn.childCanvas=cid}}
+  /* Phase 6 · orphan auto-healing. A canvas with parentCanvas pointing at
+     a deleted/missing canvas would otherwise vanish from the tab bar.
+     Promote any such orphan to vault as the safest default. */
+  let fixedOrphans=0;
+  for(const cid of Object.keys(S.canvasMeta)){
+    if(cid==='vault')continue;
+    const m=S.canvasMeta[cid];
+    if(m.parentCanvas&&!S.canvases[m.parentCanvas]){m.parentCanvas='vault';fixedOrphans++}
+  }
+  if(fixedOrphans>0&&window.dbg)window.dbg('SYS','reconcile · auto-healed '+fixedOrphans+' orphan canvas(es) to vault parent');
 }
 async function cleanOrphanCanvases(){const orphans=[];for(const cid of Object.keys(S.canvases)){if(cid==='vault')continue;const m=S.canvasMeta[cid];const empty=(S.canvases[cid].nodes||[]).length===0;const noParentRef=!m?.parentNodeId||!S.canvases[m.parentCanvas||'vault']?.nodes.find(n=>n.id===m.parentNodeId&&n.childCanvas===cid);if(empty&&noParentRef)orphans.push(cid)}
   if(!orphans.length){await uiNotice('No orphan canvases found.');return}
