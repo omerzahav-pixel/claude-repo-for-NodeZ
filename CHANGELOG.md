@@ -1,4 +1,6 @@
-# NodeZ Changelog
+# EdgeSpace Changelog
+
+(Previously named NodeZ — see Phase 6 rename entry below.)
 
 Newest first. One entry per phase completed.
 

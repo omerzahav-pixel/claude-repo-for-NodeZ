@@ -1,9 +1,9 @@
 {
-  "name": "nodez",
+  "name": "edgespace",
   "private": true,
-  "version": "2.0.0-phase0",
+  "version": "2.1.0",
   "type": "module",
-  "description": "NodeZ — mobile-first knowledge canvas (v2 rewrite of Idea Vault)",
+  "description": "EdgeSpace — mobile-first knowledge canvas",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

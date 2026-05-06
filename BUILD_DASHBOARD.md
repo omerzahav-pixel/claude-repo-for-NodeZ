@@ -1,4 +1,4 @@
-# NodeZ — Build Dashboard
+# EdgeSpace — Build Dashboard
 
 *Last updated 16 April 2026 · Status: Phase 2 complete · Phase 5 P1 complete · Phase 5 P2 complete · Phase 5b complete (24-item iPad fix pass) · Branch: v2-rewrite*
 

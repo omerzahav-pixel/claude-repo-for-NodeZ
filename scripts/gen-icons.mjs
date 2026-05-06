@@ -2,7 +2,7 @@
 /**
  * Phase 2 · PWA · icon generator.
  *
- * Produces pure-Node PNG rasters of the NodeZ logo without any external
+ * Produces pure-Node PNG rasters of the EdgeSpace logo without any external
  * image library. We draw a filled square background + three connected
  * circles (two nodes + one between them) using only zlib for the IDAT
  * stream. Output lands in public/icons/.

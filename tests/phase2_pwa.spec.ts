@@ -47,7 +47,7 @@ test.describe("Phase 2 · PWA", () => {
     // the browser uses before PWACompat's async script has a chance to run.
     await expect(page.locator('meta[name=apple-mobile-web-app-capable]').first()).toHaveAttribute("content", "yes");
     await expect(page.locator('meta[name=apple-mobile-web-app-status-bar-style]').first()).toHaveAttribute("content", "black-translucent");
-    await expect(page.locator('meta[name=apple-mobile-web-app-title]').first()).toHaveAttribute("content", "NodeZ");
+    await expect(page.locator('meta[name=apple-mobile-web-app-title]').first()).toHaveAttribute("content", "EdgeSpace");
     // Apple touch icon.
     const appleIcon = await page.locator('link[rel=apple-touch-icon]').first().getAttribute("href");
     expect(appleIcon).toBeTruthy();

@@ -1,5 +1,5 @@
 /* =============================================================================
- * NodeZ v2 · service worker.
+ * EdgeSpace · service worker.
  *
  * Strategy: stale-while-revalidate for same-origin shell assets (HTML / CSS /
  * JS / icons), network-first (with cache fallback) for the HTML entry so a
@@ -11,12 +11,12 @@
  * control without a refresh cycle — iOS Safari is especially picky about
  * this, a lingering old SW can leave users on the old bundle indefinitely.
  *
- * NodeZ data (IndexedDB `ideaVault`, localStorage) is NOT managed here —
- * the app reads/writes it directly via ws_d2.js / app.js. The SW only
- * caches static shell assets.
+ * App data (IndexedDB `ideaVault`, localStorage) is NOT managed here —
+ * the app reads/writes it directly via app.js. The SW only caches static
+ * shell assets.
  * ============================================================================= */
 
-const VERSION = "nodez-v2.phase2.1";
+const VERSION = "edgespace-v2.phase6.1";
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 const CDN = `${VERSION}-cdn`;
