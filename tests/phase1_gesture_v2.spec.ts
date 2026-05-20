@@ -113,6 +113,61 @@ test.describe("Phase 1 · gesture state machine (--gestures-v2)", () => {
     expect(Math.abs(result.velAfterPinch.y)).toBeLessThan(0.01);
   });
 
+  test("1.1.4a R1 regression — pan with flag ON actually moves view.x/view.y", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true, "raf-throttle": true });
+    // Touch pan from (200, 200) → (400, 280) with two intermediate samples.
+    const result = await page.evaluate(async () => {
+      const before = { ...(window as any).__E2E.view() };
+      const cv = document.getElementById("cv")!;
+      const dispatch = (type: string, x: number, y: number, id = 1) => {
+        cv.dispatchEvent(new PointerEvent(type, {
+          clientX: x, clientY: y, pointerType: "touch",
+          pointerId: id, isPrimary: id === 1, bubbles: true, cancelable: true
+        }));
+      };
+      dispatch("pointerdown", 200, 200);
+      dispatch("pointermove", 260, 220);
+      dispatch("pointermove", 340, 260);
+      dispatch("pointermove", 400, 280);
+      // Wait for the RAF flush to commit.
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+      const mid = { ...(window as any).__E2E.view() };
+      dispatch("pointerup", 400, 280);
+      await new Promise(r => setTimeout(r, 50));
+      const after = { ...(window as any).__E2E.view() };
+      return { before, mid, after };
+    });
+    // Pan moves clientX by +200 and clientY by +80. View.x/y should shift by
+    // (clientDx/view.k, clientDy/view.k). Initial view.k is 0.5, so view.x
+    // delta ≈ 400 and view.y delta ≈ 160. Just assert "moved by more than
+    // a trivial amount" so the test isn't brittle to view.k init drift.
+    expect(Math.abs(result.mid.x - result.before.x)).toBeGreaterThan(50);
+    expect(Math.abs(result.mid.y - result.before.y)).toBeGreaterThan(20);
+  });
+
+  test("1.1.4b R3 regression — body.dragging and body.holding cleared on IDLE", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true });
+    const result = await page.evaluate(async () => {
+      const cv = document.getElementById("cv")!;
+      // Pretend something added body.dragging + body.holding (simulating the
+      // worst case where the old code path left residue).
+      document.body.classList.add("dragging", "holding");
+      // Dispatch a pan that ends with pointerup, which transitions to idle.
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 300, clientY: 300, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointermove", { clientX: 330, clientY: 320, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointerup",   { clientX: 330, clientY: 320, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      // Wait two RAFs so any pending inertia decays past stop-threshold (low velocity → straight to idle).
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+      return {
+        dragging: document.body.classList.contains("dragging"),
+        holding:  document.body.classList.contains("holding"),
+        state:    (window as any).GestureV2.getState()
+      };
+    });
+    expect(result.dragging).toBe(false);
+    expect(result.holding).toBe(false);
+  });
+
   test("1.1.4 Old pinch path bails when flag ON (no double-write to view)", async ({ page }) => {
     await openWithFlags(page, { "gestures-v2": true });
     // After a synthetic pinch, the OLD pinchState should remain null because
@@ -176,5 +231,25 @@ test.describe("Phase 1 · perf-hud", () => {
     await openWithFlags(page, {});
     const hud = await page.locator("#perfHud").count();
     expect(hud).toBe(0);
+  });
+
+  test("1.4.4 R2 regression — ?debug=perf does NOT show legacy green log overlay", async ({ page }) => {
+    await page.goto(viteUrl + "?debug=perf", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#perfHud", { timeout: 5000 });
+    // The legacy dbgOverlay is gated on ?debug=verbose now; ?debug=perf must
+    // not trigger it. Both the DOM element and the dlog function must be absent.
+    const leak = await page.evaluate(() => ({
+      dbgOverlay: !!document.getElementById("dbgOverlay"),
+      dlog: typeof (window as any).dlog === "function"
+    }));
+    expect(leak.dbgOverlay).toBe(false);
+    expect(leak.dlog).toBe(false);
+  });
+
+  test("1.4.5 ?debug=verbose still shows the legacy log overlay (opt-in works)", async ({ page }) => {
+    await page.goto(viteUrl + "?debug=verbose", { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => !!(window as any).dlog, null, { timeout: 5000 });
+    const hasOverlay = await page.locator("#dbgOverlay").count();
+    expect(hasOverlay).toBe(1);
   });
 });

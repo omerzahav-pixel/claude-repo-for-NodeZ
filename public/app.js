@@ -1724,11 +1724,18 @@ document.getElementById('tabs')?.addEventListener('pointerdown',function(e){
 try{const meta=document.createElement('meta');meta.name='apple-mobile-web-app-capable';meta.content='yes';document.head.appendChild(meta);const meta2=document.createElement('meta');meta2.name='apple-mobile-web-app-title';meta2.content='Vault';document.head.appendChild(meta2)}catch(e){}
 
 /* Global error banner for debugging */
-/* Debug overlay — shows real-time events on iPad */
-const dbg=document.createElement('div');dbg.id='dbgOverlay';dbg.style.cssText='position:fixed;bottom:104px;left:8px;right:8px;max-height:152px;overflow-y:auto;background:rgba(0,0,0,0.85);color:#7db36a;font:10px/1.3 monospace;padding:8px;border:1px solid #7db36a;border-radius:8px;z-index:9998;pointer-events:auto;touch-action:pan-y;display:none';document.body.appendChild(dbg);
-function dlog(m){const l=document.createElement('div');l.textContent=m;dbg.insertBefore(l,dbg.firstChild);while(dbg.children.length>30)dbg.removeChild(dbg.lastChild);dbg.style.display='block'}
-/* Show debug overlay by URL ?debug=1 */
-if(location.search.includes('debug')){dbg.style.display='block';dlog('DEBUG MODE ON');dlog('viewport: '+innerWidth+'x'+innerHeight);dlog('ua: '+navigator.userAgent.slice(0,60))}
+/* Legacy verbose dev log overlay (bottom-of-viewport green panel).
+   Phase 1 fix: previously triggered on ANY location.search containing the
+   string 'debug', which means `?debug=perf` (the new Phase 1 HUD trigger)
+   ALSO turned this on. Tightened to opt-in via the specific URL token
+   `?debug=verbose`. Anything else — including ?debug=perf — leaves it
+   inert, no DOM created, no listeners attached. */
+const _dbgVerbose=(function(){try{return new URLSearchParams(location.search).get('debug')==='verbose'}catch(e){return false}})();
+if(_dbgVerbose){
+  const dbg=document.createElement('div');dbg.id='dbgOverlay';dbg.style.cssText='position:fixed;bottom:104px;left:8px;right:8px;max-height:152px;overflow-y:auto;background:rgba(0,0,0,0.85);color:#7db36a;font:10px/1.3 monospace;padding:8px;border:1px solid #7db36a;border-radius:8px;z-index:9998;pointer-events:auto;touch-action:pan-y';document.body.appendChild(dbg);
+  window.dlog=function(m){const l=document.createElement('div');l.textContent=m;dbg.insertBefore(l,dbg.firstChild);while(dbg.children.length>30)dbg.removeChild(dbg.lastChild)};
+  window.dlog('DEBUG MODE ON');window.dlog('viewport: '+innerWidth+'x'+innerHeight);window.dlog('ua: '+navigator.userAgent.slice(0,60));
+}
 
 window.addEventListener('error',e=>{const existing=document.getElementById('errBanner');if(existing)return;const b=document.createElement('div');b.id='errBanner';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#d96b5a;color:white;padding:12px;font:12px/1.4 monospace;word-break:break-word;max-height:40vh;overflow:auto';b.textContent='JS ERROR: '+(e.message||'unknown')+' @ '+(e.filename||'?')+':'+(e.lineno||'?');b.onclick=()=>b.remove();document.body.appendChild(b)});
 window.addEventListener('unhandledrejection',e=>{const existing=document.getElementById('errBanner');if(existing)return;const b=document.createElement('div');b.id='errBanner';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#d96b5a;color:white;padding:12px;font:12px/1.4 monospace;word-break:break-word;max-height:40vh;overflow:auto';b.textContent='PROMISE ERROR: '+(e.reason?.message||e.reason||'unknown')+'\\n'+(e.reason?.stack||'');b.onclick=()=>b.remove();document.body.appendChild(b)});

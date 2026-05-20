@@ -20,11 +20,18 @@
 (function () {
   'use strict';
 
-  // The view object is declared in app.js as a top-level `let`. It IS attached
-  // to window via __E2E.view() (read-only getter) but the actual mutable
-  // reference needs us to wait until app.js has executed.
+  // The view object is declared in app.js as a top-level `let` — and `let` does
+  // NOT attach to window. The only way to reach the live reference from outside
+  // app.js's scope is via the __E2E test hook, which returns the actual object
+  // (not a snapshot). Same reference each call, so writes propagate.
   function getView() {
-    return typeof window.view !== 'undefined' ? window.view : null;
+    const E = window.__E2E;
+    if (E && typeof E.view === 'function') {
+      const v = E.view();
+      if (v) return v;
+    }
+    // Fallback only — should never hit in practice once app.js has finished.
+    return null;
   }
 
   let pendingT = null;       // last-written {x, y, k} awaiting flush
@@ -33,8 +40,18 @@
 
   function commit() {
     rafHandle = null;
+    if (!pendingT) return;
     const v = getView();
-    if (!v || !pendingT) { pendingT = null; return; }
+    if (!v) {
+      // Boot race: app.js's __E2E hook not registered yet. Drop the write so
+      // we don't leak a stale pendingT, and warn so a future regression is loud.
+      if (!commit._warned) {
+        console.warn('[EdgeSpace transform] view reference not available — drop commit');
+        commit._warned = true;
+      }
+      pendingT = null;
+      return;
+    }
     v.x = pendingT.x; v.y = pendingT.y; v.k = pendingT.k;
     pendingT = null;
     const t0 = performance.now();

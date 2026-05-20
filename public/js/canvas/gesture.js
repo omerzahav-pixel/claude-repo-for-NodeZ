@@ -68,8 +68,10 @@
     let pinch = null; // {dist, cx, cy, k, x, y}
     const activePtrs = new Map(); // pointerId → {x,y}
 
-    // hold timer
-    const HOLD_MS = 500;
+    // Hold-gate timestamp recorded on pointerdown. The actual hold UX
+    // (context menu on long-press, etc.) is owned by the existing app.js
+    // code path — we record this so a future Phase can promote HOLD into
+    // a real state if needed. Today: unused after recording.
     let holdStart = null;
 
     // -- Helpers --------------------------------------------------------------
@@ -94,6 +96,27 @@
           window.CanvasTransform.cancelPending();
         }
       }
+
+      // Phase 1 R3 — every transition into IDLE clears transient body
+      // classes that *might* have been left behind by either the old hold
+      // gate or our own (currently dead) tickHold path. The accent-orange
+      // halo is driven by body.dragging + .nslice.sel; if the old pointerup
+      // path's idempotent clear hasn't fired yet, we mop here so the user
+      // never sees stuck residue after a finger lift.
+      if (next === 'idle') {
+        const b = document.body;
+        if (b) {
+          b.classList.remove('holding');
+          b.classList.remove('dragging');
+        }
+        const heldSlice = document.querySelector('.nslice.holding');
+        if (heldSlice) heldSlice.classList.remove('holding');
+        const heldGroup = document.querySelector('g.node.holding');
+        if (heldGroup) heldGroup.classList.remove('holding');
+        const cv = document.getElementById('cv');
+        if (cv) cv.classList.remove('gr');
+      }
+
       state = next;
       if (opts.consume) {
         try { opts.consume.preventDefault(); } catch (e) {}
@@ -137,21 +160,6 @@
       rafInertia = requestAnimationFrame(tickInertia);
     }
 
-    // -- HOLD detection -------------------------------------------------------
-    function tickHold() {
-      if (state !== 'hold') { rafHold = null; return; }
-      const elapsed = performance.now() - holdStart;
-      if (elapsed >= HOLD_MS) {
-        // Hold gate satisfied. We don't trigger a context menu directly here
-        // (existing app.js owns that) — we just enter HOLD as a recognised
-        // state and let the next pointermove / pointerup decide.
-        rafHold = null;
-        document.body.classList.add('holding');
-        return;
-      }
-      rafHold = requestAnimationFrame(tickHold);
-    }
-
     // -- Listeners ------------------------------------------------------------
     // CAPTURE phase so we run before the existing bubble-phase handlers.
     // When this state machine handles a gesture, we DO NOT stop the existing
@@ -162,41 +170,52 @@
 
     cv.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse' && e.button === 2) return; // right-click → ctx menu
+      // Always track the pointer so we can detect a second finger arriving
+      // even when the first finger is on a node (pinch should still take
+      // priority over a node drag).
       activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      // Pinch start: two pointers down.
+      // Pinch start: two pointers down. ALWAYS claim — pinch is the gesture
+      // machine's responsibility regardless of what's under the fingers.
       if (activePtrs.size === 2) {
         const pts = Array.from(activePtrs.values());
         const t = window.CanvasTransform.get();
         const cx = (pts[0].x + pts[1].x) / 2;
         const cy = (pts[0].y + pts[1].y) / 2;
         const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) || 1;
-        pinch = { dist, cx, cy, k: t.k, baseTx: t.x, baseTy: t.y };
+        pinch = { dist, cx, cy, k: t.k };
         setState('pinch', { consume: e });
         return;
       }
 
-      // Single pointer: start PAN (we use threshold in pointermove to confirm).
-      // INERTIA→PAN: cancel inertia, begin fresh pan from this finger.
-      if (state === 'inertia') {
-        setState('pan', { consume: e });
-      } else {
-        setState('pan', { consume: e });
+      // Single pointer. Only claim PAN if the target is empty canvas —
+      // node / zone-handle / resize-handle interactions are owned by the
+      // existing app.js handlers, which run on the bubble phase after us.
+      // Claiming PAN for a node tap would race the old node-drag code and
+      // produce ghost transforms + stuck body.dragging halo.
+      const tgt = e.target;
+      const onInteractive = tgt && (
+        (tgt.closest && (
+          tgt.closest('.node') || tgt.closest('.nrz') ||
+          tgt.closest('.zh')   || tgt.closest('.zd')
+        ))
+      );
+      if (onInteractive) {
+        // Do not enter PAN. Old code owns this gesture.
+        // We keep the pointer in activePtrs so a second finger still triggers
+        // pinch above. State stays whatever it was (idle most likely).
+        return;
       }
 
-      // Reset velocity samplers.
+      // Empty canvas → claim as PAN. INERTIA → PAN handoff (one-finger drop
+      // while inertia is decaying) cancels inertia and starts fresh.
+      setState('pan', { consume: e });
+
       lastSampleX = e.clientX; lastSampleY = e.clientY; lastSampleT = performance.now();
       prevSampleX = lastSampleX; prevSampleY = lastSampleY; prevSampleT = lastSampleT;
       vel.x = 0; vel.y = 0;
       pendingDx = 0; pendingDy = 0;
-
-      // Touch only: arm hold detection.
-      if (e.pointerType === 'touch') {
-        state = 'pan'; // pan is the default; HOLD only fires if no motion
-        holdStart = performance.now();
-        // We use a parallel HOLD track, not a separate state, so a tiny
-        // finger jitter doesn't kick us out of pan-detect mode.
-      }
+      holdStart = performance.now();
     }, true);
 
     cv.addEventListener('pointermove', function (e) {
