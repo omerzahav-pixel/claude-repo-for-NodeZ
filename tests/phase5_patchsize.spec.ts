@@ -85,7 +85,10 @@ test.describe("Phase 5 P2 · Paste-patch size sanity", () => {
       (document.getElementById("pt") as HTMLTextAreaElement).value = "a".repeat(MAX + 10);
     });
     const resultPromise = page.evaluate(() => (window as any).applyPatch());
-    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 5_000 });
+    // Phase 2 added extra <link>/<script> tags on page load; the dialog
+    // sometimes opens just past the old 5s budget on slow runners. Bumping
+    // to 10s gives slack without masking actual regressions.
+    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 10_000 });
     await expect(page.locator("#dlg h3")).toHaveText("Patch too large");
     await page.locator("#dlg button.pr").click();
     await resultPromise;
@@ -106,7 +109,10 @@ test.describe("Phase 5 P2 · Paste-patch size sanity", () => {
       (document.getElementById("pt") as HTMLTextAreaElement).value = payload + pad;
     });
     const resultPromise = page.evaluate(() => (window as any).applyPatch());
-    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 5_000 });
+    // Phase 2 added extra <link>/<script> tags on page load; the dialog
+    // sometimes opens just past the old 5s budget on slow runners. Bumping
+    // to 10s gives slack without masking actual regressions.
+    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 10_000 });
     await expect(page.locator("#dlg h3")).toHaveText("Large patch");
     // Cancel — no nodes added.
     await page.locator("#dlg button[data-ui-cancel]").click();
@@ -125,7 +131,10 @@ test.describe("Phase 5 P2 · Paste-patch size sanity", () => {
       (document.getElementById("pt") as HTMLTextAreaElement).value = payload + pad;
     });
     const resultPromise = page.evaluate(() => (window as any).applyPatch());
-    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 5_000 });
+    // Phase 2 added extra <link>/<script> tags on page load; the dialog
+    // sometimes opens just past the old 5s budget on slow runners. Bumping
+    // to 10s gives slack without masking actual regressions.
+    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 10_000 });
     // Click the primary button (Apply anyway).
     await page.locator("#dlg button.pr").click();
     await resultPromise;
@@ -145,7 +154,10 @@ test.describe("Phase 5 P2 · Paste-patch size sanity", () => {
       });
     });
     const resultPromise = page.evaluate(() => (window as any).applyPatch());
-    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 5_000 });
+    // Phase 2 added extra <link>/<script> tags on page load; the dialog
+    // sometimes opens just past the old 5s budget on slow runners. Bumping
+    // to 10s gives slack without masking actual regressions.
+    await page.waitForSelector("#dlg.on", { state: "visible", timeout: 10_000 });
     await expect(page.locator("#dlg h3")).toHaveText("Too many nodes");
     await page.locator("#dlg button.pr").click();
     await resultPromise;

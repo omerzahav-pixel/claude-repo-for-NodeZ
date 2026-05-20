@@ -1,0 +1,294 @@
+/* =============================================================================
+ * Phase 2 · silhouettes v2 helper classes (Pass 3 § 03 + § 05).
+ *
+ * Selection ring inherits currentColor from .nshape parent. Freshness halo
+ * pulses 3 s when fresh (≤ 6 h); steady stroke otherwise. Stale (> 30 d)
+ * desaturation is inline opacity via the silhouettes module — no CSS here.
+ * ============================================================================= */
+.es-sel-ring { color: var(--hot); pointer-events: none; }
+.es-halo { pointer-events: none; }
+@keyframes es-halo-pulse {
+  0%   { stroke-opacity: 0.55; }
+  50%  { stroke-opacity: 0.20; }
+  100% { stroke-opacity: 0.55; }
+}
+.es-halo-pulse { animation: es-halo-pulse 3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .es-halo-pulse { animation: none; }
+}
+
+/* =============================================================================
+ * Phase 2 · edge legend (Pass 3 § 06).
+ *
+ * Auto-docked bottom-right when canvas has ≥ 3 distinct edge types in use.
+ * DOM element (NOT SVG) so it stays at native pixel size at any zoom.
+ * Dismissible per type-signature (re-opens when a new type is added).
+ * ============================================================================= */
+#edgeLegend {
+  position: fixed;
+  inset-inline-end: var(--s-3);
+  bottom: var(--s-8);
+  z-index: 28;
+  background: var(--srf-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-3);
+  box-shadow: var(--el-3);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  min-width: 180px;
+  max-width: 220px;
+  color: var(--ink);
+  -webkit-user-select: none; user-select: none;
+}
+#edgeLegend .el-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+#edgeLegend .el-x {
+  cursor: pointer; padding: 0 4px; color: var(--ink-4);
+}
+#edgeLegend .el-x:hover { color: var(--ink); }
+#edgeLegend .el-body { padding: 4px 0; }
+#edgeLegend .el-row {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: 4px 10px;
+  color: var(--ink-2);
+  cursor: default;
+  transition: background var(--t-instant) var(--e-out);
+}
+#edgeLegend .el-row:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--ink);
+}
+#edgeLegend .el-row svg { flex-shrink: 0; }
+
+/* =============================================================================
+ * Phase 2 · zone sticky chip (Pass 3 § 08).
+ *
+ * Floats outside the zone's top edge as a pill. DOM (not SVG) so size
+ * stays native-pixel regardless of canvas zoom. The chip's `top` is
+ * computed by ZonesV2.reposition() so it pins to the visible top of the
+ * zone when the zone scrolls partly off-screen.
+ * ============================================================================= */
+.zone-chip {
+  position: fixed;
+  display: none;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid;
+  background: rgba(255,255,255,0.04);
+  color: var(--ink-2);
+  white-space: nowrap;
+  pointer-events: auto;
+  -webkit-user-select: none; user-select: none;
+  box-shadow: var(--el-1);
+  z-index: 14;
+}
+
+/* =============================================================================
+ * Three migrated component groups (Task 2.1).
+ *
+ * Each rule below uses ONLY canonical Pass 2 tokens. Specificity is higher
+ * than the legacy declarations in app.css so these win without need for
+ * !important. Touch only buttons, inputs, and the More menu — every other
+ * surface stays on v1 declarations until a later task migrates it.
+ * ============================================================================= */
+
+/* ── BUTTONS ── (Pass 2 § 02 components) */
+.btn,
+#tb button,
+#tb .tbLabel,
+#more button,
+#more label,
+.brow button,
+#dlg button {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  border-radius: var(--r-2);
+  padding: 0 var(--s-3); height: 32px;
+  font-family: var(--font-sans); font-weight: 500; font-size: 13.5px;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  transition: background var(--t-quick) var(--e-out),
+              border-color var(--t-quick) var(--e-out),
+              transform var(--t-quick) var(--e-out);
+  white-space: nowrap;
+}
+.btn:active,
+#tb button:active,
+#tb .tbLabel:active,
+#more button:active,
+#more label:active {
+  transform: translateY(0.5px);
+}
+
+.btn-primary,
+#tb button.pr,
+#tb .ac,
+.brow button.pr,
+#dlg button.pr {
+  background: linear-gradient(180deg, #FF9870, var(--hot) 50%, var(--hot-deep));
+  color: #1A0A04;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.30) inset,
+              0 6px 14px -4px rgba(255,122,69,0.45);
+}
+.btn-primary:hover,
+#tb button.pr:hover,
+#tb .ac:hover,
+.brow button.pr:hover,
+#dlg button.pr:hover {
+  filter: brightness(1.07);
+}
+
+.btn-secondary {
+  background: var(--srf-3);
+  border-color: var(--line-2);
+  color: var(--ink);
+  box-shadow: 0 1px 0 var(--hl-2) inset;
+}
+.btn-secondary:hover { background: var(--srf-4); border-color: var(--line-3); }
+
+.btn-ghost { color: var(--ink-2); }
+.btn-ghost:hover { color: var(--ink); background: var(--srf-2); }
+
+.btn-danger,
+#tb button.dn,
+#dlg button.dn,
+#more button[style*="--block"] {
+  color: var(--st-blocked);
+  border-color: rgba(248,113,113,0.32);
+  background: rgba(248,113,113,0.06);
+}
+.btn-danger:hover,
+#tb button.dn:hover,
+#dlg button.dn:hover {
+  background: rgba(248,113,113,0.12);
+  border-color: rgba(248,113,113,0.50);
+}
+
+.btn-lg { height: 40px; padding: 0 18px; font-size: 14.5px; border-radius: var(--r-3); }
+.btn-sm { height: 26px; padding: 0 10px; font-size: 12px;   border-radius: var(--r-1); }
+
+/* ── INPUTS ── */
+.input,
+#tb input,
+#sr,
+#sb input,
+#pn input,
+#pn textarea,
+#pn select,
+#dlg input[type="text"],
+#dlg textarea,
+#modal textarea,
+#modal input {
+  height: auto;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-2);
+  padding: 0 var(--s-3);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color var(--t-quick) var(--e-out),
+              box-shadow   var(--t-quick) var(--e-out);
+}
+/* Inputs that need fixed heights restore their existing measurements */
+#tb input, #sr { height: 32px; min-width: 130px; }
+.input { height: 32px; min-width: 200px; }
+
+.input:focus,
+#tb input:focus,
+#sr:focus,
+#sb input:focus,
+#pn input:focus,
+#pn textarea:focus,
+#pn select:focus,
+#dlg input[type="text"]:focus,
+#dlg textarea:focus,
+#modal textarea:focus,
+#modal input:focus {
+  border-color: var(--hot);
+  box-shadow: 0 0 0 3px var(--hot-ring);
+}
+.input::placeholder,
+#tb input::placeholder,
+#sr::placeholder { color: var(--ink-4); }
+
+/* Pill search variant */
+.search {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  height: 32px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-pill);
+  padding: 0 var(--s-3);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  min-width: 280px;
+}
+.search .kbd {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-1);
+  padding: 1px 6px;
+}
+
+/* ── MORE MENU ── */
+#more {
+  background: var(--srf-3);
+  border: 1px solid var(--line-3);
+  border-radius: var(--r-4);
+  box-shadow: var(--el-4);
+  padding: 6px 0;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+}
+#more .mh {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-4);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: var(--s-3) var(--s-4) 6px;
+}
+#more button,
+#more label {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: 7px var(--s-4);
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: 0;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  height: auto;
+  transition: background var(--t-instant) var(--e-out);
+}
+#more button:hover,
+#more label:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--ink);
+}
+#more .msep {
+  height: 1px;
+  background: var(--line);
+  margin: 6px 12px;
+}

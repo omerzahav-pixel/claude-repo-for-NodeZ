@@ -1,0 +1,139 @@
+/* =============================================================================
+ * EdgeSpace · Phase 2 · Canonical visual tokens (Pass 2 § 07).
+ *
+ * Source of truth. Every new component references these names. The bottom
+ * block aliases existing v1 token names to the new values so legacy code
+ * (Phase 5/6 v1 styles) keeps rendering unchanged while v2 components
+ * migrate at their own pace.
+ *
+ * No flag — additive only. Components don't see a difference until they
+ * reference a v2 name.
+ * ============================================================================= */
+
+:root {
+  /* ── SURFACES — five-tier ladder, warm-cool dark ── */
+  --bg:           #08090C;
+  --srf-1:        #101216;
+  --srf-2:        #161A20;
+  --srf-3:        #1E232B;
+  --srf-4:        #272D37;
+
+  /* Each tier carries its own hairline pair — top light, bottom shade */
+  --hl-1: rgba(255,255,255,0.04);  --sh-1: rgba(0,0,0,0.20);
+  --hl-2: rgba(255,255,255,0.06);  --sh-2: rgba(0,0,0,0.28);
+  --hl-3: rgba(255,255,255,0.10);  --sh-3: rgba(0,0,0,0.32);
+  --hl-4: rgba(255,255,255,0.16);  --sh-4: rgba(0,0,0,0.40);
+
+  /* ── LINES ── */
+  --line:        rgba(255,255,255,0.06);
+  --line-2:      rgba(255,255,255,0.10);
+  --line-3:      rgba(255,255,255,0.16);
+  --line-hot:    rgba(255,122,69,0.32);
+
+  /* ── INK ── */
+  --ink:         #ECEEF1;
+  --ink-2:       #B3B9C4;
+  --ink-3:       #7C828E;
+  --ink-4:       #4E535D;
+  --ink-5:       #2F333B;
+
+  /* ── HOUSE ACCENT — molten amber ── */
+  --hot:         #FF7A45;
+  --hot-soft:    #FFB48A;
+  --hot-deep:    #C95623;
+  --hot-wash:    rgba(255,122,69,0.10);
+  --hot-ring:    rgba(255,122,69,0.32);
+
+  /* ── STATUS — recalibrated, architectural ── */
+  --st-done:      #4FD18B;
+  --st-progress:  #6FA8FF;
+  --st-pending:   #F2C462;
+  --st-blocked:   #F87171;
+  --st-idea:      #B98CFB;
+
+  /* status washes (10% bg fills) */
+  --st-done-wash:     rgba(79,209,139,0.10);
+  --st-progress-wash: rgba(111,168,255,0.10);
+  --st-pending-wash:  rgba(242,196,98,0.10);
+  --st-blocked-wash:  rgba(248,113,113,0.10);
+  --st-idea-wash:     rgba(185,140,251,0.10);
+
+  /* ── WORKSPACE PALETTE — 10 swatch ladder ── */
+  --ws-1:  #FF7A45;  /* amber (default) */
+  --ws-2:  #6FA8FF;  /* blue */
+  --ws-3:  #4FD18B;  /* green */
+  --ws-4:  #B98CFB;  /* violet */
+  --ws-5:  #F2C462;  /* honey */
+  --ws-6:  #5BD6CB;  /* teal */
+  --ws-7:  #F87171;  /* rose */
+  --ws-8:  #8DA0B5;  /* slate */
+  --ws-9:  #E58CC4;  /* magenta */
+  --ws-10: #C9A875;  /* sand */
+
+  /* ── RADII ── */
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --r-4: 14px;
+  --r-5: 20px;
+  --r-pill: 999px;
+
+  /* ── SPACING — 8 base, with a 4 micro and a generous tail ── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 128px;
+
+  /* ── ELEVATION ── */
+  --el-1: 0 1px 0 var(--hl-1) inset, 0 1px 2px rgba(0,0,0,0.30);
+  --el-2: 0 1px 0 var(--hl-2) inset, 0 4px 12px rgba(0,0,0,0.35);
+  --el-3: 0 1px 0 var(--hl-3) inset, 0 12px 28px rgba(0,0,0,0.45);
+  --el-4: 0 1px 0 var(--hl-4) inset, 0 24px 60px -20px rgba(0,0,0,0.65);
+
+  /* ── MOTION ── */
+  --t-instant: 80ms;
+  --t-quick:   140ms;
+  --t-base:    220ms;
+  --t-stately: 320ms;
+
+  --e-out:    cubic-bezier(0.2, 0.7, 0.2, 1);     /* default */
+  --e-in:     cubic-bezier(0.6, 0, 0.8, 0.2);     /* dismiss */
+  --e-in-out: cubic-bezier(0.65, 0, 0.35, 1);     /* shared elements */
+
+  /* ── TYPE ── */
+  --font-sans:  'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:  'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-serif: 'Instrument Serif', 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --font-he:    'Heebo', 'Assistant', 'SF Hebrew', system-ui, sans-serif;
+}
+
+/* =============================================================================
+ * Legacy v1 token aliases.
+ *
+ * The pre-Phase-2 codebase used --bg2, --panel, --panel2, --border, --text,
+ * --text2, --muted, --accent, --accent2, --done, --prog, --pend, --block,
+ * --idea. Until Phase 4 retires the old paths, we map them to the new
+ * canonical values so every component renders consistently.
+ * ============================================================================= */
+:root {
+  --bg2:     var(--srf-1);
+  --panel:   var(--srf-2);
+  --panel2:  var(--srf-3);
+  --border:  var(--line-2);
+  --border2: var(--line-3);
+  --text:    var(--ink);
+  --text2:   var(--ink-2);
+  --muted:   var(--ink-3);
+  --accent:  var(--hot);
+  --accent2: var(--hot-deep);
+  --done:    var(--st-done);
+  --prog:    var(--st-progress);
+  --pend:    var(--st-pending);
+  --block:   var(--st-blocked);
+}

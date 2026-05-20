@@ -891,6 +891,31 @@ function render(){
   }
   const dimE=S.dimEdges;
   for(const z of zs()){const lk=z.locked!==false;const rtl=isHe||/[\u0590-\u05FF]/.test(z.name||'');h+=`<g class="zone" data-zone="${z.id}"><rect class="zr ${lk?'locked':'zd'}" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" stroke="${z.color}" stroke-dasharray="${view.k>0.35?'0':'6,5'}" data-locked="${lk?1:0}"/><foreignObject x="${z.x}" y="${z.y+6}" width="${z.w}" height="32" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" style="direction:${rtl?'rtl':'ltr'};text-align:${rtl?'right':'left'};padding:0 18px;color:${z.color};font-family:'Inter','Assistant',system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:${rtl?'0':'1px'};text-transform:${rtl?'none':'uppercase'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(z.name)}${lk?' 🔒':''}</div></foreignObject>${lk?'':`<rect class="zh" x="${z.x+z.w-14}" y="${z.y+z.h-14}" width="14" height="14" rx="3"/>`}</g>`}
+  /* Phase 2 (Pass 3 § 08) · zones v2 hook (note: this block comes BEFORE the
+     v1 zone loop above wrapped its own gate; this short-circuit prepends
+     the v2 markup to `h` and then the v1 loop is skipped via the flag
+     re-check below in the same render pass). When --zones-v2 is ON,
+     ZonesV2.renderAll() emits the rect + dashed border with NO SVG label;
+     the DOM chip layer (#zoneChips) is laid out by ZonesV2.reposition()
+     right after the SVG innerHTML lands. */
+  if (window.Flags && window.Flags.on('zones-v2') && window.ZonesV2) {
+    // Strip whatever the v1 loop above appended (the zone <g> markup) before
+    // we add v2's clean version. We can find it cheaply: the v1 loop emits
+    // exactly N occurrences of `<g class="zone" data-zone=...`.
+    h = h.replace(/<g class="zone"[\s\S]*?<\/g>/g, '');
+    h += window.ZonesV2.renderAll(zs());
+  }
+  /* Phase 2 (Pass 3 § 06–07) · edges v2 hook.
+     When --edges-v2 is ON, EdgeV2.renderAll() owns the whole edge loop:
+     8 type channels + magnetic anchors + cubic-spline routing + per-pair
+     fan-out + auto-legend. Skip the v1 loop entirely in that case. */
+  if (window.Flags && window.Flags.on('edges-v2') && window.EdgeV2) {
+    const _nodeIndex = new Map(ns().map(n => [n.id, n]));
+    h += window.EdgeV2.renderAll(es(), _nodeIndex, view, {
+      sel, focusMode, dimE
+    });
+    try { window.EdgeV2.refreshLegend(es()); } catch (e) {}
+  } else
   for(const e of es()){const a=ns().find(n=>n.id===e.from),b=ns().find(n=>n.id===e.to);if(!a||!b)continue;const et=ET[e.type]||ET.feeds;
     const rA=46,rB=46;const dx0=b.x-a.x,dy0=b.y-a.y,d0=Math.hypot(dx0,dy0)||1;
     const ax=a.x+dx0/d0*rA,ay=a.y+dy0/d0*rA,bx=b.x-dx0/d0*rB,by=b.y-dy0/d0*rB;
@@ -904,11 +929,25 @@ function render(){
     h+=`<path class="edge ${e.dim?'dim':''}" data-edge="${e.id}" d="M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}" fill="none" stroke="${et.c}" stroke-width="2.5" marker-end="url(#a-${e.type||'feeds'})" opacity="${edgeOpacity}"/>`;
     if(showEdgeLabel){const lbl=e.customLabel||t(e.type||'feeds');const mx=(ax+3*c1x+3*c2x+bx)/8,my=(ay+3*c1y+3*c2y+by)/8;const labelRtl=/[\u0590-\u05FF]/.test(lbl);const fsize=labelRtl?12:10;h+=`<foreignObject x="${mx-60}" y="${my-11}" width="120" height="22" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:'Inter','Assistant',system-ui,sans-serif;font-size:${fsize}px;color:${et.c};background:var(--bg);border:1px solid ${et.c};border-radius:4px;padding:2px 8px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">${esc(lbl)}</div></foreignObject>`}}
   for(const n of ns()){if(visIds&&!visIds.has(n.id))continue;const c=SC[n.status]||SC.idea,s=42,se=sel?.id===n.id||selSet.has(n.id),tg=edgeHover?.id===n.id;const focusDim=focusMode&&!related.has(n.id);let sh='',ring='',richContent='';
-    // D5 · Phase 1.6 — shape SVG strings are unchanged (world coords via n.x /
-    // n.y). At the bottom of the loop each slice wraps them in a
-    // <g transform="translate(-n.x,-n.y)"> so the same markup lives inside a
-    // per-node div positioned at world (n.x, n.y). Cross-layer z-stacking is
-    // fixed because every node's shape + content travel together.
+    /* Phase 2 (Pass 3 § 02) · silhouettes v2 hook.
+       When --silhouettes is ON and the renderer is loaded, the new module
+       owns the shape + status dot + freshness halo + selection ring for
+       every node type. Note + formula still emit their richContent via the
+       v1 branches below (DOM .nslice contract unchanged) — we only swap the
+       inline-SVG shape markup. When OFF, the existing per-shape branches
+       (project / library / principle / …) own everything. */
+    const _silV2 = window.Flags && window.Flags.on('silhouettes') && typeof window.RenderSilhouette === 'function';
+    if (_silV2 && n.shape !== 'formula' && n.shape !== 'note') {
+      const _sil = window.RenderSilhouette(n, view, {
+        rtl: isHe || /[֐-׿]/.test(n.label || ''),
+        selected: se || tg,
+        focused: focusMode && related && related.has(n.id),
+        dim: focusDim,
+        wsAccent: 'var(--hot)'
+      });
+      sh = _sil.sh;
+      ring = _sil.ring;
+    } else
     if(n.shape==='project'){const pts=[];for(let i=0;i<10;i++){const ang=-Math.PI/2+i*Math.PI/5;const r=i%2===0?s:s*.5;pts.push((n.x+r*Math.cos(ang))+','+(n.y+r*Math.sin(ang)))}sh=`<polygon points="${pts.join(' ')}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="${s+6}"/>`}
     else if(n.shape==='library'){sh=`<rect x="${n.x-s}" y="${n.y-s*.65}" width="${s*2}" height="${s*1.3}" rx="3" fill="${c}" stroke="rgba(255,255,255,.18)"/><line x1="${n.x-s*.5}" y1="${n.y-s*.55}" x2="${n.x-s*.5}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/><line x1="${n.x}" y1="${n.y-s*.55}" x2="${n.x}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/><line x1="${n.x+s*.5}" y1="${n.y-s*.55}" x2="${n.x+s*.5}" y2="${n.y+s*.55}" stroke="rgba(0,0,0,.3)" stroke-width="2"/>`;if(se||tg)ring=`<rect class="ring" x="${n.x-s-4}" y="${n.y-s*.65-4}" width="${s*2+8}" height="${s*1.3+8}" rx="5"/>`}
     else if(n.shape==='principle'){sh=`<polygon points="${n.x},${n.y-s*.9} ${n.x+s*.9},${n.y} ${n.x},${n.y+s*.9} ${n.x-s*.9},${n.y}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<polygon class="ring" points="${n.x},${n.y-s*.9-5} ${n.x+s*.9+5},${n.y} ${n.x},${n.y+s*.9+5} ${n.x-s*.9-5},${n.y}"/>`}
@@ -1042,6 +1081,12 @@ function render(){
   // Phase 5 P2 · empty-state overlay — show when canvas is truly empty
   const _es=document.getElementById('emptyState');
   if(_es){const empty=ns().length===0&&zs().length===0;_es.classList.toggle('on',empty)}
+  /* Phase 2 (Pass 3 § 08) · reposition the DOM zone chip layer after every
+     render(). The chip layer is scale-invariant (DOM, not SVG) so its
+     positions need recomputing each frame from the world coords. */
+  if (window.Flags && window.Flags.on('zones-v2') && window.ZonesV2) {
+    try { window.ZonesV2.reposition(zs(), view); } catch (e) {}
+  }
 }
 function bF(){const fl=document.getElementById('fl');if(!fl)return;const mode=S.filterMode||'zone';const otherMode=mode==='zone'?'status':'zone';const switchLabel=S.hebrewMode?(mode==='zone'?'אזורים ⇄ מצב':'מצב ⇄ אזורים'):(mode==='zone'?'Zones ⇄ Status':'Status ⇄ Zones');
   /* Phase 5b · filter bar starts collapsed. Toggle button expands/collapses. */

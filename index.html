@@ -32,6 +32,34 @@
      the manifest, so the `apple-*` tags are load-bearing for "Add to Home
      Screen" to launch in standalone mode with the right status-bar style.
      apple-touch-icon points at the 180×180 PNG (Apple's canonical size). -->
+<!-- Phase 2 (Pass 2 § 02) · webfont injection — gated on --webfont flag.
+     Reads localStorage directly so it can run before flags.js loads. Uses
+     font-display:swap (FOUT acceptable, FOIT not). Pinned weights only —
+     Geist 400/500/600/700, Geist Mono 400/500/600, Instrument Serif italic,
+     Heebo 400/500/600. The link tags are inserted dynamically so the
+     external resource only loads when the flag is on. -->
+<script>
+(function () {
+  var on = false;
+  try { var f = JSON.parse(localStorage.getItem('edgespace-flags') || '{}'); on = !!f['webfont']; } catch (e) {}
+  if (!on) return;
+  function link(href, attrs) {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href;
+    if (attrs) for (var k in attrs) l.setAttribute(k, attrs[k]);
+    document.head.appendChild(l);
+  }
+  function pre(href, opts) {
+    var l = document.createElement('link');
+    l.rel = 'preconnect'; l.href = href;
+    if (opts && opts.crossorigin) l.setAttribute('crossorigin', '');
+    document.head.appendChild(l);
+  }
+  pre('https://fonts.googleapis.com');
+  pre('https://fonts.gstatic.com', { crossorigin: true });
+  link('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@1&family=Heebo:wght@400;500;600&display=swap');
+})();
+</script>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
@@ -48,12 +76,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<!-- Phase 2 (Pass 2 § 07) · canonical visual tokens.
+     Additive — old code keeps working via the legacy-alias block at the
+     end of tokens.css. Migrated components (buttons, inputs, More menu)
+     consume new --srf-*, --ink-*, --hot-*, --r-*, --s-*, --t-* names. -->
+<link rel="stylesheet" href="./css/tokens.css">
 <!-- When auto-render (the dependent KaTeX module) finishes, re-run the app's
      render() so formula nodes + inline math inside note bodies get typeset.
      Non-deferred app.js at end of body runs before these defer scripts,
      so the very first render() paints with window.katex still undefined. -->
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="window.dbg&&window.dbg('KATEX','auto-render onload fired · renderMathInElement='+(window.renderMathInElement?'yes':'MISSING')+' · window.render='+(window.render?'yes':'MISSING'));if(window.render){try{window.render()}catch(e){window.dbg&&window.dbg('KATEX','render() threw: '+e.message)}}"></script>
 <link rel="stylesheet" href="./src/app.css">
+<!-- Phase 2 (Pass 2 § 02) · component migrations. Loads AFTER app.css so
+     migrated rules win on selector specificity ties. Touches only buttons,
+     inputs, and the More menu — everything else stays on v1. -->
+<link rel="stylesheet" href="./css/components-v2.css">
+<!-- Phase 2 (Pass 3+ § 01) · logical-property sweep + RTL mirroring.
+     Loads after components-v2 so its higher-specificity directional rules
+     win. Part A is always active (logical props are a superset); Part B
+     (auto-break editor) is gated on --rtl-v2 in script-boundary.js. -->
+<link rel="stylesheet" href="./css/rtl-v2.css">
 <!-- Phase 1 · 1.6c — bootstrap.ts loads rbush as a module and exposes it
      on window.RBush so the non-module app.js can use it for viewport
      culling without breaking the D2 non-module pivot. -->
@@ -149,6 +191,16 @@
 <script src="./js/storage/idb.js"></script>
 <script src="./js/devtools/perf-hud.js"></script>
 <script src="./js/canvas/gesture.js"></script>
+<!-- Phase 2 (Pass 3) · visual foundation. halo + silhouettes load before
+     app.js because app.js's render() checks window.RenderSilhouette
+     synchronously during its loop. Edges-v2, zones-v2, and rtl-v2 load
+     after app.js since they hook in via render-complete events / DOM
+     observers (they don't need to exist during app.js parse). -->
+<script src="./js/canvas/halo.js"></script>
+<script src="./js/canvas/silhouettes.js"></script>
+<script src="./js/canvas/edge-v2.js"></script>
+<script src="./js/canvas/zones-v2.js"></script>
+<script src="./js/editor/script-boundary.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>

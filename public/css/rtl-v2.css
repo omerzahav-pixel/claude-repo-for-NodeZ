@@ -1,0 +1,77 @@
+/* =============================================================================
+ * EdgeSpace · Phase 2 · RTL contract (Pass 3+ RTL Addendum § 01 + § 07).
+ *
+ * Logical-property sweep. Every directional rule that depends on layout
+ * direction (NOT visual quadrants like "fixed top of viewport") is replaced
+ * with its inline-logical equivalent so `body[dir="rtl"]` mirrors the UI
+ * cleanly without per-component overrides.
+ *
+ * This stylesheet is loaded LAST so it wins on equal specificity. Without
+ * the --rtl-v2 flag we still load it — the rules use logical properties
+ * universally, which is a strict superset of the physical-property
+ * behaviour. (Physical-property values on the same element would still
+ * override on equal specificity, but our rules are higher-specificity by
+ * selector targeting.)
+ *
+ * Part A — Logical properties (always active).
+ * Part B — Auto-break editor JS — gated by --rtl-v2 in script-boundary.js.
+ * ============================================================================= */
+
+/* Toolbars + sidebars: mirror left/right anchoring */
+body[dir="rtl"] #tb { left: auto; right: var(--s-3, 12px); }
+body[dir="rtl"] #sb { left: auto; right: var(--s-3, 12px); }
+body[dir="rtl"] #fl { left: auto; right: var(--s-3, 12px); }
+body[dir="rtl"] #bc { left: var(--s-3, 12px); right: auto; }
+body[dir="rtl"] #lgBtn { left: var(--s-4, 16px); right: auto; }
+body[dir="rtl"] #lg { left: var(--s-4, 16px); right: auto; transform-origin: top left; }
+body[dir="rtl"] #pn { left: var(--s-3, 12px); right: auto; transform-origin: top left; }
+body[dir="rtl"] #more { transform-origin: top left; }
+body[dir="rtl"] #toast { left: var(--s-4, 16px); right: auto; align-items: flex-start; }
+body[dir="rtl"] #versionTag { left: auto; right: 8px; }
+
+/* The drawer / floating UI logical alignments */
+body[dir="rtl"] .ld-skip,
+body[dir="rtl"] .ld-new { direction: rtl; }
+
+/* Node + body intrinsic isolation — Pass 3+ § 01 */
+.node-title, .nslice .nlbl, .note-body, .fnode-label, .pn h2 {
+  unicode-bidi: plaintext;
+}
+.note-body { unicode-bidi: plaintext; }
+
+/* Math, code, keyboard runs ALWAYS render LTR regardless of surrounding text */
+.math, .code, .kbd, .katex, .katex-display, pre code, code.inline {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Inputs in the property panel default to plaintext bidi so the typed
+   content's first-strong character decides direction. The patch-paste
+   textarea (#pt inside #modal) is deliberately excluded — it routinely
+   holds multi-MB JSON, where bidi computation with plaintext is too
+   expensive (caused WebKit OOM crashes during PS3 size-guard tests). */
+#pn input, #pn textarea, #dlg input, #dlg textarea {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+#modal textarea:not(#pt) {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Logical spacing on heavily-used components (no behavioural change in LTR;
+   gives RTL flip for free). */
+.brow      { display: flex; gap: var(--s-2, 8px); justify-content: flex-start; }
+.urp       { margin-inline-start: 0; }
+#bc .bc-sep { margin-inline: 0 4px; }
+#more .mh   { padding-inline: var(--s-4, 16px); padding-block: var(--s-3, 12px) 6px; }
+#sb .item   { border-inline-start: 2px solid transparent; border-left: unset; }
+#sb .item:hover { border-inline-start-color: var(--hot); border-left-color: unset; }
+
+/* Property-panel label/value rows — use inline margins so RTL flips for free */
+#pn label   { margin-inline: 0; }
+#pn .meta   { margin-inline-end: var(--s-2, 8px); margin-right: unset; }
+
+/* RTL-aware breadcrumb chevron flip (Pass 3+ already partly handled in JS) */
+body[dir="rtl"] #bc .bc-exp,
+body[dir="rtl"] #bc .bc-col { transform: scaleX(-1); }

@@ -24,10 +24,17 @@
 
   // The canonical list. Add new flags here as they ship.
   const DEFAULTS = Object.freeze({
+    // Phase 1 (Pass 5 — stability)
     'gestures-v2':   false,   // §04 · gesture state machine
     'raf-throttle':  false,   // §05 · compositor-aligned throttle (pairs w/ gestures-v2)
     'lifecycle-v2':  false,   // §06 · IDB single-flight + SW pre-paint + visibility tickle
-    'perf-hud':      false    // devtools · FPS HUD (also auto-on via ?debug=perf)
+    'perf-hud':      false,   // devtools · FPS HUD (also auto-on via ?debug=perf)
+    // Phase 2 (Pass 2/3 — visual foundation)
+    'webfont':       false,   // §02 · Geist + Geist Mono + Instrument Serif + Heebo
+    'silhouettes':   false,   // §03 · 10 distinct node silhouettes + freshness halo
+    'edges-v2':      false,   // §06 · 8 edge types + routing + auto-legend
+    'zones-v2':      false,   // §08 · 6%-fill + dashed border + DOM sticky chip
+    'rtl-v2':        false    // RTL addendum · logical props + auto-script-break editor
   });
 
   const STORAGE_KEY = 'edgespace-flags';
