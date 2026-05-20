@@ -18,7 +18,10 @@ import RBush from "rbush";
 // localStorage from eviction under storage pressure. iOS 17+ grants this
 // silently once the PWA is added to Home Screen; desktop Chrome grants it
 // based on engagement signals.
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && !(window as any)._swPrePaintRegistered) {
+  // Phase 1 (Pass 5 §06): when --lifecycle-v2 is ON, the inline head script
+  // in index.html already registered the SW before first paint. Skip the
+  // post-load registration to avoid a redundant fetch.
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js").then((reg) => {
       (window as any).dbg?.("PWA", `SW registered · scope=${reg.scope}`);

@@ -1327,7 +1327,12 @@ function beginInteraction(e){
   }else if(zH){const z=zs().find(x=>x.id===zH.closest('.zone').dataset.zone);sn();drag={k:'resize',z,sx:e.clientX,sy:e.clientY,ow:z.w,oh:z.h}}
   else if(zE){const z=zs().find(x=>x.id===zE.closest('.zone').dataset.zone);drag={k:'zone',z,ox:w.x-z.x,oy:w.y-z.y,sx:e.clientX,sy:e.clientY,moved:false}}
   else if(mod){drag={k:'marquee',sx:e.clientX,sy:e.clientY,startW:w,curW:w};selSet.clear();render()}
-  else{if(!mod&&selSet.size){selSet.clear();render()}drag={k:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};cv.classList.add('gr')}
+  else{if(!mod&&selSet.size){selSet.clear();render()}
+    /* Phase 1 (Pass 5) · when --gestures-v2 is ON, pan is owned by the new
+       state machine — leave drag null so pointermove/pointerup pan branches
+       no-op here. Node/edge/zone interactions above still run normally. */
+    if(window.Flags&&window.Flags.on('gestures-v2'))return;
+    drag={k:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};cv.classList.add('gr')}
 }
 
 cv.addEventListener('pointerdown',e=>{
@@ -1335,10 +1340,16 @@ cv.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse'&&e.button===2)return; // right-click handled by contextmenu
   // Phase 6 · suppress the deferred bootstrap zF after first user interaction.
   window._userInteracted=true;
+  /* Phase 1 (EdgeSpace Pass 5) · when --gestures-v2 is ON, the new state
+     machine in js/canvas/gesture.js owns pinch + empty-canvas pan + inertia.
+     Node/edge/zone/resize interactions still flow through this handler
+     (the state machine ignores them) so we ONLY bail on pure pan triggers. */
+  const _g2 = window.Flags && window.Flags.on('gestures-v2');
   try{cv.setPointerCapture(e.pointerId)}catch(err){}
   activePtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
 
   if(activePtrs.size===2){
+    if(_g2){return} // pinch owned by gesture-v2 state machine
     // Pinch starts — cancel any single-pointer drag
     if(drag?.k==='pan'){view.x=drag.vx;view.y=drag.vy}
     if(drag?.snap){hist.pop()}
@@ -1588,7 +1599,11 @@ function addZoneCenter(){const w=s2w(innerWidth/2,innerHeight/2);addZoneAt(w.x,w
 async function renameZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const n=await uiPrompt('Rename zone',z.name);if(n){sn();z.name=n;sv();render();bF()}hideCtx()}
 function toggleLock(zid){const z=zs().find(x=>x.id===zid);if(!z)return;sn();z.locked=z.locked===false?true:false;sv();render();hideCtx()}
 async function deleteZone(zid){const z=zs().find(x=>x.id===zid);if(!z)return;const nodesInZone=ns().filter(n=>n.zone===zid).length;if(nodesInZone>0){if(!await uiConfirm(`${nodesInZone} nodes are in "${z.name}". They'll be reassigned to another zone. Continue?`,{title:'Delete zone',danger:true,okLabel:'Delete'})){hideCtx();return}}if(zs().length<=1){await uiNotice('Cannot delete the last zone.');hideCtx();return}sn();const fallback=zs().find(x=>x.id!==zid).id;ns().forEach(n=>{if(n.zone===zid)n.zone=fallback});C().zones=zs().filter(x=>x.id!==zid);sv();render();bF();hideCtx()}
-cv.addEventListener('wheel',e=>{e.preventDefault();const b=s2w(e.clientX,e.clientY),d=e.deltaY<0?1.12:.89;view.k=view.k*d;const a=s2w(e.clientX,e.clientY);view.x+=a.x-b.x;view.y+=a.y-b.y;clampView();render();forceRepaint()},{passive:false});
+cv.addEventListener('wheel',e=>{
+  // Phase 1 · zoom is owned by the gesture state machine when --gestures-v2 is ON.
+  if(window.Flags&&window.Flags.on('gestures-v2'))return;
+  e.preventDefault();const b=s2w(e.clientX,e.clientY),d=e.deltaY<0?1.12:.89;view.k=view.k*d;const a=s2w(e.clientX,e.clientY);view.x+=a.x-b.x;view.y+=a.y-b.y;clampView();render();forceRepaint()
+},{passive:false});
 /* Phase 1 · 1.6b — defense-in-depth for iPad Safari / Apple Pencil / Scribble.
    touch-action:none on #cv (CSS) already tells the browser we own the canvas
    gesture; these non-passive touchstart/move listeners claim the legacy touch

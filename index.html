@@ -3,6 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- Phase 1 (Pass 5 §06) · pre-paint service worker registration.
+     Gated by the --lifecycle-v2 flag, read directly from localStorage so
+     this script can run BEFORE flags.js. The controllerchange reload is
+     the "no two-load update dance" pattern — when a new SW takes control,
+     the page reloads once cleanly. Defaults OFF; the existing bootstrap.ts
+     post-load registration is the fallback. -->
+<script>
+(function () {
+  if (!('serviceWorker' in navigator)) return;
+  var on = false;
+  try { var f = JSON.parse(localStorage.getItem('edgespace-flags') || '{}'); on = !!f['lifecycle-v2']; } catch (e) {}
+  if (!on) return;
+  try {
+    navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' });
+    window._swPrePaintRegistered = true;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      // New worker. Reload IS safe here — content is unchanged shell.
+      location.reload();
+    });
+  } catch (e) { /* swallow — fallback path will retry */ }
+})();
+</script>
 <title>EdgeSpace — Knowledge Canvas</title>
 <meta name="description" content="A mobile-first knowledge canvas for Markdown notes, formulas, and linked ideas.">
 <meta name="theme-color" content="#0F0F0F">
@@ -117,6 +139,16 @@
     <button id="errorBoundaryDismiss" style="background:transparent;color:#e8dfce;border:1px solid #333333;border-radius:8px;padding:12px 24px;font-size:14px;cursor:pointer">Try anyway</button>
   </div>
 </div>
+<!-- Phase 1 (Pass 5) · feature-flagged subsystems. Load order matters:
+     flags.js first (provides window.Flags), then transform/idb/perf-hud
+     (depend on Flags), then gesture.js (depends on Flags + transform), then
+     app.js (existing pipeline; bails out of pan/pinch when flag is on).
+     All four ship behind flags defaulted OFF — existing handlers stay live. -->
+<script src="./js/flags.js"></script>
+<script src="./js/canvas/transform.js"></script>
+<script src="./js/storage/idb.js"></script>
+<script src="./js/devtools/perf-hud.js"></script>
+<script src="./js/canvas/gesture.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
