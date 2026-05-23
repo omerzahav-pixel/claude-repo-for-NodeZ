@@ -171,3 +171,50 @@ g.node, g.node *,
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* =============================================================================
+ * Phase 2.7 R3 (3rd attempt) · defensive guess pending iOS Inspector data.
+ *
+ * The orange residue is NOT -webkit-tap-highlight-color (we proved that by
+ * the universal-selector reset failing). Best remaining guess is a WebKit
+ * compositor-layer bleed: dragging a node slice (own compositor layer due
+ * to transform) over a zone with 6%-opacity tinted fill leaves residue in
+ * the slice's backing store on layer-promotion boundaries. Three guards:
+ *
+ *   1. isolation:isolate on every draggable slice / SVG node group — gives
+ *      each its own stacking context so adjacent fills can't bleed.
+ *   2. background-color:transparent explicit on the slice + force a clean
+ *      backing store with backface-visibility:hidden.
+ *   3. transition:none on background / outline / box-shadow during the
+ *      drag-active classes so an interrupted transition can't paint a
+ *      stale frame underneath the slice.
+ *
+ * If this does NOT fix it on real iPad, the Inspector data the user
+ * captures (per the Phase 2.7 brief) will reveal what the orange actually
+ * is, and the surgical fix lands in 2.8.
+ * ============================================================================= */
+.nslice, g.node {
+  isolation: isolate;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  background-color: transparent;
+  outline-color: transparent;
+}
+body.dragging .nslice,
+body.dragging g.node,
+body.holding .nslice,
+body.holding g.node,
+.nslice.holding,
+g.node.holding {
+  transition: none !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-text-fill-color: currentColor;
+}
+/* The zone tinted fill: pin its `transition` to none too, just in case some
+   reflow during a node-drag interrupts a transition mid-paint. */
+.zone-v2 .zr,
+.zone .zr {
+  transition: none !important;
+}

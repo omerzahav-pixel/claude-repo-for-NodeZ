@@ -175,16 +175,58 @@
       // priority over a node drag).
       activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      // Pinch start: two pointers down. ALWAYS claim — pinch is the gesture
-      // machine's responsibility regardless of what's under the fingers.
+      /* PHASE 2.7 R2 (3rd attempt) · HARD-RESET pinch entry.
+         When the canvas has exactly 2 active touches, every piece of prior
+         state is nuked and pinch begins from a clean snapshot:
+           - snapshot the CURRENT view (whatever is visually on screen NOW)
+           - snapshot the two touch SCREEN positions
+           - precompute the WORLD-space anchor under the initial midpoint
+           - cancel any inertia / pan deltas / queued RAFs / active drag
+         Every subsequent pointermove computes the transform from scratch
+         against this baseline — no accumulator, no incremental delta. That
+         guarantees pure-pinch behaviour identical regardless of what was
+         happening pre-pinch. */
       if (activePtrs.size === 2) {
-        const pts = Array.from(activePtrs.values());
+        const pts = Array.from(activePtrs.values()).slice(0, 2);
         const t = window.CanvasTransform.get();
-        const cx = (pts[0].x + pts[1].x) / 2;
-        const cy = (pts[0].y + pts[1].y) / 2;
-        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) || 1;
-        pinch = { dist, cx, cy, k: t.k };
-        setState('pinch', { consume: e });
+        const sx0 = pts[0].x, sy0 = pts[0].y;
+        const sx1 = pts[1].x, sy1 = pts[1].y;
+        const midX = (sx0 + sx1) / 2;
+        const midY = (sy0 + sy1) / 2;
+        const dist = Math.hypot(sx1 - sx0, sy1 - sy0) || 1;
+        // Anchor in WORLD coords — the canvas-space point that the initial
+        // screen midpoint sits over right now. This stays "glued" to the
+        // current screen midpoint as the user pinches.
+        const W = innerWidth, H = innerHeight;
+        const anchorWorldX = (midX - W / 2) / t.k - t.x;
+        const anchorWorldY = (midY - H / 2) / t.k - t.y;
+        pinch = {
+          startDist: dist,
+          startMidX: midX, startMidY: midY,
+          baseK: t.k, baseX: t.x, baseY: t.y,
+          anchorWorldX, anchorWorldY,
+          loggedMoves: 0
+        };
+        // NUKE everything carried in from a prior state.
+        if (rafInertia != null) { cancelAnimationFrame(rafInertia); rafInertia = null; }
+        if (rafPan != null) { cancelAnimationFrame(rafPan); rafPan = null; }
+        pendingDx = 0; pendingDy = 0;
+        vel.x = 0; vel.y = 0;
+        if (window.CanvasTransform && window.CanvasTransform.cancelPending) {
+          window.CanvasTransform.cancelPending();
+        }
+        if (window._inertiaActive && window._cancelInertia) window._cancelInertia();
+        // Phase 2.7 diagnostic: leave one log line per pinch-start until the
+        // user confirms iPad correctness, then strip on the next sprint.
+        if (window._edgespacePinchDebug !== false) {
+          console.log('[ES pinch-start]', {
+            midX, midY, dist,
+            baseK: t.k, baseX: t.x, baseY: t.y,
+            anchorWorldX, anchorWorldY
+          });
+        }
+        state = 'pinch';
+        try { e.preventDefault(); } catch (_) {}
         return;
       }
 
@@ -223,21 +265,40 @@
       if (rec) { rec.x = e.clientX; rec.y = e.clientY; }
 
       if (state === 'pinch' && pinch && activePtrs.size >= 2) {
+        /* PHASE 2.7 R2 (3rd attempt) · DECLARATIVE pinch math.
+           Each frame computes the entire transform from the snapshot
+           taken at pinch entry + the current screen positions of the two
+           touches. No accumulators. No frame-to-frame state mutation.
+           That makes the pinch behave identically regardless of what was
+           on screen before pinch entry (node drag, pan, inertia, etc.). */
         const pts = Array.from(activePtrs.values()).slice(0, 2);
-        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) || 1;
-        const cx = (pts[0].x + pts[1].x) / 2;
-        const cy = (pts[0].y + pts[1].y) / 2;
-        const t = window.CanvasTransform.get();
-        const before = clientToWorld(cx, cy, t);
-        t.k = pinch.k * (dist / pinch.dist);
-        const after = clientToWorld(cx, cy, t);
-        t.x += after.x - before.x;
-        t.y += after.y - before.y;
-        // Two-finger pan within pinch.
-        t.x += (cx - pinch.cx) / t.k;
-        t.y += (cy - pinch.cy) / t.k;
-        pinch.cx = cx; pinch.cy = cy;
-        window.CanvasTransform.applyImmediate(t);
+        const sx0 = pts[0].x, sy0 = pts[0].y;
+        const sx1 = pts[1].x, sy1 = pts[1].y;
+        const currentMidX = (sx0 + sx1) / 2;
+        const currentMidY = (sy0 + sy1) / 2;
+        const currentDist = Math.hypot(sx1 - sx0, sy1 - sy0) || 1;
+        const W = innerWidth, H = innerHeight;
+        // Scale: ratio of current distance to start distance.
+        const newK = pinch.baseK * (currentDist / pinch.startDist);
+        // Translation: solve for view.x/y so that anchorWorld is at
+        // currentMid in screen coords.
+        //   screenX = W/2 + (worldX + view.x) * view.k
+        //   → view.x = (screenX - W/2) / view.k - worldX
+        const newX = (currentMidX - W / 2) / newK - pinch.anchorWorldX;
+        const newY = (currentMidY - H / 2) / newK - pinch.anchorWorldY;
+        const next = { x: newX, y: newY, k: newK };
+        // Phase 2.7 diagnostic — first 3 moves per pinch only, then quiet.
+        if (window._edgespacePinchDebug !== false && pinch.loggedMoves < 3) {
+          pinch.loggedMoves++;
+          console.log('[ES pinch-move]', {
+            n: pinch.loggedMoves,
+            currentMid: { x: currentMidX, y: currentMidY },
+            currentDist,
+            scaleRatio: (currentDist / pinch.startDist).toFixed(4),
+            newView: { x: newX.toFixed(2), y: newY.toFixed(2), k: newK.toFixed(4) }
+          });
+        }
+        window.CanvasTransform.applyImmediate(next);
         try { e.preventDefault(); } catch (_) {}
         return;
       }

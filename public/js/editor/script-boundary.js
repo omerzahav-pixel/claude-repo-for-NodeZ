@@ -62,16 +62,29 @@
       window.toast(text, { ms: 4000 });
       return;
     }
-    /* Phase 2.5 Issue 7 — toast fallback. window.toast may not be defined
-       on early boot, on test pages, or under future build splits. Ship a
-       self-contained bottom-centre pill so the one-time tip always shows. */
+    /* Phase 2.7 NEW · iPad keyboard occlusion fix.
+       The Phase 2.5 fallback used `bottom: 64px` which on iPad with the
+       iOS soft-keyboard open sat UNDER the keyboard. visualViewport gives
+       us the visible-viewport height (excludes the keyboard); anchor the
+       pill 80px above its bottom edge. Falls back to `bottom: 64px` when
+       visualViewport is unavailable (older browsers, PWA non-visual mode).
+       The pill listens for visualViewport.resize so it re-anchors if the
+       keyboard slides open mid-display. */
     const pill = document.createElement('div');
     pill.textContent = text;
     pill.setAttribute('role', 'status');
+    function vvBottomPx() {
+      const vv = window.visualViewport;
+      if (!vv) return null;
+      // Pill top-anchor: vv.offsetTop tells us where the visual area starts
+      // in layout-viewport coords; vv.height is the visible height.
+      return vv.offsetTop + vv.height - 80;
+    }
+    const useVv = !!window.visualViewport;
     pill.style.cssText = [
       'position:fixed',
       'inset-inline-start:50%',
-      'bottom:64px',
+      useVv ? ('top:' + vvBottomPx() + 'px') : 'bottom:64px',
       'transform:translateX(-50%) translateY(8px)',
       'z-index:99999',
       'background:var(--srf-3,#1E232B)',
@@ -92,6 +105,17 @@
       'text-overflow:ellipsis'
     ].join(';');
     document.body.appendChild(pill);
+    // Phase 2.7 diagnostic — confirms the pill IS being created on iPad.
+    // (Removed in the next sprint; user pastes this back from the iPad
+    // console to prove the trigger fires.)
+    console.log('[ES tooltip] auto-break pill created · useVv=' + useVv + ' top=' + (useVv ? vvBottomPx() : 'n/a'));
+    // Re-anchor if the iOS keyboard opens / closes / orientation flips.
+    let vvHandler = null;
+    if (useVv) {
+      vvHandler = () => { if (pill.isConnected) pill.style.top = vvBottomPx() + 'px'; };
+      window.visualViewport.addEventListener('resize', vvHandler);
+      window.visualViewport.addEventListener('scroll', vvHandler);
+    }
     requestAnimationFrame(() => {
       pill.style.opacity = '1';
       pill.style.transform = 'translateX(-50%) translateY(0)';
@@ -99,7 +123,13 @@
     setTimeout(() => {
       pill.style.opacity = '0';
       pill.style.transform = 'translateX(-50%) translateY(8px)';
-      setTimeout(() => pill.remove(), 250);
+      setTimeout(() => {
+        if (vvHandler && window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', vvHandler);
+          window.visualViewport.removeEventListener('scroll', vvHandler);
+        }
+        pill.remove();
+      }, 250);
     }, 4000);
   }
 
