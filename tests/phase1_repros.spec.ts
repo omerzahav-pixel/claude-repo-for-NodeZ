@@ -252,8 +252,12 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
       const saveErr = document
         .getElementById("saveInd")
         ?.className.includes("s-err");
+      // Phase 2.6 imF now catches parse errors and surfaces them via the
+      // dark #dlg dialog (uiNotice) instead of letting them propagate to
+      // window.onerror → #errBanner. Either signal counts as "visible".
+      const dlgOpen = document.getElementById("dlg")?.classList.contains("on");
       const errBanner = !!document.getElementById("errBanner");
-      return Boolean(saveErr || errBanner);
+      return Boolean(saveErr || errBanner || dlgOpen);
     });
 
     // The user's #1 frustration is "I tap a button and nothing happens."

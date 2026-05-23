@@ -268,11 +268,24 @@
     function pointerUpOrCancel(e) {
       activePtrs.delete(e.pointerId);
 
-      // Pinch end: drop back to idle when fewer than 2 fingers.
+      // Pinch end: if one finger remains, hand off to PAN with that finger as
+      // the new anchor — no canvas snap. The transform stays at its current
+      // value; we just need to reset the pan-sample baseline to the remaining
+      // finger's current screen position so the very next pointermove computes
+      // delta from there, not from a stale sample (R2-recurring acceptance).
       if (state === 'pinch') {
         if (activePtrs.size < 2) {
           pinch = null;
-          setState('idle');
+          if (activePtrs.size === 1) {
+            const remaining = Array.from(activePtrs.values())[0];
+            lastSampleX = remaining.x; lastSampleY = remaining.y; lastSampleT = performance.now();
+            prevSampleX = lastSampleX; prevSampleY = lastSampleY; prevSampleT = lastSampleT;
+            vel.x = 0; vel.y = 0;
+            pendingDx = 0; pendingDy = 0;
+            state = 'pan'; // no setState() — preserves the current transform; pan loop now picks up from this finger
+          } else {
+            setState('idle');
+          }
         }
         return;
       }

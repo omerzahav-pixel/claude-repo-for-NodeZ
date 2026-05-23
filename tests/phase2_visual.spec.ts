@@ -35,6 +35,65 @@ async function seedDemoNodes(page: Page) {
   });
 }
 
+test.describe("Phase 2.6 · import format detection", () => {
+  test("2.6.NEW Import button correctly distinguishes full-state from patch", async ({ page }) => {
+    await openWithFlags(page, {});
+    // Case A: full-state import — round-trips
+    await page.evaluate(() => {
+      const fullState = JSON.stringify({
+        canvases: { vault: {
+          nodes: [{ id: 1, x: 0, y: 0, shape: "idea", label: "Imported", status: "idea", zone: "ideas", created: "2026-05-01" }],
+          edges: [],
+          zones: [{ id: "ideas", name: "Ideas", x: -200, y: -150, w: 400, h: 300, color: "#6FA8FF" }]
+        }},
+        current: "vault",
+        canvasMeta: { vault: { name: "Vault", parentNodeId: null } },
+        nextId: 2,
+        hebrewMode: false
+      });
+      const dt = new DataTransfer();
+      dt.items.add(new File([fullState], "full.json", { type: "application/json" }));
+      const input = document.getElementById("imp") as HTMLInputElement;
+      input.files = dt.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForTimeout(500);
+    const afterFull = await page.evaluate(() => {
+      const c = (window as any).__E2E.current();
+      return { nodes: c.nodes.length, labels: c.nodes.map((n: any) => n.label) };
+    });
+    expect(afterFull.nodes).toBe(1);
+    expect(afterFull.labels).toContain("Imported");
+
+    // Case B: patch-shape file (no `canvases` map) — must route to patch modal
+    await page.evaluate(() => {
+      const patch = JSON.stringify({
+        canvasId: "vault",
+        nodes: [{ label: "FromPatch", status: "done" }],
+        edges: []
+      });
+      const dt = new DataTransfer();
+      dt.items.add(new File([patch], "patch.json", { type: "application/json" }));
+      const input = document.getElementById("imp") as HTMLInputElement;
+      input.files = dt.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForTimeout(800);
+    // The patch modal #pt should have received the patch text.
+    const ptValue = await page.evaluate(() => {
+      const pt = document.getElementById("pt") as HTMLTextAreaElement;
+      return pt ? pt.value : null;
+    });
+    expect(ptValue).toContain("FromPatch");
+    // And applyPatch should have run, adding the node.
+    const afterPatch = await page.evaluate(() => {
+      const c = (window as any).__E2E.current();
+      return { labels: c.nodes.map((n: any) => n.label) };
+    });
+    expect(afterPatch.labels).toContain("FromPatch");
+  });
+});
+
 test.describe("Phase 2 · flag presence", () => {
   test("2.0.1 All 5 Phase 2 flags registered with default OFF", async ({ page }) => {
     await openWithFlags(page, {});
@@ -180,6 +239,26 @@ test.describe("Phase 2 · edges (--edges-v2)", () => {
     const m = result.after.match(/^M ([-\d.]+)/);
     expect(m).toBeTruthy();
     expect(parseFloat(m![1])).toBeLessThan(0);
+  });
+
+  test("2.4.R2.2 Pinch ending with one finger remaining transitions to PAN without snap", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true, "edges-v2": true });
+    const result = await page.evaluate(() => {
+      const cv = document.getElementById("cv")!;
+      // 2-finger pinch
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 200, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true,  bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 400, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+      const beforeView = { ...(window as any).__E2E.view() };
+      // Lift finger 2 — state should transition to 'pan' (not idle) with finger 1 still down.
+      cv.dispatchEvent(new PointerEvent("pointerup",   { clientX: 400, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+      const afterState = (window as any).GestureV2.getState();
+      const afterView = { ...(window as any).__E2E.view() };
+      return { afterState, viewSnap: { dx: afterView.x - beforeView.x, dy: afterView.y - beforeView.y } };
+    });
+    expect(result.afterState).toBe("pan");
+    // No canvas snap: view delta from pinch-end → pan-handoff must stay tiny.
+    expect(Math.abs(result.viewSnap.dx)).toBeLessThan(0.5);
+    expect(Math.abs(result.viewSnap.dy)).toBeLessThan(0.5);
   });
 
   test("2.4.R2 Pinch with finger on a node cancels in-flight node-drag (R2 regression)", async ({ page }) => {

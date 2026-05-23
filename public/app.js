@@ -1428,17 +1428,31 @@ cv.addEventListener('pointerdown',e=>{
 
   if(activePtrs.size===2){
     if(_g2){
-      /* Phase 2.5 R2 — second finger landing must hand BOTH touches to the
-         v2 pinch state machine, even when the first finger started on a
-         node (which already created drag={k:'node',...} via beginInteraction
-         above). Cancel everything from the single-pointer interaction so
-         pinch reads a clean baseline and the node doesn't follow the pinch. */
+      /* Phase 2.6 R2 (recurring) — cancel ALL single-pointer interaction
+         state so the v2 pinch state machine starts from a clean slate.
+         Critical additions over Phase 2.5:
+           1. If a node was being dragged, the slice had a CSS translate()
+              applied via the fast-path. The data position (n.x/n.y) was
+              also mutated. We don't revert the node — that would lose the
+              user's drag intent — but we DO render() so the slice's inline
+              transform clears and the visual position matches the data.
+              Without this, the node stays visually offset while pinch
+              applies its own transform, making the canvas "follow" finger 2.
+           2. Drop the in-flight node-drag's velocity sampling so swipe
+              inertia doesn't fire when fingers eventually lift.
+           3. preventDefault on the touchstart so no node handler downstream
+              tries to re-grab the second touch. */
       if(drag?.k==='pan'){view.x=drag.vx;view.y=drag.vy}
       if(drag?.snap){hist.pop()}
+      const wasNodeDrag = drag?.k==='node';
       drag=null;cv.classList.remove('gr');document.body.classList.remove('dragging');
       if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
       if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
       clearHoldFeedback();
+      // Drop any in-flight inertia velocity bookkeeping on window.
+      if(window._inertiaActive&&window._cancelInertia){window._cancelInertia()}
+      // Flush stale slice/hit-group transforms by re-rendering once.
+      if(wasNodeDrag){try{render()}catch(_){}}
       try{e.preventDefault()}catch(_){}
       return;
     }
@@ -1721,17 +1735,38 @@ function imF(e){
   if(!f){window.dbg&&window.dbg('IMPORT','no file selected — abort');return}
   window.dbg&&window.dbg('IMPORT','file: '+f.name+' · '+f.size+'B');
   const r=new FileReader();
-  r.onload=()=>{
+  r.onload=async ()=>{
     window.dbg&&window.dbg('IMPORT','FileReader.onload · result len='+(r.result?r.result.length:0));
     try{
-      sn();
       const parsed=JSON.parse(r.result);
-      window.dbg&&window.dbg('IMPORT','JSON parsed · canvases='+Object.keys(parsed.canvases||{}).length);
+      /* Phase 2.6 NEW · format detection. The Import button is connected
+         to #imp which historically expected FULL STATE (an S object with
+         {canvases, canvasMeta, nextId, current, ...}). Users routinely
+         try to import PATCH files (single-canvas exports, multi-patches,
+         or Claude-generated update-mode patches) through the same button.
+         Old behaviour: imF blindly replaced S with the parsed patch,
+         reconcileCanvases initialised an empty default vault, render()
+         painted nothing → "empty vault, no imported data".
+         New behaviour: detect the shape, route patches through
+         applyPatch (showPatch + #pt + applyPatch), full state through
+         the legacy S-replace path. */
+      const looksLikeFullState = parsed && typeof parsed === 'object'
+        && parsed.canvases && typeof parsed.canvases === 'object'
+        && Object.keys(parsed.canvases).length > 0;
+      if (!looksLikeFullState) {
+        window.dbg&&window.dbg('IMPORT','patch-shape detected (no canvases map) — routing through applyPatch');
+        try { showPatch(); } catch (_) {}
+        const pt = document.getElementById('pt');
+        if (pt) { pt.value = r.result; try { await applyPatch(); } catch (apErr) { window.dbg&&window.dbg('IMPORT','applyPatch threw: '+apErr.message); } }
+        else { await uiNotice('Patch import unavailable — please open the Patch dialog manually and paste the JSON.', {title:'Import format'}); }
+        return;
+      }
+      sn();
       S=parsed;
       window.dbg&&window.dbg('IMPORT','state swapped · current='+S.current);
       reconcileCanvases();
       window.dbg&&window.dbg('IMPORT','reconcileCanvases done · nodes='+(S.canvases[S.current]?.nodes?.length||0));
-      sv();
+      await sv();
       render();
       window.dbg&&window.dbg('IMPORT','render done');
       bF();bB();renderTabs();renderSB();
@@ -1739,12 +1774,16 @@ function imF(e){
       window.dbg&&window.dbg('IMPORT','zF done — import complete');
     }catch(err){
       window.dbg&&window.dbg('IMPORT','ERROR in onload: '+err.message);
-      throw err;
+      try{ await uiNotice('Could not import: '+(err&&err.message||'unknown error'),{title:'Import failed'}); }catch(_){}
     }
   };
   r.onerror=()=>{window.dbg&&window.dbg('IMPORT','FileReader error: '+(r.error&&r.error.message))};
   r.readAsText(f);
   window.dbg&&window.dbg('IMPORT','readAsText dispatched');
+  // Phase 2.6 NEW · reset the input value so picking the same file twice in
+  // a row re-fires the change event. Without this, iOS Safari silently
+  // ignores a repeat selection of the same file.
+  try { e.target.value = ''; } catch (_) {}
 }
 function reconcileCanvases(){
   if(!S)S={};

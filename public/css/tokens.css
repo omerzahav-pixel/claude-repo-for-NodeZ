@@ -137,3 +137,37 @@
   --pend:    var(--st-pending);
   --block:   var(--st-blocked);
 }
+
+/* =============================================================================
+ * Phase 2.6 R3 (recurring) · universal iOS tap-highlight kill.
+ *
+ * The Phase 2.5 element-list approach missed the descendant tree. WebKit's
+ * orange tap-highlight is inherited from the ANCESTOR that matched
+ * activation, so a node-drag inside a zone painted residue on whichever
+ * element the touch propagated through. A universal-selector reset is the
+ * only complete fix.
+ *
+ * -webkit-touch-callout: none also disables the long-press "save image" /
+ * "copy link" iOS sheets which were occasionally interrupting node drags.
+ *
+ * No flag — defensive global behaviour. Inputs / textareas / contenteditable
+ * surfaces still get their normal selection because the universal-selector
+ * `user-select` is intentionally NOT changed here.
+ * ============================================================================= */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+/* Draggable / dragged-over surfaces must not allow text-selection during the
+   gesture — selection during drag is also a visible orange-residue trigger
+   on iPadOS. Inputs + textareas re-enable user-select via the existing
+   `#pn input,#pn textarea,...` rules in app.css. */
+.node, .node *,
+.nslice, .nslice *,
+.zone, .zone *,
+.zone-v2, .zone-v2 *,
+g.node, g.node *,
+.nrz {
+  -webkit-user-select: none;
+  user-select: none;
+}
