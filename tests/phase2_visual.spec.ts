@@ -241,6 +241,105 @@ test.describe("Phase 2 · edges (--edges-v2)", () => {
     expect(parseFloat(m![1])).toBeLessThan(0);
   });
 
+  test("2.8.A PINCH exit zeros velocity (no fling-out)", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true });
+    const result = await page.evaluate(async () => {
+      const cv = document.getElementById("cv")!;
+      // 2-finger pinch with midpoint moving fast (would feed inertia if not zeroed)
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 200, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true,  bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 400, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+      // simulate moving both fingers together (= midpoint moves a lot)
+      for (let i = 1; i <= 8; i++) {
+        cv.dispatchEvent(new PointerEvent("pointermove", { clientX: 200 + i*30, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true,  bubbles: true, cancelable: true }));
+        cv.dispatchEvent(new PointerEvent("pointermove", { clientX: 400 + i*30, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+        await new Promise(r => setTimeout(r, 16));
+      }
+      const viewAtRelease = { ...(window as any).__E2E.view() };
+      // Both fingers up SIMULTANEOUSLY (the fling-out scenario)
+      cv.dispatchEvent(new PointerEvent("pointerup", { clientX: 440, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true,  bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointerup", { clientX: 640, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+      // Wait several frames — if inertia fires, view will drift
+      await new Promise(r => setTimeout(r, 250));
+      const viewAfterSettle = { ...(window as any).__E2E.view() };
+      const vel = (window as any).GestureV2.getVelocity();
+      const gState = (window as any).GestureV2.getState();
+      return {
+        velX: vel.x, velY: vel.y,
+        state: gState,
+        drift: { dx: viewAfterSettle.x - viewAtRelease.x, dy: viewAfterSettle.y - viewAtRelease.y }
+      };
+    });
+    // Velocity must be zero post-pinch.
+    expect(Math.abs(result.velX)).toBeLessThan(0.5);
+    expect(Math.abs(result.velY)).toBeLessThan(0.5);
+    // State must be idle (not inertia).
+    expect(result.state).toBe('idle');
+    // View must not drift after release (inertia would shift it).
+    expect(Math.abs(result.drift.dx)).toBeLessThan(2);
+    expect(Math.abs(result.drift.dy)).toBeLessThan(2);
+  });
+
+  test("2.8.B Long-press on empty canvas fires window.onCanvasLongPress", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true });
+    const fired = await page.evaluate(async () => {
+      let called: { x: number; y: number } | null = null;
+      (window as any).onCanvasLongPress = (p: any) => { called = { x: p.x, y: p.y }; };
+      const cv = document.getElementById("cv")!;
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 500, clientY: 350, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 580));
+      return called;
+    });
+    expect(fired).toBeTruthy();
+    expect(fired!.x).toBe(500);
+    expect(fired!.y).toBe(350);
+  });
+
+  test("2.8.B Double-tap on empty canvas fires window.onCanvasDoubleTap", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true });
+    const fired = await page.evaluate(async () => {
+      let called: { x: number; y: number } | null = null;
+      (window as any).onCanvasDoubleTap = (p: any) => { called = { x: p.x, y: p.y }; };
+      const cv = document.getElementById("cv")!;
+      // first tap
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 600, clientY: 300, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointerup",   { clientX: 600, clientY: 300, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 100));
+      // second tap within 350ms
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 602, clientY: 301, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointerup",   { clientX: 602, clientY: 301, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 50));
+      return called;
+    });
+    expect(fired).toBeTruthy();
+  });
+
+  test("2.8.C Edge label transforms update during node drag (label-residue fix)", async ({ page }) => {
+    await openWithFlags(page, { "edges-v2": true });
+    const result = await page.evaluate(() => {
+      const E = (window as any).__E2E;
+      const c = E.current();
+      const z = c.zones[0]?.id || "ideas";
+      E.addNodeRaw({ id: 7001, x: 0,   y: 0, shape: "idea", label: "L", status: "idea", zone: z, created: "2026-05-01" });
+      E.addNodeRaw({ id: 7002, x: 250, y: 0, shape: "idea", label: "R", status: "idea", zone: z, created: "2026-05-01" });
+      c.edges.push({ id: 7100, from: 7001, to: 7002, type: "feeds" });
+      // view is a let in app.js; access the live ref via __E2E.view()
+      const v = E.view(); v.k = 0.7;
+      (window as any).render();
+      const labelBefore = document.querySelector(`g[data-edge-label="7100"]`)?.getAttribute("transform") || "";
+      // Move node 7001 dramatically and trigger live-route.
+      const n = c.nodes.find((x: any) => x.id === 7001);
+      n.x = -400; n.y = -200;
+      const ni = new Map(c.nodes.map((nn: any) => [nn.id, nn]));
+      (window as any).EdgeV2.liveRouteForNode(n, c.edges, ni);
+      const labelAfter = document.querySelector(`g[data-edge-label="7100"]`)?.getAttribute("transform") || "";
+      return { labelBefore, labelAfter };
+    });
+    expect(result.labelBefore).toBeTruthy();
+    expect(result.labelAfter).toBeTruthy();
+    // The label's transform must have changed when the path's source node moved.
+    expect(result.labelAfter).not.toBe(result.labelBefore);
+  });
+
   test("2.4.R2.2 Pinch ending with one finger remaining transitions to PAN without snap", async ({ page }) => {
     await openWithFlags(page, { "gestures-v2": true, "edges-v2": true });
     const result = await page.evaluate(() => {

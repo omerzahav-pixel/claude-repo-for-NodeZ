@@ -73,6 +73,33 @@
     // code path — we record this so a future Phase can promote HOLD into
     // a real state if needed. Today: unused after recording.
     let holdStart = null;
+    /* Phase 2.8 B — high-level gesture event dispatch.
+       The state machine surfaces these as window.onCanvasLongPress /
+       window.onCanvasDoubleTap callbacks; app.js registers the existing
+       "add node here" UX against them. Gesture.js stays the producer of
+       low-level events; app.js stays the consumer that decides UX. */
+    const LONG_PRESS_MS = 500;
+    const DOUBLE_TAP_MS = 350;
+    const DOUBLE_TAP_DIST_PX = 30;
+    const HOLD_MOVE_TOL_PX = 8;
+    let longPressTimer = null;
+    let longPressTouchStart = null;
+    let lastTap = { t: 0, x: 0, y: 0 };
+
+    function clearLongPress() {
+      if (longPressTimer != null) { clearTimeout(longPressTimer); longPressTimer = null; }
+      longPressTouchStart = null;
+    }
+    function fireLongPress(x, y, target) {
+      if (typeof window.onCanvasLongPress === 'function') {
+        try { window.onCanvasLongPress({ x, y, target }); } catch (e) { console.error('[ES onCanvasLongPress]', e); }
+      }
+    }
+    function fireDoubleTap(x, y, target) {
+      if (typeof window.onCanvasDoubleTap === 'function') {
+        try { window.onCanvasDoubleTap({ x, y, target }); } catch (e) { console.error('[ES onCanvasDoubleTap]', e); }
+      }
+    }
 
     // -- Helpers --------------------------------------------------------------
     function speedSq(v) { return v.x * v.x + v.y * v.y; }
@@ -204,8 +231,7 @@
           startDist: dist,
           startMidX: midX, startMidY: midY,
           baseK: t.k, baseX: t.x, baseY: t.y,
-          anchorWorldX, anchorWorldY,
-          loggedMoves: 0
+          anchorWorldX, anchorWorldY
         };
         // NUKE everything carried in from a prior state.
         if (rafInertia != null) { cancelAnimationFrame(rafInertia); rafInertia = null; }
@@ -216,15 +242,6 @@
           window.CanvasTransform.cancelPending();
         }
         if (window._inertiaActive && window._cancelInertia) window._cancelInertia();
-        // Phase 2.7 diagnostic: leave one log line per pinch-start until the
-        // user confirms iPad correctness, then strip on the next sprint.
-        if (window._edgespacePinchDebug !== false) {
-          console.log('[ES pinch-start]', {
-            midX, midY, dist,
-            baseK: t.k, baseX: t.x, baseY: t.y,
-            anchorWorldX, anchorWorldY
-          });
-        }
         state = 'pinch';
         try { e.preventDefault(); } catch (_) {}
         return;
@@ -258,6 +275,33 @@
       vel.x = 0; vel.y = 0;
       pendingDx = 0; pendingDy = 0;
       holdStart = performance.now();
+
+      /* Phase 2.8 B — arm long-press timer for empty-canvas touches only.
+         Fires window.onCanvasLongPress after 500ms if the finger hasn't
+         moved more than HOLD_MOVE_TOL_PX. Existing app.js node-drag /
+         shift-drag-edge / context-menu paths handle their own hold
+         semantics for interactive targets — we ONLY watch empty canvas. */
+      if (e.pointerType === 'touch') {
+        clearLongPress();
+        longPressTouchStart = { x: e.clientX, y: e.clientY, target: e.target };
+        longPressTimer = setTimeout(() => {
+          longPressTimer = null;
+          // The state machine flipped if the user moved past threshold;
+          // skip if we're no longer in pan-from-rest.
+          if (state !== 'pan') { longPressTouchStart = null; return; }
+          // Final motion check against the start coords.
+          const cur = activePtrs.get(e.pointerId);
+          if (!cur || !longPressTouchStart) { longPressTouchStart = null; return; }
+          const dx = Math.abs(cur.x - longPressTouchStart.x);
+          const dy = Math.abs(cur.y - longPressTouchStart.y);
+          if (dx > HOLD_MOVE_TOL_PX || dy > HOLD_MOVE_TOL_PX) { longPressTouchStart = null; return; }
+          const { x, y, target } = longPressTouchStart;
+          longPressTouchStart = null;
+          // Hand off to PAN exit so we don't also fire pan-inertia.
+          vel.x = 0; vel.y = 0;
+          fireLongPress(x, y, target);
+        }, LONG_PRESS_MS);
+      }
     }, true);
 
     cv.addEventListener('pointermove', function (e) {
@@ -287,17 +331,6 @@
         const newX = (currentMidX - W / 2) / newK - pinch.anchorWorldX;
         const newY = (currentMidY - H / 2) / newK - pinch.anchorWorldY;
         const next = { x: newX, y: newY, k: newK };
-        // Phase 2.7 diagnostic — first 3 moves per pinch only, then quiet.
-        if (window._edgespacePinchDebug !== false && pinch.loggedMoves < 3) {
-          pinch.loggedMoves++;
-          console.log('[ES pinch-move]', {
-            n: pinch.loggedMoves,
-            currentMid: { x: currentMidX, y: currentMidY },
-            currentDist,
-            scaleRatio: (currentDist / pinch.startDist).toFixed(4),
-            newView: { x: newX.toFixed(2), y: newY.toFixed(2), k: newK.toFixed(4) }
-          });
-        }
         window.CanvasTransform.applyImmediate(next);
         try { e.preventDefault(); } catch (_) {}
         return;
@@ -307,6 +340,14 @@
 
       const dx = e.clientX - lastSampleX;
       const dy = e.clientY - lastSampleY;
+      /* Phase 2.8 B — any meaningful motion cancels the pending long-press
+         (the user is panning, not pressing). The 8px threshold matches
+         iOS Safari's own long-press cancel distance. */
+      if (longPressTouchStart) {
+        const totalDx = Math.abs(e.clientX - longPressTouchStart.x);
+        const totalDy = Math.abs(e.clientY - longPressTouchStart.y);
+        if (totalDx > HOLD_MOVE_TOL_PX || totalDy > HOLD_MOVE_TOL_PX) clearLongPress();
+      }
       prevSampleX = lastSampleX; prevSampleY = lastSampleY; prevSampleT = lastSampleT;
       lastSampleX = e.clientX;   lastSampleY = e.clientY;   lastSampleT = performance.now();
 
@@ -329,21 +370,27 @@
     function pointerUpOrCancel(e) {
       activePtrs.delete(e.pointerId);
 
-      // Pinch end: if one finger remains, hand off to PAN with that finger as
-      // the new anchor — no canvas snap. The transform stays at its current
-      // value; we just need to reset the pan-sample baseline to the remaining
-      // finger's current screen position so the very next pointermove computes
-      // delta from there, not from a stale sample (R2-recurring acceptance).
+      /* Phase 2.8 A — PINCH exit MUST zero velocity unconditionally.
+         The pinch midpoint moves very fast during a normal pinch (each
+         finger contributes half its motion to the midpoint). On the LAST
+         touchend of a pinch, the v1 pointerup-inertia path used to read
+         "midpoint velocity" as a real swipe and fire inertia — flinging
+         the canvas across the screen. Velocity is captured only during
+         actual PAN motion (one finger drag); PINCH exit always = vel 0. */
       if (state === 'pinch') {
         if (activePtrs.size < 2) {
           pinch = null;
+          vel.x = 0; vel.y = 0;
+          pendingDx = 0; pendingDy = 0;
+          if (rafInertia != null) { cancelAnimationFrame(rafInertia); rafInertia = null; }
+          if (window._inertiaActive && window._cancelInertia) window._cancelInertia();
           if (activePtrs.size === 1) {
+            // One finger remains — transition to PAN with that finger as the
+            // new anchor. Canvas does NOT snap; transform stays at current.
             const remaining = Array.from(activePtrs.values())[0];
             lastSampleX = remaining.x; lastSampleY = remaining.y; lastSampleT = performance.now();
             prevSampleX = lastSampleX; prevSampleY = lastSampleY; prevSampleT = lastSampleT;
-            vel.x = 0; vel.y = 0;
-            pendingDx = 0; pendingDy = 0;
-            state = 'pan'; // no setState() — preserves the current transform; pan loop now picks up from this finger
+            state = 'pan'; // no setState() — preserves the current transform
           } else {
             setState('idle');
           }
@@ -355,6 +402,38 @@
         setState('idle');
         return;
       }
+
+      /* Phase 2.8 B — double-tap detection. If this pointerup ends a
+         touch that didn't move much AND there was a prior touchend within
+         350ms within 30px, fire window.onCanvasDoubleTap. Only for empty-
+         canvas releases (longPressTouchStart was armed → target was canvas).
+         A successful long-press already fired; that path also clears
+         longPressTimer so we won't re-fire here. */
+      const movedThisGesture = longPressTouchStart
+        ? (Math.abs(e.clientX - longPressTouchStart.x) > HOLD_MOVE_TOL_PX ||
+           Math.abs(e.clientY - longPressTouchStart.y) > HOLD_MOVE_TOL_PX)
+        : true;
+      if (e.pointerType === 'touch' && longPressTouchStart && !movedThisGesture) {
+        const now = performance.now();
+        const dxTap = Math.abs(e.clientX - lastTap.x);
+        const dyTap = Math.abs(e.clientY - lastTap.y);
+        if (now - lastTap.t < DOUBLE_TAP_MS && dxTap < DOUBLE_TAP_DIST_PX && dyTap < DOUBLE_TAP_DIST_PX) {
+          // Second tap of a double-tap pair. Capture target BEFORE
+          // clearLongPress (which nulls longPressTouchStart).
+          const tgt = longPressTouchStart.target;
+          clearLongPress();
+          lastTap.t = 0; // consume so a triple-tap doesn't re-fire
+          // Suppress pan inertia for the tap.
+          vel.x = 0; vel.y = 0;
+          fireDoubleTap(e.clientX, e.clientY, tgt);
+          setState('idle');
+          return;
+        }
+        // First tap: record and let the timer continue (long-press might
+        // still fire if user holds; double-tap windows the second touch).
+        lastTap = { t: now, x: e.clientX, y: e.clientY };
+      }
+      clearLongPress();
 
       // Pan end: maybe enter inertia.
       // Compute velocity from the most recent two samples (px / frame at 60Hz).

@@ -1706,6 +1706,28 @@ cv.addEventListener('contextmenu',e=>{const nE=e.target.closest('.node'),eE=e.ta
     ctx.innerHTML=`<div class="csub">${t('ctxZone')}: ${esc(z.name)}</div><button onclick="toggleLock('${zid}')">${lk?t('unlockZ'):t('lockZ')}</button><button onclick="renameZone('${zid}')">${t('renameZ')}</button><button onclick="recolorZone('${zid}')">${t('recolorZ')}</button><button onclick="deleteZone('${zid}')" style="color:var(--block)">${t('deleteZ')}</button>`;positionCtx(e.clientX,e.clientY)}
   else{e.preventDefault();showCanvasCtx(e.clientX,e.clientY,s2w(e.clientX,e.clientY))}});
 function showCanvasCtx(x,y,w){ctx.innerHTML=`<button onclick="hideCtx();addNodeAt(${w.x},${w.y})">${t('addNodeHere')}</button><button onclick="hideCtx();addZoneAt(${w.x},${w.y})">${t('addZoneHere')}</button>`;positionCtx(x,y)}
+
+/* Phase 2.8 B — register against the gesture state machine's high-level
+   callbacks. The machine fires these for empty-canvas single-touch events
+   only (node/zone/handle interactions stay owned by app.js's existing
+   pointerdown handler). Long-press → "Add node / Add zone here" menu,
+   matching the desktop right-click behaviour. Double-tap → add a node
+   at that point, matching desktop dblclick behaviour. */
+window.onCanvasLongPress = function(pos) {
+  if (!pos) return;
+  // Bail if the touch landed on a UI overlay (defensive — gesture.js
+  // already filters node/zone targets but not toolbar/sidebar chrome).
+  if (pos.target && pos.target.closest && pos.target.closest('#tb,#sb,#fl,#bc,#more,#ctx,#ep,#dlg,#modal,#landing,#pn,#tabs,#lg,#lgBtn,#perfHud,#zoneChips,#edgeLegend,#emptyState')) return;
+  const w = s2w(pos.x, pos.y);
+  showCanvasCtx(pos.x, pos.y, w);
+};
+window.onCanvasDoubleTap = function(pos) {
+  if (!pos) return;
+  if (pos.target && pos.target.closest && pos.target.closest('#tb,#sb,#fl,#bc,#more,#ctx,#ep,#dlg,#modal,#landing,#pn,#tabs,#lg,#lgBtn,#perfHud,#zoneChips,#edgeLegend,#emptyState')) return;
+  const w = s2w(pos.x, pos.y);
+  const n = addNode(w.x, w.y);
+  sel = n; op(n);
+};
 async function recolorZone(zid){const c=await uiPrompt(S.hebrewMode?'צבע (hex)':'Zone color','',{placeholder:'#d97757',hint:'Hex color, e.g. #d97757'});if(!c)return;sn();const z=zs().find(x=>x.id===zid);if(z)z.color=c;sv();render();bF()}
 function addNodeAt(x,y){const n=addNode(x,y);sel=n;op(n)}
 async function addZoneAt(x,y){const name=await uiPrompt('New zone','New Zone');if(!name)return;sn();const id='z-'+Date.now();const colors=['#8b7ba8','#6b8cb0','#5fa3a8','#7aa882','#c48a9b','#c9896a','#7d7569','#b07ba8','#6ba8a0'];const c=colors[zs().length%colors.length];zs().push({id,name,x:x-250,y:y-180,w:500,h:360,color:c});sv();render();bF()}

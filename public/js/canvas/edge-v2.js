@@ -183,7 +183,12 @@
        invisible. Bump to 32px with vertical centering so all four sides of
        the pill remain visible at every script. The pill chip itself stays
        compact via padding + max-width on the inner div. */
-    const labelSvg = `<g transform="translate(${mx} ${my}) rotate(${ang.toFixed(1)})"><foreignObject x="-64" y="-16" width="128" height="32" style="pointer-events:none;overflow:visible"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;justify-content:center;align-items:center;height:100%"><span style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:var(--font-sans,Inter);font-size:${fsize}px;color:${s.hue};background:var(--bg,#08090C);border-width:1px;border-style:solid;border-color:${s.hue};border-radius:4px;padding:2px 8px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;box-sizing:border-box;line-height:1.2">${escHtml(text)}</span></div></foreignObject></g>`;
+    /* Phase 2.8 C — tag the label <g> with data-edge-label so the live-route
+       function (called during the node-drag fast path) can find and update
+       its transform in place. Without this tag, labels stayed at their old
+       midpoint while the path itself moved — leaving orange-bordered chips
+       drifting behind a dragged node ("orange residue"). */
+    const labelSvg = `<g data-edge-label="${edge.id}" transform="translate(${mx} ${my}) rotate(${ang.toFixed(1)})"><foreignObject x="-64" y="-16" width="128" height="32" style="pointer-events:none;overflow:visible"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;justify-content:center;align-items:center;height:100%"><span style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:var(--font-sans,Inter);font-size:${fsize}px;color:${s.hue};background:var(--bg,#08090C);border-width:1px;border-style:solid;border-color:${s.hue};border-radius:4px;padding:2px 8px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;box-sizing:border-box;line-height:1.2">${escHtml(text)}</span></div></foreignObject></g>`;
     return stroke + labelSvg;
   }
 
@@ -300,17 +305,20 @@
       const a = nodeIndex.get(e.from);
       const b = nodeIndex.get(e.to);
       if (!a || !b) continue;
-      let d;
+      let d, c1, c2, anchorA, anchorB;
       if (useV2) {
-        const anchorA = bestAnchor(a, b);
-        const anchorB = bestAnchor(b, a);
-        d = cubicPath(anchorA, anchorB, fan.get(e.id) || 0).d;
+        anchorA = bestAnchor(a, b);
+        anchorB = bestAnchor(b, a);
+        const p = cubicPath(anchorA, anchorB, fan.get(e.id) || 0);
+        d = p.d; c1 = p.c1; c2 = p.c2;
       } else {
         // v1 centre-to-centre cubic (mirrors app.js's render() math).
         const rA = 46, rB = 46;
         const dx0 = b.x - a.x, dy0 = b.y - a.y, d0 = Math.hypot(dx0, dy0) || 1;
         const ax = a.x + dx0/d0*rA, ay = a.y + dy0/d0*rA;
         const bx = b.x - dx0/d0*rB, by = b.y - dy0/d0*rB;
+        anchorA = { x: ax, y: ay };
+        anchorB = { x: bx, y: by };
         const dx = bx - ax, dy = by - ay;
         const horiz = Math.abs(dx) >= Math.abs(dy);
         const off = Math.min(Math.abs(horiz ? dx : dy) * 0.75, 240);
@@ -318,11 +326,28 @@
         const c1y = horiz ? ay                        : ay + Math.sign(dy) * off;
         const c2x = horiz ? bx - Math.sign(dx) * off : bx;
         const c2y = horiz ? by                        : by - Math.sign(dy) * off;
-        d = `M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}`;
+        c1 = { x: c1x, y: c1y };
+        c2 = { x: c2x, y: c2y };
+        d = `M ${ax},${ay} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${bx},${by}`;
       }
       // Selector matches both v1 (.edge) and v2 (.e2) by data-edge id.
       const path = cv.querySelector(`path[data-edge="${e.id}"]`);
       if (path) { path.setAttribute('d', d); touched++; }
+      /* Phase 2.8 C · also reposition the label <g data-edge-label> if it
+         exists. Without this, labels stay at their old midpoint while the
+         edge path slides under the dragged node — visible as orange-bordered
+         chip "residue" trailing behind the moving node. */
+      const label = cv.querySelector(`g[data-edge-label="${e.id}"]`);
+      if (label) {
+        const mx = (anchorA.x + 3*c1.x + 3*c2.x + anchorB.x) / 8;
+        const my = (anchorA.y + 3*c1.y + 3*c2.y + anchorB.y) / 8;
+        let ang = Math.atan2(anchorB.y - anchorA.y, anchorB.x - anchorA.x) * 180 / Math.PI;
+        if (ang >  45) ang =  45;
+        if (ang < -45) ang = -45;
+        if (ang >  90) ang -= 180;
+        if (ang < -90) ang += 180;
+        label.setAttribute('transform', `translate(${mx} ${my}) rotate(${ang.toFixed(1)})`);
+      }
     }
     return touched;
   }

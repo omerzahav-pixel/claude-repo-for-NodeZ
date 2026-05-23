@@ -105,10 +105,6 @@
       'text-overflow:ellipsis'
     ].join(';');
     document.body.appendChild(pill);
-    // Phase 2.7 diagnostic — confirms the pill IS being created on iPad.
-    // (Removed in the next sprint; user pastes this back from the iPad
-    // console to prove the trigger fires.)
-    console.log('[ES tooltip] auto-break pill created · useVv=' + useVv + ' top=' + (useVv ? vvBottomPx() : 'n/a'));
     // Re-anchor if the iOS keyboard opens / closes / orientation flips.
     let vvHandler = null;
     if (useVv) {
