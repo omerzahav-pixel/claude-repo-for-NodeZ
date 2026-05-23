@@ -57,11 +57,50 @@
   function showTipOnce() {
     try { if (localStorage.getItem(STORE_TIP) === '1') return; } catch (e) {}
     try { localStorage.setItem(STORE_TIP, '1'); } catch (e) {}
+    const text = 'Hebrew and Latin on separate lines — undo with ⌘Z.';
     if (typeof window.toast === 'function') {
-      window.toast('Hebrew and Latin on separate lines — undo with ⌘Z.', { ms: 3500 });
-    } else {
-      console.log('[EdgeSpace RTL] Hebrew + Latin auto-break enabled');
+      window.toast(text, { ms: 4000 });
+      return;
     }
+    /* Phase 2.5 Issue 7 — toast fallback. window.toast may not be defined
+       on early boot, on test pages, or under future build splits. Ship a
+       self-contained bottom-centre pill so the one-time tip always shows. */
+    const pill = document.createElement('div');
+    pill.textContent = text;
+    pill.setAttribute('role', 'status');
+    pill.style.cssText = [
+      'position:fixed',
+      'inset-inline-start:50%',
+      'bottom:64px',
+      'transform:translateX(-50%) translateY(8px)',
+      'z-index:99999',
+      'background:var(--srf-3,#1E232B)',
+      'color:var(--ink,#ECEEF1)',
+      'border:1px solid var(--line-2,rgba(255,255,255,0.10))',
+      'border-radius:8px',
+      'padding:8px 14px',
+      'font:500 12px/1.4 var(--font-sans,Inter),system-ui,sans-serif',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.4)',
+      'opacity:0',
+      'transition:opacity 200ms ease-out, transform 200ms ease-out',
+      'pointer-events:none',
+      '-webkit-user-select:none',
+      'user-select:none',
+      'max-width:90vw',
+      'white-space:nowrap',
+      'overflow:hidden',
+      'text-overflow:ellipsis'
+    ].join(';');
+    document.body.appendChild(pill);
+    requestAnimationFrame(() => {
+      pill.style.opacity = '1';
+      pill.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    setTimeout(() => {
+      pill.style.opacity = '0';
+      pill.style.transform = 'translateX(-50%) translateY(8px)';
+      setTimeout(() => pill.remove(), 250);
+    }, 4000);
   }
 
   function handleInput(ev) {

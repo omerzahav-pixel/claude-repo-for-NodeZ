@@ -69,6 +69,55 @@
 #edgeLegend .el-row svg { flex-shrink: 0; }
 
 /* =============================================================================
+ * Phase 2.5 R3 — kill iOS tap-highlight residue on draggable surfaces.
+ *
+ * The 6%-opacity zone fills (zones-v2) amplified WebKit's default orange
+ * tap-highlight when dragging across them, leaving a visible smear that only
+ * cleared on the next gesture. Setting tap-highlight to transparent on every
+ * draggable / dragged-over surface removes the WebKit default entirely.
+ * outline:none guards against focus rings during pointer drag.
+ * ============================================================================= */
+.zone, .zone-v2,
+svg#cv .node,
+.nslice,
+g.node,
+g.zone,
+.zr,
+body.dragging,
+body.dragging .nslice,
+body.dragging g.node,
+body.holding,
+body.holding .nslice,
+body.holding g.node {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+/* Belt-and-suspenders: the SVG canvas itself + the HTML overlay layer */
+svg#cv, #canvasOverlay, #zoneChips {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* =============================================================================
+ * Phase 2.5 R5 — make scrollable sheets fully scrollable on iOS Safari.
+ *
+ * #pn (property panel / detail sheet) had overflow-y:auto + max-height
+ * already, but missed -webkit-overflow-scrolling:touch — without it, iOS
+ * still bounces on pull-down and doesn't reach the bottom. overscroll-
+ * behavior:contain stops the scroll from chaining into the canvas.
+ * touch-action:pan-y is already set in app.css for #pn; we re-affirm here.
+ * Same prophylactic for #modal .mc which also holds long-form content.
+ * ============================================================================= */
+#pn,
+#modal .mc,
+#dlg .dc,
+#more,
+#sb .sbbody {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+/* =============================================================================
  * Phase 2 · zone sticky chip (Pass 3 § 08).
  *
  * Floats outside the zone's top edge as a pill. DOM (not SVG) so size

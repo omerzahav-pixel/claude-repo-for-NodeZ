@@ -178,7 +178,12 @@
     if (ang < -90) ang += 180;
     const labelRtl = /[֐-׿]/.test(text);
     const fsize = labelRtl ? 12 : 10;
-    const labelSvg = `<g transform="translate(${mx} ${my}) rotate(${ang.toFixed(1)})"><foreignObject x="-60" y="-11" width="120" height="22" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:var(--font-sans,Inter);font-size:${fsize}px;color:${s.hue};background:var(--bg,#08090C);border:1px solid ${s.hue};border-radius:4px;padding:2px 8px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">${escHtml(text)}</div></foreignObject></g>`;
+    /* Phase 2.5 R4 — foreignObject was 22px tall, which clipped Heebo's
+       slightly-taller descenders in RTL and left the bottom border
+       invisible. Bump to 32px with vertical centering so all four sides of
+       the pill remain visible at every script. The pill chip itself stays
+       compact via padding + max-width on the inner div. */
+    const labelSvg = `<g transform="translate(${mx} ${my}) rotate(${ang.toFixed(1)})"><foreignObject x="-64" y="-16" width="128" height="32" style="pointer-events:none;overflow:visible"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;justify-content:center;align-items:center;height:100%"><span style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:var(--font-sans,Inter);font-size:${fsize}px;color:${s.hue};background:var(--bg,#08090C);border-width:1px;border-style:solid;border-color:${s.hue};border-radius:4px;padding:2px 8px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;box-sizing:border-box;line-height:1.2">${escHtml(text)}</span></div></foreignObject></g>`;
     return stroke + labelSvg;
   }
 
@@ -262,8 +267,69 @@
     });
   }
 
+  /* =========================================================================
+   * Live-route on node drag (Phase 2.5 R1).
+   *
+   * The existing app.js node-drag fast path skips a full render() and instead
+   * CSS-transforms the moved slice + SVG hit-group. That left every edge
+   * connected to the dragged node frozen at its original position until
+   * pointerup fired the next render(). On iPad this is a hard visible break.
+   *
+   * Solution: a small DOM-walk that finds every edge `<path data-edge>` whose
+   * source/target id matches the moving node, recomputes its path from the
+   * node's live x/y, and updates the `d` attribute in place. No re-render,
+   * no innerHTML churn — only the affected path strings are touched.
+   *
+   * Works for BOTH v1 edges (.edge data-edge) and v2 edges (.e2 data-edge)
+   * because they share the same data-edge ID convention. Routing differs
+   * between v1 (centre-to-centre cubic) and v2 (magnetic-anchor cubic) —
+   * the function below uses v2 routing when --edges-v2 is on and v1 routing
+   * otherwise so the visual stays consistent.
+   * ========================================================================= */
+  function liveRouteForNode(node, edges, nodeIndex) {
+    if (!node || !edges || !edges.length) return 0;
+    const cv = document.getElementById('cv');
+    if (!cv) return 0;
+    const useV2 = window.Flags && window.Flags.on('edges-v2');
+    let touched = 0;
+    // Pre-compute fan offsets ONCE for the whole edge set so multi-edge
+    // bundling stays in sync as one end moves.
+    const fan = useV2 ? fanOffsetsFor(edges) : null;
+    for (const e of edges) {
+      if (e.from !== node.id && e.to !== node.id) continue;
+      const a = nodeIndex.get(e.from);
+      const b = nodeIndex.get(e.to);
+      if (!a || !b) continue;
+      let d;
+      if (useV2) {
+        const anchorA = bestAnchor(a, b);
+        const anchorB = bestAnchor(b, a);
+        d = cubicPath(anchorA, anchorB, fan.get(e.id) || 0).d;
+      } else {
+        // v1 centre-to-centre cubic (mirrors app.js's render() math).
+        const rA = 46, rB = 46;
+        const dx0 = b.x - a.x, dy0 = b.y - a.y, d0 = Math.hypot(dx0, dy0) || 1;
+        const ax = a.x + dx0/d0*rA, ay = a.y + dy0/d0*rA;
+        const bx = b.x - dx0/d0*rB, by = b.y - dy0/d0*rB;
+        const dx = bx - ax, dy = by - ay;
+        const horiz = Math.abs(dx) >= Math.abs(dy);
+        const off = Math.min(Math.abs(horiz ? dx : dy) * 0.75, 240);
+        const c1x = horiz ? ax + Math.sign(dx) * off : ax;
+        const c1y = horiz ? ay                        : ay + Math.sign(dy) * off;
+        const c2x = horiz ? bx - Math.sign(dx) * off : bx;
+        const c2y = horiz ? by                        : by - Math.sign(dy) * off;
+        d = `M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}`;
+      }
+      // Selector matches both v1 (.edge) and v2 (.e2) by data-edge id.
+      const path = cv.querySelector(`path[data-edge="${e.id}"]`);
+      if (path) { path.setAttribute('d', d); touched++; }
+    }
+    return touched;
+  }
+
   window.EdgeV2 = Object.freeze({
     TYPES, spec, anchors, bestAnchor, cubicPath, fanOffsetsFor,
-    renderEdge, renderAll, markerDefs, refreshLegend
+    renderEdge, renderAll, markerDefs, refreshLegend,
+    liveRouteForNode
   });
 })();

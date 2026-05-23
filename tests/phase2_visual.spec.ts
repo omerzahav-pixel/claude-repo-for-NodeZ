@@ -149,6 +149,71 @@ test.describe("Phase 2 · edges (--edges-v2)", () => {
     expect(offsets[2]).toBeCloseTo(7,  1);
   });
 
+  test("2.4.R1 Edges live-route when their source node moves (R1 regression)", async ({ page }) => {
+    await openWithFlags(page, { "edges-v2": true });
+    // Seed 2 nodes + 1 edge, then move node 1 and confirm the edge path
+    // attribute updates without a full render() being required.
+    const result = await page.evaluate(() => {
+      const E = (window as any).__E2E;
+      const c = E.current();
+      const z = c.zones[0]?.id || "ideas";
+      E.addNodeRaw({ id: 5001, x:  0,  y:  0, shape: "idea", label: "A", status: "idea", zone: z });
+      E.addNodeRaw({ id: 5002, x: 200, y:  0, shape: "idea", label: "B", status: "idea", zone: z });
+      c.edges.push({ id: 9001, from: 5001, to: 5002, type: "feeds" });
+      (window as any).render();
+      const before = document.querySelector('path[data-edge="9001"]')?.getAttribute('d') || '';
+      // Move node 1
+      const n = c.nodes.find((x: any) => x.id === 5001);
+      n.x = -150; n.y = -120;
+      // Call live-route directly (this is what the drag fast-path calls).
+      const ni = new Map(c.nodes.map((nn: any) => [nn.id, nn]));
+      (window as any).EdgeV2.liveRouteForNode(n, c.edges, ni);
+      const after = document.querySelector('path[data-edge="9001"]')?.getAttribute('d') || '';
+      return { before, after };
+    });
+    expect(result.before).toBeTruthy();
+    expect(result.after).toBeTruthy();
+    // Critical: live-route changed the path d-attribute without a render().
+    expect(result.after).not.toBe(result.before);
+    // The new path's starting M coordinate is negative (target is at +200,
+    // source moved to -150,-120 so its best anchor still has x < 0).
+    const m = result.after.match(/^M ([-\d.]+)/);
+    expect(m).toBeTruthy();
+    expect(parseFloat(m![1])).toBeLessThan(0);
+  });
+
+  test("2.4.R2 Pinch with finger on a node cancels in-flight node-drag (R2 regression)", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true, "edges-v2": true });
+    const result = await page.evaluate(() => {
+      const E = (window as any).__E2E;
+      const c = E.current();
+      const z = c.zones[0]?.id || "ideas";
+      E.addNodeRaw({ id: 6001, x: 0, y: 0, shape: "idea", label: "N", status: "idea", zone: z });
+      (window as any).render();
+      const cv = document.getElementById("cv")!;
+      // Find the screen position of the node.
+      const g = document.querySelector(`g.node[data-id="6001"]`) as Element;
+      const rect = g.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top  + rect.height / 2;
+      // 1st finger lands ON the node
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: cx, clientY: cy, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      const dragMidJourney = !!(window as any).__E2E.drag && (window as any).__E2E.drag()?.k;
+      // 2nd finger lands anywhere
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: cx + 200, clientY: cy + 50, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+      // After the 2nd finger lands, v1 drag must be cancelled and gesture v2 should be in 'pinch'.
+      const dragAfter = (window as any).__E2E.drag && (window as any).__E2E.drag();
+      const gestureState = (window as any).GestureV2?.getState();
+      return {
+        dragMidJourney,           // before 2nd finger — drag might be {k:'node'}
+        dragAfterIsNull: !dragAfter,
+        gestureState
+      };
+    });
+    expect(result.dragAfterIsNull).toBe(true);
+    expect(result.gestureState).toBe("pinch");
+  });
+
   test("2.4.4 Auto-legend appears when canvas has ≥ 3 distinct edge types", async ({ page }) => {
     await openWithFlags(page, { "edges-v2": true });
     await page.evaluate(() => {

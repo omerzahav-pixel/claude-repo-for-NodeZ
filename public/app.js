@@ -1244,6 +1244,39 @@ function updateLatexPreview(){const el=document.getElementById('latexPreview'),s
    button + legacy contexts. */
 function sP(){if(!sel)return;aFlush();op(sel)}
 function cp(){aFlush();autosaveSnapped=false;panelDetailsOpen=false;sel=null;pn.classList.remove('on');render()}
+/* Phase 2.5 Issue 6 — tap-outside dismisses the property panel.
+   Only "empty canvas" taps count — taps on a node, edge, zone, resize
+   handle, or any floating UI surface are left alone so the existing
+   click handlers in app.js can do their normal thing (toggle selection,
+   open ctx menu, etc.). A tap is defined as pointerdown→pointerup with
+   < 10 px of movement; anything beyond that is a pan or node drag and
+   must not dismiss the panel. */
+(function(){
+  const DISMISS_THRESHOLD_PX = 10;
+  let downX = 0, downY = 0, downActive = false;
+  function isFloatingUi(t){
+    return !!(t && t.closest && t.closest('#pn,#more,#ctx,#ep,#dlg,#modal,#landing,#sb,#tb,#bc,#tabs,#lg,#lgBtn,#zoneChips,#edgeLegend,#perfHud,#emptyState,#fl'));
+  }
+  function isInteractiveCanvasTarget(t){
+    if (!t || !t.closest) return false;
+    // Anything that the existing pointer handlers already recognise.
+    return !!(t.closest('.node, g.node, .nslice, .nrz, .zh, .zd, .zone, .edge, [data-edge]'));
+  }
+  document.addEventListener('pointerdown', e => {
+    if (!pn.classList.contains('on')) { downActive = false; return; }
+    if (isFloatingUi(e.target))       { downActive = false; return; }
+    if (isInteractiveCanvasTarget(e.target)) { downActive = false; return; }
+    downActive = true; downX = e.clientX; downY = e.clientY;
+  }, true);
+  document.addEventListener('pointerup', e => {
+    if (!downActive) return;
+    downActive = false;
+    if (!pn.classList.contains('on')) return;
+    const dx = Math.abs(e.clientX - downX), dy = Math.abs(e.clientY - downY);
+    if (dx > DISMISS_THRESHOLD_PX || dy > DISMISS_THRESHOLD_PX) return; // pan/drag — don't dismiss
+    cp();
+  }, true);
+})();
 function createRoadmap(nid){const n=ns().find(x=>x.id===nid);if(!n)return;const cid='rm-'+nid;if(S.canvases[cid])return switchTo(cid);sn();S.canvases[cid]={nodes:[],edges:[],zones:JSON.parse(JSON.stringify(RMZ))};S.canvasMeta[cid]={name:n.label+' › Roadmap',parentNodeId:n.id,parentCanvas:S.current};n.childCanvas=cid;sv();switchTo(cid)}
 function copyBackToVault(nid){const n=ns().find(x=>x.id===nid);if(!n)return;sn();const fromCanvas=S.current;S.current='vault';const w=s2w(innerWidth/2,innerHeight/2);addNode(w.x,w.y,{...n,id:undefined,originId:n.id,childCanvas:null},true);S.current=fromCanvas;sv();uiNotice('Copied to vault.')}
 function copyToCanvas(nid,cid){const vn=S.canvases.vault.nodes.find(x=>x.id===nid);if(!vn)return;sn();const prev=S.current;S.current=cid;const z=zs()[0];const x=z.x+60+Math.random()*(z.w-140),y=z.y+70+Math.random()*(z.h-140);addNode(x,y,{...vn,id:undefined,originId:vn.id,zone:z.id,childCanvas:null},true);S.current=prev;sv();render()}
@@ -1394,7 +1427,21 @@ cv.addEventListener('pointerdown',e=>{
   activePtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
 
   if(activePtrs.size===2){
-    if(_g2){return} // pinch owned by gesture-v2 state machine
+    if(_g2){
+      /* Phase 2.5 R2 — second finger landing must hand BOTH touches to the
+         v2 pinch state machine, even when the first finger started on a
+         node (which already created drag={k:'node',...} via beginInteraction
+         above). Cancel everything from the single-pointer interaction so
+         pinch reads a clean baseline and the node doesn't follow the pinch. */
+      if(drag?.k==='pan'){view.x=drag.vx;view.y=drag.vy}
+      if(drag?.snap){hist.pop()}
+      drag=null;cv.classList.remove('gr');document.body.classList.remove('dragging');
+      if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
+      if(holdTimer){clearTimeout(holdTimer);holdTimer=null}
+      clearHoldFeedback();
+      try{e.preventDefault()}catch(_){}
+      return;
+    }
     // Pinch starts — cancel any single-pointer drag
     if(drag?.k==='pan'){view.x=drag.vx;view.y=drag.vy}
     if(drag?.snap){hist.pop()}
@@ -1508,6 +1555,14 @@ document.addEventListener('pointermove',e=>{
       const dx=drag.n.x-drag.renderX,dy=drag.n.y-drag.renderY;
       const _sl=document.querySelector(`.nslice[data-nid="${drag.n.id}"]`);if(_sl)_sl.style.transform=`translate(${dx}px,${dy}px)`;
       const _hg=cv.querySelector(`g.node[data-id="${drag.n.id}"]`);if(_hg)_hg.setAttribute('transform',`translate(${dx},${dy})`);
+      /* Phase 2.5 R1 — live-route connected edges so they track the moved
+         node in real time. Without this, the fast drag path (which skips
+         render() to avoid the ghost-trail) leaves every connected edge
+         frozen at its old anchor until pointerup. */
+      if(window.EdgeV2&&typeof window.EdgeV2.liveRouteForNode==='function'){
+        const _ni=new Map(ns().map(n=>[n.id,n]));
+        try{window.EdgeV2.liveRouteForNode(drag.n,es(),_ni)}catch(_e){}
+      }
     }else{render()}}
   else if(drag.k==='marquee'){drag.curW=w;render();drawMarquee(drag.startW,w)}
   else if(drag.k==='zone'&&drag.moved){if(!drag.snap){sn();drag.snap=true}drag.z.x=w.x-drag.ox;drag.z.y=w.y-drag.oy;render()}
@@ -1808,4 +1863,6 @@ if(!window.__E2E){Object.defineProperty(window,'__E2E',{value:Object.freeze({
   current:()=>S.canvases[S.current],
   addNodeRaw:(node)=>{S.canvases[S.current].nodes.push(node);render();return node},
   setCurrentCanvas:(id)=>{if(S.canvases[id]){S.current=id;render();return true}return false},
+  // Phase 2.5 R2 regression-test hook — read live drag-interaction state.
+  drag:()=>drag,
 })})}
