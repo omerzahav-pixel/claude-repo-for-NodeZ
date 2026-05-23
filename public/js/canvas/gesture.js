@@ -73,6 +73,19 @@
     // code path — we record this so a future Phase can promote HOLD into
     // a real state if needed. Today: unused after recording.
     let holdStart = null;
+    /* Phase 2.9 Fix 1 — brute-force "no inertia after multi-touch" flag.
+       Reasoning: previous attempts tried to zero velocity at every state
+       boundary, but velocity kept getting seeded somewhere mid-gesture
+       (likely from the PAN handoff when a finger lifts mid-pinch). The
+       only correct rule is: inertia is for SINGLE-FINGER swipes, full
+       stop. If at any point the gesture had ≥ 2 fingers down, inertia
+       is forbidden for the remainder of the gesture, regardless of how
+       it ends. Flag flips true on the 2nd-pointer touchdown; resets to
+       false only when activePtrs is empty (all fingers off the screen
+       AND nothing else can possibly write to view via this state
+       machine). */
+    let gestureHadMultiTouch = false;
+
     /* Phase 2.8 B — high-level gesture event dispatch.
        The state machine surfaces these as window.onCanvasLongPress /
        window.onCanvasDoubleTap callbacks; app.js registers the existing
@@ -197,6 +210,11 @@
 
     cv.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse' && e.button === 2) return; // right-click → ctx menu
+      /* Phase 2.9 Fix 1 — start-of-gesture reset. If no pointers were
+         tracked before this one, this is the start of a fresh gesture
+         lifetime. Reset the multi-touch flag so a previous gesture's
+         residual state can't poison this one's inertia decision. */
+      if (activePtrs.size === 0) gestureHadMultiTouch = false;
       // Always track the pointer so we can detect a second finger arriving
       // even when the first finger is on a node (pinch should still take
       // priority over a node drag).
@@ -214,6 +232,7 @@
          guarantees pure-pinch behaviour identical regardless of what was
          happening pre-pinch. */
       if (activePtrs.size === 2) {
+        gestureHadMultiTouch = true; // Phase 2.9 Fix 1
         const pts = Array.from(activePtrs.values()).slice(0, 2);
         const t = window.CanvasTransform.get();
         const sx0 = pts[0].x, sy0 = pts[0].y;
@@ -387,12 +406,16 @@
           if (activePtrs.size === 1) {
             // One finger remains — transition to PAN with that finger as the
             // new anchor. Canvas does NOT snap; transform stays at current.
+            // gestureHadMultiTouch STAYS true — the gesture isn't over yet,
+            // and any inertia on its eventual finger-lift is forbidden
+            // because this gesture had 2 fingers earlier.
             const remaining = Array.from(activePtrs.values())[0];
             lastSampleX = remaining.x; lastSampleY = remaining.y; lastSampleT = performance.now();
             prevSampleX = lastSampleX; prevSampleY = lastSampleY; prevSampleT = lastSampleT;
             state = 'pan'; // no setState() — preserves the current transform
           } else {
             setState('idle');
+            gestureHadMultiTouch = false; // all fingers off, gesture over
           }
         }
         return;
@@ -444,14 +467,22 @@
       vel.x = vxPerMs * 16;
       vel.y = vyPerMs * 16;
 
-      // Only enter inertia for touch gestures with enough velocity.
-      if (e.pointerType === 'touch' && speedSq(vel) > SWIPE_MIN_SPEED_SQ) {
+      /* Phase 2.9 Fix 1 — inertia is reserved STRICTLY for gestures that
+         were single-finger from start to finish. If gestureHadMultiTouch
+         is true, this gesture had a second finger at some point — pinch
+         midpoint motion, pinch→pan handoff, finger lift mid-pinch, etc.
+         All of those produce bogus velocity readings that read as violent
+         swipes if fed into inertia. Force IDLE in that case. */
+      const allFingersOff = activePtrs.size === 0;
+      if (e.pointerType === 'touch' && !gestureHadMultiTouch && speedSq(vel) > SWIPE_MIN_SPEED_SQ) {
         setState('inertia');
         rafInertia = requestAnimationFrame(tickInertia);
       } else {
         setState('idle');
         vel.x = 0; vel.y = 0;
       }
+      // Reset the multi-touch flag only when no fingers remain on screen.
+      if (allFingersOff) gestureHadMultiTouch = false;
     }
     cv.addEventListener('pointerup',     pointerUpOrCancel, true);
     cv.addEventListener('pointercancel', pointerUpOrCancel, true);

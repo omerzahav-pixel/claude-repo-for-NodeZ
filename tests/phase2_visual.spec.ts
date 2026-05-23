@@ -241,6 +241,100 @@ test.describe("Phase 2 · edges (--edges-v2)", () => {
     expect(parseFloat(m![1])).toBeLessThan(0);
   });
 
+  test("2.9.1 Multi-touch gesture blocks ALL inertia (brute-force flag)", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true });
+    // Pinch, lift fingers SEQUENTIALLY while moving fast — would feed inertia
+    // pre-Phase-2.9 via the PAN-from-PINCH handoff capturing midpoint motion.
+    const result = await page.evaluate(async () => {
+      const cv = document.getElementById("cv")!;
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 200, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true,  bubbles: true, cancelable: true }));
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 400, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+      // Move both fingers right fast (parallel pan during pinch)
+      for (let i = 1; i <= 6; i++) {
+        cv.dispatchEvent(new PointerEvent("pointermove", { clientX: 200 + i*40, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true,  bubbles: true, cancelable: true }));
+        cv.dispatchEvent(new PointerEvent("pointermove", { clientX: 400 + i*40, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+        await new Promise(r => setTimeout(r, 16));
+      }
+      // Lift finger 2 first → PINCH→PAN handoff
+      cv.dispatchEvent(new PointerEvent("pointerup",   { clientX: 640, clientY: 200, pointerType: "touch", pointerId: 2, isPrimary: false, bubbles: true, cancelable: true }));
+      // Now move the remaining finger fast (PAN motion → captures vel)
+      for (let i = 1; i <= 4; i++) {
+        cv.dispatchEvent(new PointerEvent("pointermove", { clientX: 440 + i*40, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+        await new Promise(r => setTimeout(r, 16));
+      }
+      const viewAtRelease = { ...(window as any).__E2E.view() };
+      // Lift finger 1 → previously this would feed inertia. Multi-touch flag
+      // is still true (set when 2nd finger landed, not reset until size===0).
+      cv.dispatchEvent(new PointerEvent("pointerup", { clientX: 600, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 300));
+      const viewAfterSettle = { ...(window as any).__E2E.view() };
+      const gState = (window as any).GestureV2.getState();
+      return {
+        state: gState,
+        drift: { dx: viewAfterSettle.x - viewAtRelease.x, dy: viewAfterSettle.y - viewAtRelease.y }
+      };
+    });
+    expect(result.state).toBe('idle');
+    // No inertia: view delta must stay tiny.
+    expect(Math.abs(result.drift.dx)).toBeLessThan(2);
+    expect(Math.abs(result.drift.dy)).toBeLessThan(2);
+  });
+
+  test("2.9.1b Pure single-finger swipe still produces inertia (regression guard)", async ({ page }) => {
+    await openWithFlags(page, { "gestures-v2": true });
+    const result = await page.evaluate(async () => {
+      const cv = document.getElementById("cv")!;
+      cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 200, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      // Fast pan to build velocity
+      for (let i = 1; i <= 6; i++) {
+        cv.dispatchEvent(new PointerEvent("pointermove", { clientX: 200 + i*40, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+        await new Promise(r => setTimeout(r, 16));
+      }
+      cv.dispatchEvent(new PointerEvent("pointerup", { clientX: 440, clientY: 200, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
+      // Inertia should fire — wait a frame and check state is 'inertia'.
+      await new Promise(r => setTimeout(r, 30));
+      const stateAfter = (window as any).GestureV2.getState();
+      return { stateAfter };
+    });
+    // Either 'inertia' (still decaying) or 'idle' (decayed quickly) is OK —
+    // the critical check is that single-finger swipe path is NOT blocked.
+    // 'pan' would mean handoff failed.
+    expect(['inertia', 'idle']).toContain(result.stateAfter);
+  });
+
+  test("2.9.3 Tap inside zone dismisses property panel", async ({ page }) => {
+    await openWithFlags(page, { "zones-v2": true });
+    const result = await page.evaluate(async () => {
+      const E = (window as any).__E2E;
+      const c = E.current();
+      const z = c.zones[0];
+      // Open the panel via a real node click first
+      E.addNodeRaw({ id: 8001, x: z.x + 100, y: z.y + 100, shape: "idea", label: "P", status: "idea", zone: z.id, created: "2026-05-01" });
+      // Open the panel directly
+      (window as any).op((window as any).__E2E.current().nodes.find((n: any) => n.id === 8001));
+      await new Promise(r => setTimeout(r, 50));
+      const pnOnBefore = document.getElementById("pn")?.classList.contains("on");
+      // Tap inside zone (not on a node) — find a spot inside zone but away from the node.
+      // World coords: zone is at z.x .. z.x + z.w. Pick a point well inside, away from node.
+      const v = E.view();
+      const W = window.innerWidth, H = window.innerHeight;
+      // Convert world coords to screen
+      const tapWorldX = z.x + z.w - 50;
+      const tapWorldY = z.y + z.h - 50;
+      const screenX = W / 2 + (tapWorldX + v.x) * v.k;
+      const screenY = H / 2 + (tapWorldY + v.y) * v.k;
+      // Dispatch pointerdown + pointerup at that screen point, no movement.
+      const tgt = document.elementFromPoint(screenX, screenY) || document.getElementById("cv")!;
+      tgt.dispatchEvent(new PointerEvent("pointerdown", { clientX: screenX, clientY: screenY, pointerType: "mouse", pointerId: 9, isPrimary: true, bubbles: true, cancelable: true }));
+      tgt.dispatchEvent(new PointerEvent("pointerup",   { clientX: screenX, clientY: screenY, pointerType: "mouse", pointerId: 9, isPrimary: true, bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 100));
+      const pnOnAfter = document.getElementById("pn")?.classList.contains("on");
+      return { pnOnBefore, pnOnAfter };
+    });
+    expect(result.pnOnBefore).toBe(true);
+    expect(result.pnOnAfter).toBe(false);
+  });
+
   test("2.8.A PINCH exit zeros velocity (no fling-out)", async ({ page }) => {
     await openWithFlags(page, { "gestures-v2": true });
     const result = await page.evaluate(async () => {

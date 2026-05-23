@@ -75,13 +75,18 @@
     return groupOpen + paths + (extraGlyphs || '') + halo + statusDot + '</g>';
   }
 
-  // ── 1. project — wedge-rim card + workspace-accent left rim + drill chip ──
+  // ── 1. project — wedge card + drill chip (Phase 2.9 Fix 2: rim removed).
+  //   The amber left-rim accent was visual icing on top of the project's
+  //   already-distinct silhouette + drill chip + metadata label. Four
+  //   attempts to eliminate the orange residue on iPad (universal tap-
+  //   highlight reset, compositor-layer isolation, edge-route in-place
+  //   audit, label-transform live update) failed to converge. Pragmatic
+  //   call: drop the rim entirely. The project type remains identifiable
+  //   from its silhouette shape and the drill chevron (when it has a
+  //   child canvas). Workspace accent now manifests only via selection
+  //   ring and the freshness halo on the status dot.
   function project(node, ctx) {
     const w = S * 1.05, h = S * 0.75, r = 10;
-    const accent = workspaceAccent(ctx);
-    const rim = ctx.rtl
-      ? `<rect x="${node.x + w - 4}" y="${node.y - h}" width="4" height="${h*2}" fill="${accent}"/>`
-      : `<rect x="${node.x - w}"     y="${node.y - h}" width="4" height="${h*2}" fill="${accent}"/>`;
     const body = `<rect x="${node.x - w}" y="${node.y - h}" width="${w*2}" height="${h*2}" rx="${r}" fill="var(--srf-3,#1E232B)" stroke="var(--line-2,rgba(255,255,255,0.10))" stroke-width="1"/>`;
     // Drill chip — small chevron on trailing edge if node has childCanvas.
     const drill = node.childCanvas
@@ -89,7 +94,7 @@
           ? `<path d="M ${node.x - w + 12} ${node.y + h - 7} l 4 -4 l -4 -4" fill="none" stroke="${INK_3}" stroke-width="1.5" stroke-linecap="round"/>`
           : `<path d="M ${node.x + w - 12} ${node.y + h - 7} l -4 -4 l 4 -4" fill="none" stroke="${INK_3}" stroke-width="1.5" stroke-linecap="round"/>`)
       : '';
-    return { sh: compose(node, ctx, body + rim, w, h, r, drill), w, h, r };
+    return { sh: compose(node, ctx, body, w, h, r, drill), w, h, r };
   }
 
   // ── 2. idea — full pill + faint Instrument-Serif watermark ──

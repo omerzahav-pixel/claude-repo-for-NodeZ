@@ -1259,8 +1259,19 @@ function cp(){aFlush();autosaveSnapped=false;panelDetailsOpen=false;sel=null;pn.
   }
   function isInteractiveCanvasTarget(t){
     if (!t || !t.closest) return false;
-    // Anything that the existing pointer handlers already recognise.
-    return !!(t.closest('.node, g.node, .nslice, .nrz, .zh, .zd, .zone, .edge, [data-edge]'));
+    /* Phase 2.9 Fix 3 — taps inside a zone (not on a node) must dismiss
+       the property panel like an empty-canvas tap. Removed `.zd` (zone
+       fill drag-handle) and `.zone` from the bail list so the dismiss-
+       tracking arms. Zone DRAG still works because the existing app.js
+       pointer handlers also fire on the same event; if the user moves
+       > 10px before pointerup, our dismiss listener bails on motion and
+       app.js's beginInteraction → drag={k:'zone',...} runs normally.
+       What stays in the list:
+         .node / g.node / .nslice  — node tap selects/toggles the node
+         .nrz                       — node resize handle
+         .zh                        — zone resize handle
+         .edge / [data-edge]        — edge interaction (custom edge ctx menu) */
+    return !!(t.closest('.node, g.node, .nslice, .nrz, .zh, .edge, [data-edge]'));
   }
   document.addEventListener('pointerdown', e => {
     if (!pn.classList.contains('on')) { downActive = false; return; }
