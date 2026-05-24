@@ -86,18 +86,14 @@
        machine). */
     let gestureHadMultiTouch = false;
 
-    /* Phase 2.8 B — high-level gesture event dispatch.
-       The state machine surfaces these as window.onCanvasLongPress /
-       window.onCanvasDoubleTap callbacks; app.js registers the existing
-       "add node here" UX against them. Gesture.js stays the producer of
-       low-level events; app.js stays the consumer that decides UX. */
+    /* Sprint 3 preamble 1 — only long-press dispatch remains; double-tap
+       was removed at user request. The state machine surfaces long-press
+       as window.onCanvasLongPress; app.js registers the existing
+       "add node / add zone here" UX against it. */
     const LONG_PRESS_MS = 500;
-    const DOUBLE_TAP_MS = 350;
-    const DOUBLE_TAP_DIST_PX = 30;
     const HOLD_MOVE_TOL_PX = 8;
     let longPressTimer = null;
     let longPressTouchStart = null;
-    let lastTap = { t: 0, x: 0, y: 0 };
 
     function clearLongPress() {
       if (longPressTimer != null) { clearTimeout(longPressTimer); longPressTimer = null; }
@@ -106,11 +102,6 @@
     function fireLongPress(x, y, target) {
       if (typeof window.onCanvasLongPress === 'function') {
         try { window.onCanvasLongPress({ x, y, target }); } catch (e) { console.error('[ES onCanvasLongPress]', e); }
-      }
-    }
-    function fireDoubleTap(x, y, target) {
-      if (typeof window.onCanvasDoubleTap === 'function') {
-        try { window.onCanvasDoubleTap({ x, y, target }); } catch (e) { console.error('[ES onCanvasDoubleTap]', e); }
       }
     }
 
@@ -426,36 +417,10 @@
         return;
       }
 
-      /* Phase 2.8 B — double-tap detection. If this pointerup ends a
-         touch that didn't move much AND there was a prior touchend within
-         350ms within 30px, fire window.onCanvasDoubleTap. Only for empty-
-         canvas releases (longPressTouchStart was armed → target was canvas).
-         A successful long-press already fired; that path also clears
-         longPressTimer so we won't re-fire here. */
-      const movedThisGesture = longPressTouchStart
-        ? (Math.abs(e.clientX - longPressTouchStart.x) > HOLD_MOVE_TOL_PX ||
-           Math.abs(e.clientY - longPressTouchStart.y) > HOLD_MOVE_TOL_PX)
-        : true;
-      if (e.pointerType === 'touch' && longPressTouchStart && !movedThisGesture) {
-        const now = performance.now();
-        const dxTap = Math.abs(e.clientX - lastTap.x);
-        const dyTap = Math.abs(e.clientY - lastTap.y);
-        if (now - lastTap.t < DOUBLE_TAP_MS && dxTap < DOUBLE_TAP_DIST_PX && dyTap < DOUBLE_TAP_DIST_PX) {
-          // Second tap of a double-tap pair. Capture target BEFORE
-          // clearLongPress (which nulls longPressTouchStart).
-          const tgt = longPressTouchStart.target;
-          clearLongPress();
-          lastTap.t = 0; // consume so a triple-tap doesn't re-fire
-          // Suppress pan inertia for the tap.
-          vel.x = 0; vel.y = 0;
-          fireDoubleTap(e.clientX, e.clientY, tgt);
-          setState('idle');
-          return;
-        }
-        // First tap: record and let the timer continue (long-press might
-        // still fire if user holds; double-tap windows the second touch).
-        lastTap = { t: now, x: e.clientX, y: e.clientY };
-      }
+      /* Sprint 3 preamble 1 — double-tap-to-add-node removed per user
+         feedback. Long-press still opens "add node / add zone" prompt.
+         Only the second-tap-fires-add path is gone; first-tap recording
+         and lastTap state are also stripped since nothing reads them. */
       clearLongPress();
 
       // Pan end: maybe enter inertia.

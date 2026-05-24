@@ -34,7 +34,11 @@
     'silhouettes':   false,   // §03 · 10 distinct node silhouettes + freshness halo
     'edges-v2':      false,   // §06 · 8 edge types + routing + auto-legend
     'zones-v2':      false,   // §08 · 6%-fill + dashed border + DOM sticky chip
-    'rtl-v2':        false    // RTL addendum · logical props + auto-script-break editor
+    'rtl-v2':        false,   // RTL addendum · logical props + auto-script-break editor
+    // Phase 3 (Pass 4 — navigation)
+    'nav-v2':        false,   // §01 · workspace spine + canvas drawer
+    'palette':       false,   // §02 · ⌘K command palette
+    'views-v2':      false    // §03 · 5 view modes (Canvas/List/Kanban/Timeline/Weak-spot)
   });
 
   const STORAGE_KEY = 'edgespace-flags';

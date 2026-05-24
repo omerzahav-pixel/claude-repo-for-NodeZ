@@ -1255,7 +1255,7 @@ function cp(){aFlush();autosaveSnapped=false;panelDetailsOpen=false;sel=null;pn.
   const DISMISS_THRESHOLD_PX = 10;
   let downX = 0, downY = 0, downActive = false;
   function isFloatingUi(t){
-    return !!(t && t.closest && t.closest('#pn,#more,#ctx,#ep,#dlg,#modal,#landing,#sb,#tb,#bc,#tabs,#lg,#lgBtn,#zoneChips,#edgeLegend,#perfHud,#emptyState,#fl'));
+    return !!(t && t.closest && t.closest('#pn,#more,#ctx,#ep,#dlg,#modal,#landing,#sb,#tb,#bc,#tabs,#lg,#lgBtn,#zoneChips,#edgeLegend,#edgeControls,#perfHud,#emptyState,#fl,#spine,#drawer,#topbar,#viewTabs,#palette,#viewStage'));
   }
   function isInteractiveCanvasTarget(t){
     if (!t || !t.closest) return false;
@@ -1728,17 +1728,12 @@ window.onCanvasLongPress = function(pos) {
   if (!pos) return;
   // Bail if the touch landed on a UI overlay (defensive — gesture.js
   // already filters node/zone targets but not toolbar/sidebar chrome).
-  if (pos.target && pos.target.closest && pos.target.closest('#tb,#sb,#fl,#bc,#more,#ctx,#ep,#dlg,#modal,#landing,#pn,#tabs,#lg,#lgBtn,#perfHud,#zoneChips,#edgeLegend,#emptyState')) return;
+  if (pos.target && pos.target.closest && pos.target.closest('#tb,#sb,#fl,#bc,#more,#ctx,#ep,#dlg,#modal,#landing,#pn,#tabs,#lg,#lgBtn,#perfHud,#zoneChips,#edgeLegend,#emptyState,#spine,#drawer,#topbar,#viewTabs,#palette,#viewStage')) return;
   const w = s2w(pos.x, pos.y);
   showCanvasCtx(pos.x, pos.y, w);
 };
-window.onCanvasDoubleTap = function(pos) {
-  if (!pos) return;
-  if (pos.target && pos.target.closest && pos.target.closest('#tb,#sb,#fl,#bc,#more,#ctx,#ep,#dlg,#modal,#landing,#pn,#tabs,#lg,#lgBtn,#perfHud,#zoneChips,#edgeLegend,#emptyState')) return;
-  const w = s2w(pos.x, pos.y);
-  const n = addNode(w.x, w.y);
-  sel = n; op(n);
-};
+// Sprint 3 preamble 1 — window.onCanvasDoubleTap intentionally NOT
+// registered. Double-tap-to-add-node was removed at user request.
 async function recolorZone(zid){const c=await uiPrompt(S.hebrewMode?'צבע (hex)':'Zone color','',{placeholder:'#d97757',hint:'Hex color, e.g. #d97757'});if(!c)return;sn();const z=zs().find(x=>x.id===zid);if(z)z.color=c;sv();render();bF()}
 function addNodeAt(x,y){const n=addNode(x,y);sel=n;op(n)}
 async function addZoneAt(x,y){const name=await uiPrompt('New zone','New Zone');if(!name)return;sn();const id='z-'+Date.now();const colors=['#8b7ba8','#6b8cb0','#5fa3a8','#7aa882','#c48a9b','#c9896a','#7d7569','#b07ba8','#6ba8a0'];const c=colors[zs().length%colors.length];zs().push({id,name,x:x-250,y:y-180,w:500,h:360,color:c});sv();render();bF()}

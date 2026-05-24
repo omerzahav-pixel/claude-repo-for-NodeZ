@@ -199,8 +199,20 @@
 <script src="./js/canvas/halo.js"></script>
 <script src="./js/canvas/silhouettes.js"></script>
 <script src="./js/canvas/edge-v2.js"></script>
+<script src="./js/canvas/edge-controls.js"></script>
 <script src="./js/canvas/zones-v2.js"></script>
 <script src="./js/editor/script-boundary.js"></script>
 <script src="./app.js"></script>
+<!-- Phase 3 (Pass 4) · navigation chrome. Loads AFTER app.js so the
+     spine/drawer/palette modules can wrap window.render etc. -->
+<script src="./js/chrome/spine.js"></script>
+<script src="./js/chrome/drawer.js"></script>
+<script src="./js/search/index.js"></script>
+<script src="./js/chrome/palette.js"></script>
+<script src="./js/views/list.js"></script>
+<script src="./js/views/kanban.js"></script>
+<script src="./js/views/timeline.js"></script>
+<script src="./js/views/weakspot.js"></script>
+<script src="./js/chrome/view-tabs.js"></script>
 </body>
 </html>

@@ -388,23 +388,22 @@ test.describe("Phase 2 · edges (--edges-v2)", () => {
     expect(fired!.y).toBe(350);
   });
 
-  test("2.8.B Double-tap on empty canvas fires window.onCanvasDoubleTap", async ({ page }) => {
+  test("Sprint3.P1 Double-tap on empty canvas no longer fires (removed per user)", async ({ page }) => {
     await openWithFlags(page, { "gestures-v2": true });
     const fired = await page.evaluate(async () => {
-      let called: { x: number; y: number } | null = null;
+      let called: any = null;
       (window as any).onCanvasDoubleTap = (p: any) => { called = { x: p.x, y: p.y }; };
       const cv = document.getElementById("cv")!;
-      // first tap
       cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 600, clientY: 300, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
       cv.dispatchEvent(new PointerEvent("pointerup",   { clientX: 600, clientY: 300, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
       await new Promise(r => setTimeout(r, 100));
-      // second tap within 350ms
       cv.dispatchEvent(new PointerEvent("pointerdown", { clientX: 602, clientY: 301, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
       cv.dispatchEvent(new PointerEvent("pointerup",   { clientX: 602, clientY: 301, pointerType: "touch", pointerId: 1, isPrimary: true, bubbles: true, cancelable: true }));
       await new Promise(r => setTimeout(r, 50));
       return called;
     });
-    expect(fired).toBeTruthy();
+    // After removal, the callback must never fire even with a "valid" double-tap sequence.
+    expect(fired).toBeNull();
   });
 
   test("2.8.C Edge label transforms update during node drag (label-residue fix)", async ({ page }) => {
