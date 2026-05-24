@@ -199,8 +199,79 @@
     // writes, the existing handlers detect Flags.on('gestures-v2') and bail
     // (see app.js patches).
 
+    /* Sprint 3.3 Issue 4 — gesture state watchdog. iOS occasionally drops
+       a `pointerup`/`pointercancel` (most commonly when a finger lifts at
+       the screen edge), leaving a stale entry in activePtrs forever.
+       Next time the user starts a new gesture, activePtrs.size jumps
+       from 1 (stale) to 2 (stale + new), tripping the PINCH branch — the
+       user reports "pan it zooms". The watchdog:
+         · garbage-collects pointer entries older than POINTER_STALE_MS
+           on every event
+         · if state is PINCH but live activePtrs.size < 2 → force IDLE
+         · if state is PAN but live activePtrs.size === 0 → force IDLE
+       Combined with the visibilitychange / window.blur full reset below
+       this catches every known stuck-state path. */
+    const POINTER_STALE_MS = 5_000;
+    const pointerSeen = new Map(); // pointerId → ts of last event
+    function noteSeen(e) {
+      pointerSeen.set(e.pointerId, performance.now());
+    }
+    function gcStalePointers() {
+      const now = performance.now();
+      for (const [pid, ts] of pointerSeen) {
+        if (now - ts > POINTER_STALE_MS) {
+          pointerSeen.delete(pid);
+          activePtrs.delete(pid);
+        }
+      }
+    }
+    function reconcileState() {
+      /* IMPORTANT: do NOT re-evaluate `gestureHadMultiTouch` here. That
+         flag is the Phase 2.9 brute-force "no inertia after multi-touch"
+         guard, and must STAY true for the rest of the gesture even after
+         the second finger lifts. Setting it from `activePtrs.size >= 2`
+         per-event would let inertia fire on the PINCH→PAN→up handoff,
+         breaking test 2.9.1.
+         What we DO recover here: stuck state. If state is PINCH but only
+         one (or zero) finger is live, we lost a touchend — drop pinch
+         baseline and demote to pan/idle. The gc'd-pointers reset path
+         (5s staleness above) handles the corollary: a brand-new gesture
+         starts with empty activePtrs, so a stale finger never poisons
+         the next user interaction. */
+      if (state === 'pinch' && activePtrs.size < 2) {
+        pinch = null;
+        vel.x = 0; vel.y = 0;
+        pendingDx = 0; pendingDy = 0;
+        if (rafInertia != null) { cancelAnimationFrame(rafInertia); rafInertia = null; }
+        if (rafPan != null) { cancelAnimationFrame(rafPan); rafPan = null; }
+        state = (activePtrs.size === 1) ? 'pan' : 'idle';
+      }
+      if (state === 'pan' && activePtrs.size === 0) {
+        state = 'idle';
+      }
+    }
+    /* Full state reset on visibility/blur. Tab switching or app-switching
+       on iPad reliably orphans in-flight touches. */
+    function fullReset() {
+      activePtrs.clear();
+      pointerSeen.clear();
+      gestureHadMultiTouch = false;
+      pinch = null;
+      vel.x = 0; vel.y = 0;
+      pendingDx = 0; pendingDy = 0;
+      if (rafInertia != null) { cancelAnimationFrame(rafInertia); rafInertia = null; }
+      if (rafPan != null) { cancelAnimationFrame(rafPan); rafPan = null; }
+      state = 'idle';
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') fullReset();
+    });
+    window.addEventListener('blur', fullReset);
+
     cv.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse' && e.button === 2) return; // right-click → ctx menu
+      noteSeen(e);
+      gcStalePointers();
       /* Phase 2.9 Fix 1 — start-of-gesture reset. If no pointers were
          tracked before this one, this is the start of a fresh gesture
          lifetime. Reset the multi-touch flag so a previous gesture's
@@ -315,6 +386,9 @@
     }, true);
 
     cv.addEventListener('pointermove', function (e) {
+      noteSeen(e);
+      gcStalePointers();
+      reconcileState();
       const rec = activePtrs.get(e.pointerId);
       if (rec) { rec.x = e.clientX; rec.y = e.clientY; }
 
@@ -378,7 +452,17 @@
     }, true);
 
     function pointerUpOrCancel(e) {
+      pointerSeen.delete(e.pointerId);
       activePtrs.delete(e.pointerId);
+      /* Sprint 3.3 Issue 4 — treat pointercancel and pointerup identically
+         and immediately reconcile state. Without this, a pointercancel
+         that arrives mid-pinch could leave activePtrs in a half-state.
+         The original code was already calling pointerUpOrCancel for both
+         events, but the watchdog adds an extra safety net. */
+      if (e.type === 'pointercancel') {
+        gcStalePointers();
+        reconcileState();
+      }
 
       /* Phase 2.8 A — PINCH exit MUST zero velocity unconditionally.
          The pinch midpoint moves very fast during a normal pinch (each

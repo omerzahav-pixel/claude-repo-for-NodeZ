@@ -58,6 +58,11 @@
         window.Drawer.toggle();
         return;
       }
+      /* Sprint 3.3 Issue 7 — gear chip opens the Tools panel. */
+      if (act === 'tools-toggle' && window.ToolsPanel && typeof window.ToolsPanel.toggle === 'function') {
+        window.ToolsPanel.toggle();
+        return;
+      }
     });
     render();
     // Re-render when workspaces change. The existing app.js code doesn't
@@ -127,6 +132,9 @@
       '<div class="spine-top">' + chips + '</div>' +
       '<div class="spine-bot">' +
         '<button class="ws-chip add" data-act="new-ws" title="New workspace">+</button>' +
+        /* Sprint 3.3 Issue 7 — Tools chip opens the slide-out panel that
+           replaces the old top toolbar (import / export / add zone / etc). */
+        '<button class="sb tools" data-act="tools-toggle" aria-label="Tools" title="Tools (Import · Export · Add zone · More)">⚙</button>' +
         '<button class="sb" data-act="drawer-toggle" aria-label="Toggle drawer" title="Toggle drawer">☰</button>' +
       '</div>';
     /* Sprint 3.2 Issue 7 — actions wired via root-level event delegation

@@ -78,11 +78,24 @@
   }
 
   /**
-   * Compute the 8 magnetic anchors for a node bounding box.
+   * Sprint 3.3 Issue 2a — node visible half-extents.
+   * For notes/formulas that set node._w/_h explicitly in app.js, use those.
+   * Otherwise default to 42 (the silhouette `s` constant used by every
+   * other shape in app.js). The old 80/60 defaults were ~2x the visible
+   * silhouette, which left a ~38 px gap between the edge endpoint and
+   * the node outline ("edges stop right before actually touching the node").
+   */
+  function halfExtents(n) {
+    if (n._w && n._h) return { w: n._w, h: n._h };
+    return { w: 42, h: 42 };
+  }
+
+  /**
+   * Compute the 8 magnetic anchors for a node.
    * Mid-edges (4) at strength 1.0, corners (4) at strength 0.5.
    */
   function anchors(n) {
-    const w = (n._w || 80), h = (n._h || 60);
+    const { w, h } = halfExtents(n);
     return [
       // 4 mid-edges
       { x: n.x,     y: n.y - h, s: 1.0 },  // top
@@ -97,18 +110,34 @@
     ];
   }
 
-  /** Best anchor on `n` for an edge heading toward `target`. */
+  /**
+   * Best anchor on `n` for an edge heading toward `target`.
+   *
+   * Sprint 3.3 Issue 2b — was a strength-weighted score `s * (1000 - d)`
+   * that flipped sign for d > 1000 (long distances on big canvases),
+   * which inverted the preference and made corners win over mid-edges.
+   * Now: pick best mid-edge by distance and best corner by distance,
+   * then prefer the mid-edge unless the corner is more than 30 % closer.
+   * Matches what users expect — "bottom of source" should connect to
+   * "top mid-edge of target" when the target is directly below.
+   */
   function bestAnchor(n, target) {
     const cands = anchors(n);
-    let best = cands[0], bestScore = -Infinity;
-    for (const a of cands) {
-      const dx = target.x - a.x, dy = target.y - a.y;
-      const d  = Math.hypot(dx, dy) || 1;
-      // Prefer anchors near the target, weighted by strength.
-      const score = a.s * (1000 - d);
-      if (score > bestScore) { bestScore = score; best = a; }
+    const dist = (a) => Math.hypot(target.x - a.x, target.y - a.y);
+    let bestMid = cands[0], bestMidD = dist(cands[0]);
+    for (let i = 1; i < 4; i++) {
+      const d = dist(cands[i]);
+      if (d < bestMidD) { bestMid = cands[i]; bestMidD = d; }
     }
-    return best;
+    let bestCorner = cands[4], bestCornerD = dist(cands[4]);
+    for (let i = 5; i < 8; i++) {
+      const d = dist(cands[i]);
+      if (d < bestCornerD) { bestCorner = cands[i]; bestCornerD = d; }
+    }
+    // If the corner is < 70 % the mid-edge distance → corner is genuinely
+    // closer by a meaningful margin, use it. Otherwise stick with the
+    // mid-edge for visual cleanliness.
+    return (bestCornerD < bestMidD * 0.7) ? bestCorner : bestMid;
   }
 
   /** Build the cubic-spline path between two anchors. */

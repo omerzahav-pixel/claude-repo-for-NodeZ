@@ -36,9 +36,11 @@
     'zones-v2':      false,   // §08 · 6%-fill + dashed border + DOM sticky chip
     'rtl-v2':        false,   // RTL addendum · logical props + auto-script-break editor
     // Phase 3 (Pass 4 — navigation)
-    'nav-v2':        false,   // §01 · workspace spine + canvas drawer
-    'palette':       false,   // §02 · ⌘K command palette
-    'views-v2':      false    // §03 · 5 view modes (Canvas/List/Kanban/Timeline/Weak-spot)
+    'nav-v2':            false, // §01 · workspace spine + canvas drawer
+    'palette':           false, // §02 · ⌘K command palette
+    'views-v2':          false, // §03 · 5 view modes (Canvas/List/Kanban/Timeline/Weak-spot)
+    // Sprint 3.3 (transition flag — Issue 7)
+    'toolbar-migrated':  false  // hide #tb top toolbar in favour of the spine Tools panel
   });
 
   const STORAGE_KEY = 'edgespace-flags';

@@ -365,7 +365,13 @@ const s2w=(x,y)=>({x:(x-innerWidth/2)/view.k-view.x,y:(y-innerHeight/2)/view.k-v
 const C=()=>S.canvases[S.current],zs=()=>C().zones,ns=()=>C().nodes,es=()=>C().edges;
 const zoneAt=(x,y)=>{for(const z of zs())if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h)return z.id;return zs()[0]?.id||null};
 const DB_NAME='ideaVault',DB_STORE='state';
+/* Sprint 3.3 Issue 1 — module-scope `let` doesn't go on window, which is
+   why spine.js / drawer.js's `window.currentWs` reads were falling back
+   to the literal 'workspace' and the workspace-name label stayed stale.
+   The setter below + the bootstrap reader mirror to window.currentWs so
+   the chrome modules see the live value. */
 let currentWs='workspace';
+try { window.currentWs = currentWs; } catch (e) {}
 const KEY=()=>'vault3-'+currentWs;
 const WS_LIST_KEY='vault3-workspaces';
 const HE_KEY='vault3-he';
@@ -377,7 +383,7 @@ async function storageSet(k,v){let ok=false;try{if('indexedDB' in window){await 
 async function listWorkspaces(){const v=await storageGet(WS_LIST_KEY);if(v)try{return JSON.parse(v)}catch(e){}return ['workspace']}
 async function saveWorkspaces(list){await storageSet(WS_LIST_KEY,JSON.stringify(list))}
 async function getCurrentWs(){const v=await storageGet('vault3-current-ws');return v||'workspace'}
-async function setCurrentWs(ws){await storageSet('vault3-current-ws',ws);currentWs=ws}
+async function setCurrentWs(ws){await storageSet('vault3-current-ws',ws);currentWs=ws;try{window.currentWs=ws}catch(e){}}
 /* Phase 5 P2 — workspace color coding. Derive a stable hue from the name
    so every workspace has an instant-recognition color across devices,
    without any per-workspace picker or storage migration. Same string →
@@ -479,7 +485,7 @@ async function load(){
   // their face on every page load.
   const step=(m,ok)=>{window.dbg&&window.dbg('SYS',(ok===false?'✗ ':'✓ ')+m)};
   step('load() started');
-  try{currentWs=await getCurrentWs();step('getCurrentWs: '+currentWs)}catch(e){step('getCurrentWs FAIL: '+e.message,false);currentWs='workspace'}
+  try{currentWs=await getCurrentWs();try{window.currentWs=currentWs}catch(e){}step('getCurrentWs: '+currentWs)}catch(e){step('getCurrentWs FAIL: '+e.message,false);currentWs='workspace';try{window.currentWs=currentWs}catch(e2){}}
   try{await loadWsColors();step('loadWsColors OK')}catch(e){step('loadWsColors FAIL: '+e.message,false)}
   let list;try{list=await listWorkspaces();step('listWorkspaces: '+JSON.stringify(list))}catch(e){step('listWorkspaces FAIL: '+e.message,false);list=['workspace']}
   if(!list.includes(currentWs)){list.push(currentWs);try{await saveWorkspaces(list);step('saveWorkspaces OK')}catch(e){step('saveWorkspaces FAIL: '+e.message,false)}}

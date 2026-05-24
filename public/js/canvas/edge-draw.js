@@ -63,8 +63,12 @@
     };
   }
 
+  /* Sprint 3.3 Issue 2 — keep in sync with edge-v2.halfExtents:
+     visible silhouette half-radius is ~42, not 80/60. The dots sat
+     ~38 px outside the node before. */
   function nodeHalfExtents(n) {
-    return { w: n._w || 80, h: n._h || 60 };
+    if (n._w && n._h) return { w: n._w, h: n._h };
+    return { w: 42, h: 42 };
   }
 
   function anchorWorld(node, side) {
