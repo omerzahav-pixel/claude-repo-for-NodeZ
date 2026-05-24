@@ -164,8 +164,16 @@
     const path    = cubicPath(anchorA, anchorB, opts.fanOffset || 0);
     const dash    = s.dash === 'none' ? '' : `stroke-dasharray="${s.dash}"`;
     const op      = (opts.opacity != null ? opts.opacity : (s.opacity || 1)) * (opts.dim ? 0.18 : 1);
-    const stroke  = `<path class="e2 e2-${edge.type||'feeds'}" data-edge="${edge.id}" d="${path.d}" fill="none" stroke="${s.hue}" stroke-width="${s.w}" ${dash} marker-end="url(#e2-${edge.type||'feeds'})" opacity="${op.toFixed(3)}" stroke-linecap="round"/>`;
-    if (!opts.showLabel) return stroke;
+    /* Sprint 3.1 Issue 2 — emit an invisible 20-px-stroke hit-target FIRST,
+       then the visible path. Both carry the same data-edge id so existing
+       selectors keep working; the hit path uses pointer-events="stroke" so
+       only the fat stroke band catches taps. liveRouteForNode() updates
+       BOTH paths (querySelectorAll) so the hit zone tracks the visible
+       edge during node-drag. */
+    const hit     = `<path class="e2-hit" data-edge="${edge.id}" d="${path.d}" fill="none" stroke="transparent" stroke-width="20" pointer-events="stroke"/>`;
+    const stroke  = `<path class="e2 e2-${edge.type||'feeds'}" data-edge="${edge.id}" d="${path.d}" fill="none" stroke="${s.hue}" stroke-width="${s.w}" ${dash} marker-end="url(#e2-${edge.type||'feeds'})" opacity="${op.toFixed(3)}" stroke-linecap="round" pointer-events="none"/>`;
+    const strokePair = hit + stroke;
+    if (!opts.showLabel) return strokePair;
     // Label sits at the path midpoint with background clip.
     const mx = (anchorA.x + 3 * path.c1.x + 3 * path.c2.x + anchorB.x) / 8;
     const my = (anchorA.y + 3 * path.c1.y + 3 * path.c2.y + anchorB.y) / 8;
@@ -189,7 +197,7 @@
        midpoint while the path itself moved — leaving orange-bordered chips
        drifting behind a dragged node ("orange residue"). */
     const labelSvg = `<g data-edge-label="${edge.id}" transform="translate(${mx} ${my}) rotate(${ang.toFixed(1)})"><foreignObject x="-64" y="-16" width="128" height="32" style="pointer-events:none;overflow:visible"><div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;justify-content:center;align-items:center;height:100%"><span style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:var(--font-sans,Inter);font-size:${fsize}px;color:${s.hue};background:var(--bg,#08090C);border-width:1px;border-style:solid;border-color:${s.hue};border-radius:4px;padding:2px 8px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;box-sizing:border-box;line-height:1.2">${escHtml(text)}</span></div></foreignObject></g>`;
-    return stroke + labelSvg;
+    return strokePair + labelSvg;
   }
 
   function escHtml(s) {
@@ -330,9 +338,13 @@
         c2 = { x: c2x, y: c2y };
         d = `M ${ax},${ay} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${bx},${by}`;
       }
-      // Selector matches both v1 (.edge) and v2 (.e2) by data-edge id.
-      const path = cv.querySelector(`path[data-edge="${e.id}"]`);
-      if (path) { path.setAttribute('d', d); touched++; }
+      /* Selector matches both v1 (.edge) and v2 (.e2/.e2-hit) by data-edge
+         id. Sprint 3.1 Issue 2 — each edge now renders TWO <path> elements
+         (visible + invisible fat hit-target); update BOTH so the hit zone
+         tracks the visible edge during node-drag. */
+      const paths = cv.querySelectorAll(`path[data-edge="${e.id}"]`);
+      paths.forEach(p => p.setAttribute('d', d));
+      if (paths.length) touched++;
       /* Phase 2.8 C · also reposition the label <g data-edge-label> if it
          exists. Without this, labels stay at their old midpoint while the
          edge path slides under the dragged node — visible as orange-bordered

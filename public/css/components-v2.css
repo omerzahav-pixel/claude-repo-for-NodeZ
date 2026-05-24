@@ -70,9 +70,22 @@
 
 /* =============================================================================
  * Sprint 3 preamble · Edge selection + controls panel.
+ *
+ * Sprint 3.1 Issue 2 — each edge renders TWO <path> elements:
+ *   path.e2-hit   (or .edge-hit)  20-px transparent stroke, pointer target
+ *   path.e2       (or .edge)      thin visible stroke, pointer-events:none
+ * The hit-path catches all taps cleanly even on iPad. The visible path keeps
+ * its existing styling. On selection we add .e2-sel to the visible path.
  * ============================================================================= */
-path.e2 { pointer-events: stroke; cursor: pointer; }
-path.e2-sel { stroke-width: 3px !important; filter: drop-shadow(0 0 4px var(--hot-ring)); }
+path.e2-hit, path.edge-hit {
+  pointer-events: stroke;
+  cursor: pointer;
+  /* Defensive: even though stroke="transparent", make sure nothing renders. */
+  fill: none;
+}
+path.e2, path.edge { cursor: pointer; }
+path.e2-sel,
+path.edge.e2-sel { stroke-width: 3px !important; filter: drop-shadow(0 0 4px var(--hot-ring)); }
 #edgeControls {
   background: var(--srf-3);
   border: 1px solid var(--line-3);
@@ -126,6 +139,62 @@ path.e2-sel { stroke-width: 3px !important; filter: drop-shadow(0 0 4px var(--ho
   display: inline-flex; align-items: center; justify-content: center;
 }
 #edgeControls .ec-trash:hover { background: rgba(248,113,113,0.10); border-color: rgba(248,113,113,0.40); }
+
+/* =============================================================================
+ * Sprint 3.1 Issue 3 · Edge-draw handles (touch-friendly link gesture).
+ *
+ * A 24-px touch target with a 12-px visible dot in the centre. The dot uses
+ * the hot accent so it reads as a live grab affordance. Halo ring around
+ * the dot lifts it off whatever the selected node is sitting on.
+ * ============================================================================= */
+#edgeDrawHandles { /* fixed-position layer set inline by edge-draw.js */ }
+.edge-handle {
+  /* sizing/positioning is inline (per-handle); this rule is for visual style */
+  border-radius: 50%;
+  transition: transform var(--t-fast, 120ms) var(--e-out, ease-out);
+}
+.edge-handle:hover { transform: scale(1.18); }
+.edge-handle:active { transform: scale(0.92); }
+.edge-handle-dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  background: var(--hot, #FF7A45);
+  border: 2px solid var(--hot-ring, rgba(255,122,69,0.45));
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px var(--bg, #08090C),
+    0 0 6px 0 var(--hot-ring, rgba(255,122,69,0.45));
+  pointer-events: none;
+}
+/* Hide during active drag/pan to reduce visual noise. */
+body.dragging .edge-handle { opacity: 0; pointer-events: none; }
+
+/* =============================================================================
+ * Sprint 3.1 Issue 4 · Orange selection-glow residue fix.
+ *
+ * `.nslice.sel` in src/app.css carries a drop-shadow filter for the orange
+ * selection glow. During a drag, the fast-path sets `.nslice` inline
+ * `style.transform = translate(dx, dy)` every pointermove (skipping
+ * render() to avoid the ghost-trail). On iOS WebKit, drop-shadow + inline
+ * transform = the blur backing store gets stuck at the pre-drag position,
+ * leaving a faint orange smudge at the old node spot until the next paint.
+ *
+ * Fix: drop the filter during `body.dragging`. The SVG `<circle class="ring">`
+ * inside the slice (single element per node, slice-attached, no compositor
+ * caching) keeps the user's selection unambiguous during motion. Glow
+ * returns instantly on pointerup.
+ *
+ * Belt-and-suspenders: `will-change: transform` promotes selected slices
+ * to their own compositor layer up-front, so when the drag begins the
+ * layer is already isolated and the filter buffer would lose its source
+ * cleanly even if the !important rule somehow loses cascade priority.
+ * ============================================================================= */
+.nslice.sel { will-change: transform; }
+body.dragging .nslice.sel,
+body.holding .nslice.sel {
+  filter: none !important;
+  transition: none !important;
+}
 
 /* =============================================================================
  * Sprint 3 · Workspace spine + canvas drawer (Pass 4 § 01).

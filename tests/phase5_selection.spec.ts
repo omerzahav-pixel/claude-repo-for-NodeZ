@@ -113,16 +113,18 @@ test.describe("Phase 5 P2 · Selection glow + drag feedback", () => {
     expect(filter!.toLowerCase()).toContain("drop-shadow");
   });
 
-  test("5P2.4 body.dragging + .sel yields a stronger filter than .sel alone", async ({ page }) => {
+  test("5P2.4 body.dragging clears the .sel drop-shadow (Sprint 3.1 Issue 4)", async ({ page }) => {
+    /* Was: dragging brightened the filter. Sprint 3.1 Issue 4 reversed this
+       — the drop-shadow filter is now removed during body.dragging because
+       on iOS WebKit, filter + inline transform leaves the blur backing
+       store stuck at the pre-drag position (visible as orange residue).
+       The SVG <circle class="ring"> inside the slice keeps the selection
+       readable during motion without the compositor cache leak. */
     await openCleanApp(page);
     const { a } = await seedTwoNodes(page);
     const c = await nodeClientCenter(page, a);
     await page.mouse.click(c.x, c.y);
     await page.waitForSelector("#pn.on", { state: "visible", timeout: 2_000 });
-    // Read base filter, then temporarily force body.dragging and read again.
-    // The base→dragging swap runs through an 80ms transition — we wait past
-    // it so getComputedStyle returns the settled value, not an interpolated
-    // mid-transition one.
     const diff = await page.evaluate((id) => {
       const el = document.querySelector(`.nslice[data-nid="${id}"].sel`) as HTMLElement | null;
       if (!el) return null;
@@ -137,11 +139,11 @@ test.describe("Phase 5 P2 · Selection glow + drag feedback", () => {
       });
     }, a);
     expect(diff).not.toBeNull();
+    // Static glow: drop-shadow is present.
     expect(diff!.base).not.toBe("none");
-    expect(diff!.dragging).not.toBe("none");
-    // The strings must differ — the `body.dragging .nslice.sel` rule overrode
-    // the base `.nslice.sel` filter.
-    expect(diff!.dragging).not.toBe(diff!.base);
+    expect(diff!.base.toLowerCase()).toContain("drop-shadow");
+    // During drag: filter is cleared (none or empty per browser normalisation).
+    expect(diff!.dragging === "none" || diff!.dragging === "").toBe(true);
   });
 
   test("5P2.5 multi-select (ctrl+click) tags every selected node with .sel", async ({ page }) => {

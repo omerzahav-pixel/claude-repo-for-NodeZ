@@ -96,10 +96,14 @@
     const input = p.querySelector('.ec-label-input');
     input.oninput = onLabelInput;
     input.onkeydown = (ev) => { if (ev.key === 'Enter') input.blur(); if (ev.key === 'Escape') deselect(); };
-    // Repaint the path itself with the .e2-sel class.
+    /* Sprint 3.1 Issue 2 — each edge now renders TWO paths (visible + fat
+       invisible hit-target). Target the VISIBLE one only: .e2 (v2) or
+       .edge (v1), never the .e2-hit / .edge-hit sibling. */
     document.querySelectorAll('path.e2-sel').forEach(el => el.classList.remove('e2-sel'));
-    const path = document.querySelector('path[data-edge="' + edge.id + '"]');
-    if (path) path.classList.add('e2-sel');
+    const visible = document.querySelector(
+      'path.e2[data-edge="' + edge.id + '"], path.edge[data-edge="' + edge.id + '"]'
+    );
+    if (visible) visible.classList.add('e2-sel');
   }
 
   function cycleType() {
@@ -158,28 +162,35 @@
     const cv = document.getElementById('cv');
     if (!cv) { requestAnimationFrame(installHitTest); return; }
     cv.addEventListener('pointerdown', function (e) {
-      // Look for an edge path under the pointer. e.target may be an
-      // ancestor (<svg>, <g>) on some browsers; use elementFromPoint as
-      // a fallback to find the exact path.
+      /* Sprint 3.1 Issue 2 — find an edge path under the pointer. With the
+         fat invisible hit-target (.e2-hit / .edge-hit, stroke=20), single-
+         finger taps on iPad reliably land here. We check e.target first,
+         then fall through to elementFromPoint to handle browsers that
+         report the parent <svg> as target. */
       let path = null;
       if (e.target && e.target.tagName === 'path' && e.target.hasAttribute('data-edge')) {
         path = e.target;
+      } else if (e.target && e.target.closest && e.target.closest('path[data-edge]')) {
+        path = e.target.closest('path[data-edge]');
       } else {
-        // Fallback: elementFromPoint (after dispatch the target might be cv itself)
         const el = document.elementFromPoint(e.clientX, e.clientY);
-        if (el && el.tagName === 'path' && el.hasAttribute('data-edge')) path = el;
+        if (el && el.closest && el.closest('path[data-edge]')) path = el.closest('path[data-edge]');
       }
+      // Skip edge selection while a node is being dragged — node drag wins.
       if (path) {
         const id = path.getAttribute('data-edge');
         select(id);
+        /* stopImmediatePropagation kills sibling listeners on #cv (the
+           app.js pan / beginInteraction handler is bound to #cv too),
+           which is the only way to prevent it from grabbing the same
+           pointerdown and starting a PAN. */
+        try { e.stopImmediatePropagation(); } catch (_) {}
         try { e.stopPropagation(); } catch (_) {}
         try { e.preventDefault(); } catch (_) {}
         return;
       }
-      // Tap on anything else inside cv → deselect (matches tap-elsewhere).
-      // But only deselect if there's a current selection (cheap check).
+      // Tap on anything else inside cv → deselect.
       if (currentId != null) {
-        // Don't deselect when the user is interacting with our own panel.
         if (e.target && e.target.closest && e.target.closest('#edgeControls')) return;
         deselect();
       }

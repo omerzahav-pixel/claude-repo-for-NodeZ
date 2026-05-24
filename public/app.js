@@ -926,7 +926,12 @@ function render(){
     const edgeDim=dimE||(focusMode&&!edgeFocus);
     const edgeOpacity=edgeDim?(focusMode?0.08:0.18):1;
     const showEdgeLabel=!dimE&&view.k>0.4&&(!focusMode||edgeFocus);
-    h+=`<path class="edge ${e.dim?'dim':''}" data-edge="${e.id}" d="M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}" fill="none" stroke="${et.c}" stroke-width="2.5" marker-end="url(#a-${e.type||'feeds'})" opacity="${edgeOpacity}"/>`;
+    /* Sprint 3.1 Issue 2 — emit an invisible 20-px-stroke hit-target FIRST
+       so iPad taps land reliably on thin edges. The visible path keeps its
+       existing 2.5-px stroke + marker; the hit path has pointer-events:
+       stroke so only the fat band catches taps. */
+    h+=`<path class="edge-hit" data-edge="${e.id}" d="M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}" fill="none" stroke="transparent" stroke-width="20" pointer-events="stroke"/>`;
+    h+=`<path class="edge ${e.dim?'dim':''}" data-edge="${e.id}" d="M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}" fill="none" stroke="${et.c}" stroke-width="2.5" marker-end="url(#a-${e.type||'feeds'})" opacity="${edgeOpacity}" pointer-events="none"/>`;
     if(showEdgeLabel){const lbl=e.customLabel||t(e.type||'feeds');const mx=(ax+3*c1x+3*c2x+bx)/8,my=(ay+3*c1y+3*c2y+by)/8;const labelRtl=/[\u0590-\u05FF]/.test(lbl);const fsize=labelRtl?12:10;h+=`<foreignObject x="${mx-60}" y="${my-11}" width="120" height="22" style="pointer-events:none"><div xmlns="http://www.w3.org/1999/xhtml" style="direction:${labelRtl?'rtl':'ltr'};text-align:center;font-family:'Inter','Assistant',system-ui,sans-serif;font-size:${fsize}px;color:${et.c};background:var(--bg);border:1px solid ${et.c};border-radius:4px;padding:2px 8px;display:inline-block;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">${esc(lbl)}</div></foreignObject>`}}
   for(const n of ns()){if(visIds&&!visIds.has(n.id))continue;const c=SC[n.status]||SC.idea,s=42,se=sel?.id===n.id||selSet.has(n.id),tg=edgeHover?.id===n.id;const focusDim=focusMode&&!related.has(n.id);let sh='',ring='',richContent='';
     /* Phase 2 (Pass 3 § 02) · silhouettes v2 hook.
@@ -1609,23 +1614,33 @@ document.addEventListener('pointerup',e=>{
   clearHoldFeedback();
   if(pinchState){if(activePtrs.size<2){pinchState=null}return}
 
-  // Double-tap detection (touch only) — if this was a tap that didn't move
+  /* Sprint 3.1 Issue 1 — touch double-tap is now only honoured when the
+     tap actually landed on a .node. That preserves double-tap-to-open-
+     roadmap on iPad while removing the silent path that re-introduced
+     double-tap-to-add-node (the dblclick handler below no longer adds
+     nodes either, so this is defence-in-depth). */
   if(e.pointerType==='touch'&&drag&&!drag.moved){
     const now=Date.now();
     const isDblTap=(now-lastTapTime<350)&&(Math.abs(e.clientX-lastTapX)<30)&&(Math.abs(e.clientY-lastTapY)<30);
     if(isDblTap){
-      // Cancel pending open and fire dblclick
-      if(drag.k==='pan'){view.x=drag.vx;view.y=drag.vy}
-      if(drag.snap){hist.pop()}
-      drag=null;cv.classList.remove('gr');document.body.classList.remove('dragging');
       const el=document.elementFromPoint(e.clientX,e.clientY);
-      const ev=new MouseEvent('dblclick',{clientX:e.clientX,clientY:e.clientY,bubbles:true,cancelable:true});
-      Object.defineProperty(ev,'target',{value:el});
-      cv.dispatchEvent(ev);
+      const onNode=el&&el.closest&&el.closest('.node');
+      if(onNode){
+        if(drag.k==='pan'){view.x=drag.vx;view.y=drag.vy}
+        if(drag.snap){hist.pop()}
+        drag=null;cv.classList.remove('gr');document.body.classList.remove('dragging');
+        const ev=new MouseEvent('dblclick',{clientX:e.clientX,clientY:e.clientY,bubbles:true,cancelable:true});
+        Object.defineProperty(ev,'target',{value:el});
+        cv.dispatchEvent(ev);
+        lastTapTime=0;
+        return;
+      }
+      // Empty-canvas double-tap: explicit no-op. Reset state and fall
+      // through so single-tap semantics (panel close, etc.) still apply.
       lastTapTime=0;
-      return;
+    } else {
+      lastTapTime=now;lastTapX=e.clientX;lastTapY=e.clientY;
     }
-    lastTapTime=now;lastTapX=e.clientX;lastTapY=e.clientY;
   }
 
   document.body.classList.remove('dragging');
@@ -1693,7 +1708,11 @@ cv.addEventListener('pointercancel',e=>{
   });
 })();
 
-cv.addEventListener('dblclick',async e=>{const nE=e.target.closest?.('.node');if(nE){const n=ns().find(x=>x.id===+nE.dataset.id);if(n.shape==='project'&&S.current==='vault'){if(n.childCanvas)switchTo(n.childCanvas);else if(await uiConfirm('Create roadmap for "'+n.label+'"?',{title:'New roadmap',okLabel:'Create'}))createRoadmap(n.id);return}sel=n;op(n);return}const w=s2w(e.clientX,e.clientY);const n=addNode(w.x,w.y);sel=n;op(n)});
+/* Sprint 3.1 Issue 1 — empty-canvas double-click NO LONGER adds a node.
+   Long-press is now the only add-node gesture. Double-click on a project
+   node in the vault still opens / creates a roadmap; double-click on any
+   other node still opens its property panel. */
+cv.addEventListener('dblclick',async e=>{const nE=e.target.closest?.('.node');if(!nE)return;const n=ns().find(x=>x.id===+nE.dataset.id);if(!n)return;if(n.shape==='project'&&S.current==='vault'){if(n.childCanvas)switchTo(n.childCanvas);else if(await uiConfirm('Create roadmap for "'+n.label+'"?',{title:'New roadmap',okLabel:'Create'}))createRoadmap(n.id);return}sel=n;op(n)});
 
 /* Re-render on resize / orientation change (iPad URL bar collapse, rotation) */
 window.addEventListener('resize',()=>{try{render()}catch(e){}});
@@ -1932,4 +1951,8 @@ if(!window.__E2E){Object.defineProperty(window,'__E2E',{value:Object.freeze({
   setCurrentCanvas:(id)=>{if(S.canvases[id]){S.current=id;render();return true}return false},
   // Phase 2.5 R2 regression-test hook — read live drag-interaction state.
   drag:()=>drag,
+  // Sprint 3.1 Issue 3 — expose the live selected node so the edge-draw
+  // handles module can position its 4 grab dots without re-introducing a
+  // global variable.
+  sel:()=>sel,
 })})}
