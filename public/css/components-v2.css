@@ -190,8 +190,19 @@ body.dragging .edge-handle { opacity: 0; pointer-events: none; }
  * cleanly even if the !important rule somehow loses cascade priority.
  * ============================================================================= */
 .nslice.sel { will-change: transform; }
-body.dragging .nslice.sel,
-body.holding .nslice.sel {
+/* Sprint 3.2 Issue 1 — the same WebKit drop-shadow / inline-transform
+   compositor bug also applies to `.nslice.holding` (press-and-hold
+   visual feedback in src/app.css:409), which is added to ANY node the
+   user grabs — not just selected ones. Sprint 3.1's override only
+   covered .nslice.sel. Extend to cover EVERY .nslice during body.dragging
+   or body.holding (the slice may have neither .sel nor .holding when the
+   user did a quick tap-and-drag without the hold gate).
+   The SVG g.node.holding > .th already provides an orange tint inside
+   the cv SVG (which slides cleanly via SVG-transform, no residue), so
+   no visual is lost. */
+body.dragging .nslice,
+body.holding .nslice,
+.nslice.holding {
   filter: none !important;
   transition: none !important;
 }
@@ -218,23 +229,45 @@ body.holding .nslice.sel {
 #spine .spine-top { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1; overflow-y: auto; width: 100%; }
 #spine .spine-bot { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-bottom: 8px; }
 #spine .ws-chip {
-  width: 32px; height: 32px; border-radius: 10px;
+  /* Sprint 3.2 Issue 2 — slightly bigger (36px) + visible 1px border so
+     the chip reads against the dark spine even when its background hue
+     is dim. Outer shadow keeps the soft halo. */
+  width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: white;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: white;
   position: relative; cursor: pointer;
-  transition: transform var(--t-quick) var(--e-out);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 12px -4px rgba(0,0,0,0.4);
+  transition: transform var(--t-quick) var(--e-out), box-shadow var(--t-quick) var(--e-out);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.12),
+    0 1px 0 rgba(255,255,255,0.22) inset,
+    0 4px 12px -4px rgba(0,0,0,0.55);
   border: 0;
   padding: 0;
 }
-#spine .ws-chip:hover { transform: scale(1.06); }
+#spine .ws-chip:hover { transform: scale(1.06); box-shadow:
+    0 0 0 1px rgba(255,255,255,0.32),
+    0 1px 0 rgba(255,255,255,0.28) inset,
+    0 6px 14px -4px rgba(0,0,0,0.6); }
+#spine .ws-chip.active {
+  /* Reinforce: bright outline ring + slight scale so the active chip
+     stands out even before the eye registers the leading-edge rail. */
+  box-shadow:
+    0 0 0 2px var(--ink, #F0EBE5),
+    0 1px 0 rgba(255,255,255,0.28) inset,
+    0 6px 14px -4px rgba(0,0,0,0.6);
+}
 #spine .ws-chip.active::before {
+  /* Was at inset-inline-start: -16px which put the rail at viewport x=-4
+     (cropped off-screen). With 36px chips + spine padding the chip's
+     leading edge sits at viewport x=9.5; offset -6 puts the rail at
+     viewport x=3.5–7.5, fully visible in the spine's leading gutter. */
   content: ""; position: absolute;
-  inset-inline-start: -16px;
-  top: 6px; bottom: 6px;
-  width: 3px;
-  border-start-end-radius: 3px; border-end-end-radius: 3px;
-  background: var(--ink);
+  inset-inline-start: -6px;
+  top: 7px; bottom: 7px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--ink, #F0EBE5);
+  box-shadow: 0 0 6px var(--ink, #F0EBE5);
 }
 #spine .ws-chip.add {
   background: none !important; color: var(--ink-4) !important;
@@ -242,11 +275,15 @@ body.holding .nslice.sel {
   box-shadow: none;
 }
 #spine .sb {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: transparent; border: 0; color: var(--ink-3); cursor: pointer;
-  font-size: 14px;
+  /* Sprint 3.2 Issue 7 — bigger + bordered + brighter so the hamburger
+     reads as an actionable button instead of a faint glyph. */
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--srf-2); border: 1px solid var(--line-2); color: var(--ink-2); cursor: pointer;
+  font-size: 18px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
 }
-#spine .sb:hover { background: var(--srf-3); color: var(--ink); }
+#spine .sb:hover { background: var(--srf-3); color: var(--ink); border-color: var(--line-3); }
+#spine .sb:active { transform: scale(0.95); }
 body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-inline-end: 0; border-inline-start: 1px solid var(--line); }
 
 #drawer {
@@ -277,10 +314,16 @@ body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-i
 #drawer .ws-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #drawer .ws-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); flex-shrink: 0; }
 #drawer .dr-toggle {
-  background: transparent; border: 0; color: var(--ink-3); cursor: pointer;
-  font-size: 10px; padding: 4px;
+  /* Sprint 3.2 Issue 3 — was 10px font with 4px padding = ~18px target,
+     unusable on touch. Now 32px hit target with a 16px icon. */
+  background: transparent; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
+  font-size: 16px; line-height: 1;
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px;
 }
-#drawer .dr-toggle:hover { color: var(--ink); }
+#drawer .dr-toggle:hover { color: var(--ink); background: var(--srf-2); border-color: var(--line-2); }
+#drawer.collapsed .dr-toggle { width: 32px; height: 32px; margin: 0 auto; }
 #drawer .dr-tree { display: flex; flex-direction: column; gap: 2px; }
 #drawer .dr-row {
   display: flex; align-items: center; gap: 6px;
@@ -288,14 +331,40 @@ body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-i
   border-radius: 6px; cursor: pointer;
   color: var(--ink-2);
   font-size: 12.5px;
-  min-height: 24px;
+  min-height: 28px;
 }
 #drawer .dr-row:hover { background: rgba(255,255,255,0.03); color: var(--ink); }
 #drawer .dr-row.active { background: rgba(255,122,69,0.10); color: var(--hot); }
-#drawer .dr-row .caret { width: 12px; flex-shrink: 0; font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); text-align: center; }
+#drawer .dr-row .caret {
+  /* Sprint 3.2 Issue 3 — caret was a 10px font in a 12px-wide box, too
+     tiny to tap reliably on iPad. Now a 24x24 inline-flex hit target. */
+  width: 24px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 14px; color: var(--ink-3);
+  border-radius: 4px;
+}
+#drawer .dr-row .caret:hover { background: var(--srf-2); color: var(--ink); }
+@media (pointer: coarse) {
+  /* iPad / touch: 44x44 minimum per Apple HIG. */
+  #drawer .dr-row .caret { width: 32px; height: 32px; font-size: 16px; }
+  #drawer .dr-toggle { width: 44px; height: 44px; font-size: 18px; }
+}
 #drawer .dr-row .child-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; opacity: 0.7; }
 #drawer .dr-row .dr-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #drawer .dr-row .count { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); flex-shrink: 0; }
+
+/* Sprint 3.2 Issue 5 — drawer-row context menu (Set as default, etc). */
+#drawerRowMenu button {
+  display: block; width: 100%; text-align: start;
+  background: transparent; border: 0;
+  color: var(--ink, #F0EBE5);
+  font: inherit;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#drawerRowMenu button:hover { background: var(--srf-4, #2A3038); }
 #drawer .dr-section-head {
   font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
   letter-spacing: 0.12em; text-transform: uppercase;
@@ -325,6 +394,45 @@ body.nav-v2-on.drawer-collapsed #fl { inset-inline-start: calc(96px + 12px); }
   transition: opacity var(--t-quick) var(--e-out), visibility 0ms linear var(--t-quick);
 }
 #palette.on { visibility: visible; opacity: 1; transition: opacity var(--t-base) var(--e-out), visibility 0ms linear 0ms; }
+
+/* Sprint 3.2 Issue 4 — always-on "Search anywhere" pill in the top
+   center of the viewport. Independent of --nav-v2 (this is the palette's
+   own visible entry point so users don't need to know the Cmd+K / iPad
+   swipe gestures). Hides when the palette itself is open. */
+#paletteOpenPill {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 36;
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 12px;
+  background: var(--srf-2, #181C24);
+  color: var(--ink-2, #C8C5BE);
+  border: 1px solid var(--line-2, #2A2F3A);
+  border-radius: 999px;
+  font-family: var(--font-sans, Inter);
+  font-size: 12.5px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px -4px rgba(0,0,0,0.5);
+  transition: background var(--t-quick) var(--e-out), color var(--t-quick) var(--e-out), border-color var(--t-quick) var(--e-out);
+}
+#paletteOpenPill:hover { background: var(--srf-3, #1F242E); color: var(--ink, #F0EBE5); border-color: var(--hot-ring, rgba(255,122,69,0.45)); }
+#paletteOpenPill .pp-ic { font-size: 13px; color: var(--ink-3, #7C828E); }
+#paletteOpenPill .pp-lbl { font-weight: 500; }
+#paletteOpenPill .pp-kbd {
+  font-family: var(--font-mono, monospace); font-size: 10.5px;
+  color: var(--ink-3, #7C828E);
+  border: 1px solid var(--line-2, #2A2F3A);
+  border-radius: 4px; padding: 1px 5px;
+  direction: ltr; /* keep Cmd+K LTR even in RTL mode */
+}
+#palette.on ~ #paletteOpenPill,
+body:has(#palette.on) #paletteOpenPill { opacity: 0; pointer-events: none; }
+/* When --nav-v2 is on the spine occupies the leading edge — shift the
+   pill so it stays visually centred over the canvas, not over the spine. */
+body.nav-v2-on #paletteOpenPill { left: calc(50% + 28px); }
+body[dir="rtl"].nav-v2-on #paletteOpenPill { left: calc(50% - 28px); }
 #palette .palette-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 #palette .palette-box {
   position: absolute; top: 80px; left: 50%; transform: translateX(-50%);

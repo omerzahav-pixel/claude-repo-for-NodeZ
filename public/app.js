@@ -402,7 +402,20 @@ async function rebuildWsDropdown(){const list=await listWorkspaces();const sel=d
   sel.style.paddingLeft='10px';}
 async function switchWorkspace(ws){await sv();await setCurrentWs(ws);S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:{vault:{name:'Vault',parentNodeId:null}},nextId:1,hebrewMode:false};hist=[];selSet.clear();sel=null;await loadState();rebuildWsDropdown()}
 async function newWorkspace(){const name=await uiPrompt('New workspace name','university',{hint:'e.g. university, life, research'});if(!name)return;const clean=name.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');if(!clean)return;const list=await listWorkspaces();if(list.includes(clean)){await uiNotice('A workspace named "'+clean+'" already exists.');return}list.push(clean);await saveWorkspaces(list);await switchWorkspace(clean)}
-async function loadState(){try{const v=await storageGet(KEY());if(v){const o=JSON.parse(v);S={...S,...o}}}catch(e){console.error('load',e)}reconcileCanvases();applyHebrewState();render();bF();bB();renderTabs();renderSB()}
+async function loadState(){try{const v=await storageGet(KEY());if(v){const o=JSON.parse(v);S={...S,...o}}}catch(e){console.error('load',e)}reconcileCanvases();/* Sprint 3.2 Issue 5 — honour the workspace's default-canvas preference. */applyDefaultCanvasForCurrentWs();applyHebrewState();render();bF();bB();renderTabs();renderSB()}
+/* Sprint 3.2 Issue 5 — per-workspace default canvas. setDefaultCanvasForWorkspace
+   writes 'edgespace-default-canvas:' + workspaceName to localStorage. On every
+   workspace load, applyDefaultCanvasForCurrentWs reads it and (if present and
+   still valid) sets S.current to that canvas. */
+const DEFAULT_CANVAS_PREFIX='edgespace-default-canvas:';
+function defaultCanvasKey(ws){return DEFAULT_CANVAS_PREFIX+(ws||currentWs)}
+function setDefaultCanvasForWorkspace(cid,ws){try{localStorage.setItem(defaultCanvasKey(ws||currentWs),cid)}catch(e){}}
+function clearDefaultCanvasForWorkspace(ws){try{localStorage.removeItem(defaultCanvasKey(ws||currentWs))}catch(e){}}
+function getDefaultCanvasForWorkspace(ws){try{return localStorage.getItem(defaultCanvasKey(ws||currentWs))}catch(e){return null}}
+function applyDefaultCanvasForCurrentWs(){try{const def=getDefaultCanvasForWorkspace();if(def&&S.canvases&&S.canvases[def]&&S.current!==def){S.current=def}}catch(e){}}
+window.setDefaultCanvasForWorkspace=setDefaultCanvasForWorkspace;
+window.clearDefaultCanvasForWorkspace=clearDefaultCanvasForWorkspace;
+window.getDefaultCanvasForWorkspace=getDefaultCanvasForWorkspace;
 /* Phase 5 P2 · Landing screen — shown on first load when ≥ 2 workspaces. */
 /* Phase 6 · landing-screen logic survives Safari tab close.
    Decision tree:

@@ -39,6 +39,26 @@
     // Add body class so the CSS layout-shift rules (#tb, #sb, #fl move
     // right to make room for the 280px spine+drawer column) activate.
     document.body.classList.add('nav-v2-on');
+    /* Sprint 3.2 Issue 7 — event delegation on the spine root so the
+       per-button listeners survive every re-render. (The previous
+       direct-attach pattern recreated all listeners on each render; if
+       a click landed during the brief window between innerHTML and
+       re-attach, the event was lost.) */
+    root.addEventListener('click', (e) => {
+      const tgt = e.target && e.target.closest ? e.target.closest('[data-act],[data-ws]') : null;
+      if (!tgt) return;
+      const ws = tgt.getAttribute('data-ws');
+      const act = tgt.getAttribute('data-act');
+      if (ws && typeof window.switchWorkspace === 'function' && ws !== window.currentWs) {
+        window.switchWorkspace(ws);
+        return;
+      }
+      if (act === 'new-ws' && typeof window.newWorkspace === 'function') { window.newWorkspace(); return; }
+      if (act === 'drawer-toggle' && window.Drawer && typeof window.Drawer.toggle === 'function') {
+        window.Drawer.toggle();
+        return;
+      }
+    });
     render();
     // Re-render when workspaces change. The existing app.js code doesn't
     // emit events; poll every 1s for cheap freshness, and re-render on
@@ -51,10 +71,26 @@
       const wrapped = async function () {
         const r = await orig.apply(this, arguments);
         try { await render(); } catch (e) {}
+        try { window.Drawer && window.Drawer.refresh && window.Drawer.refresh(); } catch (e) {}
         return r;
       };
       wrapped.__spineHooked = true;
       window.rebuildWsDropdown = wrapped;
+    }
+    /* Sprint 3.2 Issue 2 — also wrap switchWorkspace so the drawer
+       re-renders the instant the new workspace finishes loading, instead
+       of waiting for the 1500ms poll. Without this, the user sees the
+       drawer go empty for ~1.5s after every chip tap. */
+    if (typeof window.switchWorkspace === 'function' && !window.switchWorkspace.__spineHooked) {
+      const orig = window.switchWorkspace;
+      const wrapped = async function () {
+        const r = await orig.apply(this, arguments);
+        try { await render(); } catch (e) {}
+        try { window.Drawer && window.Drawer.refresh && window.Drawer.refresh(); } catch (e) {}
+        return r;
+      };
+      wrapped.__spineHooked = true;
+      window.switchWorkspace = wrapped;
     }
   }
 
@@ -93,21 +129,8 @@
         '<button class="ws-chip add" data-act="new-ws" title="New workspace">+</button>' +
         '<button class="sb" data-act="drawer-toggle" aria-label="Toggle drawer" title="Toggle drawer">☰</button>' +
       '</div>';
-    // Wire actions.
-    root.querySelectorAll('[data-ws]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ws = btn.getAttribute('data-ws');
-        if (ws && typeof window.switchWorkspace === 'function' && ws !== window.currentWs) {
-          window.switchWorkspace(ws);
-        }
-      });
-    });
-    root.querySelector('[data-act="new-ws"]')?.addEventListener('click', () => {
-      if (typeof window.newWorkspace === 'function') window.newWorkspace();
-    });
-    root.querySelector('[data-act="drawer-toggle"]')?.addEventListener('click', () => {
-      if (window.Drawer) window.Drawer.toggle();
-    });
+    /* Sprint 3.2 Issue 7 — actions wired via root-level event delegation
+       in install(); no per-render attach needed. */
   }
 
   function escHtml(s) {
@@ -115,20 +138,32 @@
   }
   function escAttr(s) { return escHtml(s).replace(/"/g, '&quot;'); }
 
-  // Pick a high-contrast text color (white or near-black) for a hex bg.
-  function textOn(hex) {
-    if (!hex) return '#fff';
-    const m = String(hex).replace('#', '');
+  /* Sprint 3.2 Issue 2 — wsColor() returns HSL strings, not hex. The
+     previous textOn() only parsed hex, fell through to white for HSL,
+     and produced low-contrast white-on-yellow chips that the user
+     couldn't read. Now we handle both. */
+  function textOn(color) {
+    if (!color) return '#fff';
+    const s = String(color).trim();
     let r, g, b;
-    if (m.length === 3) {
-      r = parseInt(m[0] + m[0], 16); g = parseInt(m[1] + m[1], 16); b = parseInt(m[2] + m[2], 16);
-    } else if (m.length >= 6) {
-      r = parseInt(m.slice(0, 2), 16); g = parseInt(m.slice(2, 4), 16); b = parseInt(m.slice(4, 6), 16);
+    // Try hsl(h, s%, l%) — we judge contrast off the lightness directly.
+    const hsl = s.match(/^hsla?\(\s*([\d.]+)[\s,]+([\d.]+)%[\s,]+([\d.]+)%/i);
+    if (hsl) {
+      const L = parseFloat(hsl[3]) / 100;
+      return L > 0.55 ? '#1A0A04' : '#fff';
+    }
+    // Try #rgb / #rrggbb / rgb(...) / rgba(...).
+    const hex = s.replace(/^#/, '');
+    if (/^[0-9a-f]{3}$/i.test(hex)) {
+      r = parseInt(hex[0] + hex[0], 16); g = parseInt(hex[1] + hex[1], 16); b = parseInt(hex[2] + hex[2], 16);
+    } else if (/^[0-9a-f]{6}$/i.test(hex)) {
+      r = parseInt(hex.slice(0, 2), 16); g = parseInt(hex.slice(2, 4), 16); b = parseInt(hex.slice(4, 6), 16);
     } else {
-      return '#fff';
+      const rgb = s.match(/^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i);
+      if (rgb) { r = +rgb[1]; g = +rgb[2]; b = +rgb[3]; }
+      else return '#fff';
     }
     if (!isFinite(r)) return '#fff';
-    // Standard relative luminance heuristic.
     const L = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
     return L > 0.55 ? '#1A0A04' : '#fff';
   }

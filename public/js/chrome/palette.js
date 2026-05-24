@@ -82,9 +82,38 @@
     inputEl.addEventListener('input', onInput);
     inputEl.addEventListener('keydown', onKey);
     root.querySelector('.palette-backdrop').addEventListener('click', close);
-    // Global triggers.
+    /* Sprint 3.2 Issue 4 — also bind the global key handler on `window`
+       (capture phase) so the listener fires even if some other handler
+       on document body grabs the event first. Both wires call the same
+       handler; the toggle()'s internal `opened` guard prevents
+       double-firing if both fire. */
     document.addEventListener('keydown', onGlobalKey, true);
+    window.addEventListener('keydown', onGlobalKey, true);
     installTwoFingerSwipeDown();
+    /* Sprint 3.2 Issue 4 — visible always-on entry point. Users on Chrome
+     * report Cmd+K still triggers the browser's omnibox before our
+     * preventDefault; a clickable pill removes the dependency entirely. */
+    installSearchPill();
+  }
+
+  function installSearchPill() {
+    if (document.getElementById('paletteOpenPill')) return;
+    const pill = document.createElement('button');
+    pill.id = 'paletteOpenPill';
+    pill.type = 'button';
+    pill.setAttribute('aria-label', 'Open command palette');
+    pill.title = 'Search anywhere (⌘K / Ctrl+K)';
+    const isMac = /Mac|iPad|iPhone|iPod/.test(navigator.platform);
+    const kbd = isMac ? '⌘K' : 'Ctrl+K';
+    pill.innerHTML =
+      '<span class="pp-ic" aria-hidden="true">⌕</span>' +
+      '<span class="pp-lbl">Search anywhere</span>' +
+      '<span class="pp-kbd">' + kbd + '</span>';
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      open();
+    });
+    document.body.appendChild(pill);
   }
 
   function open() {
@@ -111,13 +140,25 @@
   }
   function toggle() { opened ? close() : open(); }
 
+  /* Defensive: track when we last handled the event so the dual document+
+     window listeners don't both call toggle() back-to-back. */
+  let lastHandledKeyTs = 0;
   function onGlobalKey(e) {
-    if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey) && !e.altKey) {
+    if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
       // Suppress when typing in a textarea — they own Cmd+K for word delete on macOS.
       const t = document.activeElement;
       if (t && t.tagName === 'TEXTAREA') return;
+      /* CRITICAL: call preventDefault BEFORE anything else so Chrome /
+         Safari don't capture Cmd+K for the omnibox / Reader-search. The
+         capture phase listener fires before bubble-phase, but the browser
+         keyboard action is decided AFTER all in-page listeners — so
+         preventDefault here actually does work. */
       e.preventDefault();
       e.stopImmediatePropagation();
+      e.stopPropagation();
+      const now = Date.now();
+      if (now - lastHandledKeyTs < 50) return; // de-dupe document+window double-fire
+      lastHandledKeyTs = now;
       toggle();
     }
   }
@@ -249,32 +290,51 @@
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  /* Two-finger swipe-down to open the palette on iPad. */
+  /* Two-finger swipe-down to open the palette on iPad.
+     Sprint 3.2 Issue 4 — was gated by `touchStartY < 200` (only swipes
+     starting in the top 200px counted), which made it useless when the
+     user swiped on the canvas body. Now: any starting position, but
+     fingers must remain within 60px of each other horizontally (so an
+     actual pinch-zoom doesn't get mistaken for a swipe). */
   function installTwoFingerSwipeDown() {
-    let touchStartY = null;
-    let touchStartTouches = 0;
+    let startMidY = null;
+    let startSpread = null;
+    let started2 = false;
     document.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
-        touchStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        touchStartTouches = 2;
+        const a = e.touches[0], b = e.touches[1];
+        startMidY = (a.clientY + b.clientY) / 2;
+        startSpread = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        started2 = true;
       } else {
-        touchStartY = null;
-        touchStartTouches = e.touches.length;
+        started2 = false;
+        startMidY = null;
       }
     }, { passive: true });
     document.addEventListener('touchend', (e) => {
-      if (touchStartTouches !== 2 || touchStartY == null) return;
-      // If we still have at least one touch active, this was a finger lift mid-pinch
-      // — ignore. Only fire when ALL fingers up.
-      if (e.touches.length > 0) return;
-      const t = e.changedTouches && e.changedTouches[0];
-      if (!t) { touchStartY = null; return; }
-      const dy = t.clientY - touchStartY;
-      // Swipe-down threshold: 80px downward, starting near the top of the viewport.
-      if (touchStartY < 200 && dy > 80) {
-        open();
+      if (!started2 || startMidY == null) return;
+      if (e.touches.length > 0) return; // wait for all fingers up
+      const c0 = e.changedTouches && e.changedTouches[0];
+      const c1 = e.changedTouches && e.changedTouches[1];
+      const ts = Array.from(e.changedTouches || []);
+      if (ts.length < 1) { started2 = false; return; }
+      // Compute end mid-Y and end spread from changedTouches; if only one
+      // touch is in changedTouches, fall back to its Y.
+      let endMidY, endSpread;
+      if (ts.length >= 2) {
+        endMidY   = (ts[0].clientY + ts[1].clientY) / 2;
+        endSpread = Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY);
+      } else {
+        endMidY = ts[0].clientY;
+        endSpread = startSpread;
       }
-      touchStartY = null; touchStartTouches = 0;
+      const dy = endMidY - startMidY;
+      const spreadDelta = Math.abs((endSpread || 0) - (startSpread || 0));
+      // Real two-finger swipe-down: midpoint moved > 60 px down AND fingers
+      // stayed close together (spread changed by < 60 px → not a pinch).
+      if (dy > 60 && spreadDelta < 60) open();
+      started2 = false;
+      startMidY = null;
     }, { passive: true });
   }
 

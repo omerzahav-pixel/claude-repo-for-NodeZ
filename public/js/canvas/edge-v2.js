@@ -229,7 +229,12 @@
   }
 
   // ─── Auto-legend ──────────────────────────────────────────────────────────
-  const LEGEND_THRESHOLD = 3;
+  /* Sprint 3.2 Issue 6 — was 3 per Pass 3 § 06. User couldn't see the
+     legend at all because typical test canvases have < 3 distinct types.
+     Lowered to 1 for this sprint so it's discoverable. Once the user has
+     confirmed it appears and they understand it's auto-hidden when
+     redundant, we can restore the higher threshold (probably 2). */
+  const LEGEND_THRESHOLD = 1;
   const LEGEND_DISMISS_KEY = 'edgespace-edge-legend-dismissed';
   let legendEl = null;
   let lastTypesSig = '';
