@@ -101,7 +101,12 @@
   }
 
   function installSearchPill() {
+    /* Sprint 3.4 Issue 4 — when --nav-v2 is ON, the search entry point
+       moves to a spine chip (see spine.js). The top-center pill is
+       therefore created ONLY when nav-v2 is OFF. Avoids two overlapping
+       search entry points. */
     if (document.getElementById('paletteOpenPill')) return;
+    if (window.Flags && window.Flags.on('nav-v2')) return;
     const pill = document.createElement('button');
     pill.id = 'paletteOpenPill';
     pill.type = 'button';

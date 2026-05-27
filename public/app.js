@@ -422,6 +422,56 @@ function applyDefaultCanvasForCurrentWs(){try{const def=getDefaultCanvasForWorks
 window.setDefaultCanvasForWorkspace=setDefaultCanvasForWorkspace;
 window.clearDefaultCanvasForWorkspace=clearDefaultCanvasForWorkspace;
 window.getDefaultCanvasForWorkspace=getDefaultCanvasForWorkspace;
+
+/* Sprint 3.4 Issue 6 — per-workspace Weak-spot enable toggle.
+   Spaced-repetition makes sense for study workspaces ("uni"), noise for
+   project ones. Stored at localStorage[edgespace-weakspot:<ws>] = '1'|'0'.
+   Default OFF for everyone, EXCEPT we one-time-migrate any workspace named
+   exactly 'uni' to default ON (matches the user's existing study setup). */
+const WEAKSPOT_PREFIX='edgespace-weakspot:';
+const WEAKSPOT_MIGRATION_KEY='edgespace-weakspot-migrated';
+function weakspotKey(ws){return WEAKSPOT_PREFIX+(ws||currentWs)}
+function isWeakspotEnabled(ws){try{const v=localStorage.getItem(weakspotKey(ws||currentWs));return v==='1'}catch(e){return false}}
+function setWeakspotEnabled(ws,on){try{localStorage.setItem(weakspotKey(ws||currentWs),on?'1':'0')}catch(e){}}
+async function runWeakspotMigration(){try{if(localStorage.getItem(WEAKSPOT_MIGRATION_KEY))return;const list=typeof window.listWorkspaces==='function'?await window.listWorkspaces():[];/* one-time: enable weakspot on the workspace named 'uni' if present */for(const w of (list||[])){if(w==='uni')setWeakspotEnabled(w,true)}localStorage.setItem(WEAKSPOT_MIGRATION_KEY,'1')}catch(e){}}
+/* Fire-and-forget after boot. */
+setTimeout(()=>{runWeakspotMigration()},2000);
+
+/* Sprint 3.4 Issue 6 — workspace-settings UI. Tools-panel "Workspace
+   settings" row calls this. Simple modal with the weakspot toggle (and
+   room for future per-ws prefs). */
+function openWorkspaceSettings(){
+  const ws=currentWs||'workspace';
+  const enabled=isWeakspotEnabled(ws);
+  const body=
+    '<h3 style="margin:0 0 12px;font-family:var(--font-sans);font-size:16px">Workspace settings — '+esc(ws)+'</h3>'+
+    '<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line-2,#2A2F3A);border-radius:8px;cursor:pointer">'+
+      '<input type="checkbox" id="__wsWeakspotToggle"'+(enabled?' checked':'')+' style="width:18px;height:18px"/>'+
+      '<div style="flex:1">'+
+        '<div style="font-weight:500;color:var(--ink,#F0EBE5)">Enable Weak-spot view for this workspace</div>'+
+        '<div style="font-size:12px;color:var(--ink-3,#7C828E);margin-top:4px">Spaced-repetition ranking. Useful for study workspaces; noise for project ones.</div>'+
+      '</div>'+
+    '</label>';
+  if(typeof window.uiModal==='function'){
+    window.uiModal(body,{title:'Settings',okLabel:'Done',onOk:saveSettings});
+  }else{
+    /* Fallback path: render directly into #modal. */
+    const m=document.getElementById('modal');const mb=document.getElementById('mcbody');
+    if(!m||!mb)return;
+    mb.innerHTML=body+'<div style="display:flex;justify-content:flex-end;margin-top:16px"><button id="__wsSettingsDone" style="padding:8px 16px;background:var(--hot,#FF7A45);color:#0F0F0F;border:none;border-radius:6px;cursor:pointer;font-weight:600">Done</button></div>';
+    m.classList.add('on');
+    document.getElementById('__wsSettingsDone').onclick=()=>{saveSettings();m.classList.remove('on')};
+  }
+  function saveSettings(){
+    const t=document.getElementById('__wsWeakspotToggle');
+    if(t)setWeakspotEnabled(ws,t.checked);
+    /* Re-render view tabs so the Weak-spot button shows/hides immediately. */
+    try{window.ViewTabs&&window.ViewTabs.refresh&&window.ViewTabs.refresh()}catch(e){}
+  }
+}
+window.openWorkspaceSettings=openWorkspaceSettings;
+window.isWeakspotEnabled=isWeakspotEnabled;
+window.setWeakspotEnabled=setWeakspotEnabled;
 /* Phase 5 P2 · Landing screen — shown on first load when ≥ 2 workspaces. */
 /* Phase 6 · landing-screen logic survives Safari tab close.
    Decision tree:
@@ -1138,7 +1188,101 @@ function addC(){/* Phase 5b — use SVG bounding rect for true visual center (iP
   const w=s2w(cx,cy);const p=findFreeSpot(w.x,w.y);const n=addNode(p.x,p.y);sel=n;op(n)}
 function delN(id){sn();C().nodes=ns().filter(n=>n.id!==id);C().edges=es().filter(e=>e.from!==id&&e.to!==id);if(sel?.id===id)cp();sv();render();renderSB()}
 function delE(id){sn();C().edges=es().filter(e=>e.id!==id);sv();render()}
-function clr(){C().nodes=[];C().edges=[];cp();sv();render()}
+/* Sprint 3.4 Issue 7 — clr() now also clears zones. Empty rectangles
+   left behind after "Clear canvas" were visual debris. Single undo
+   restores nodes + edges + zones together. */
+function clr(){C().nodes=[];C().edges=[];C().zones=[];cp();sv();render()}
+
+/* Sprint 3.4 Issue 8 — clear canvas with optional cascade-delete of
+   linked child canvases. Replaces clearCanvasConfirm in the new Tools
+   panel flow (the old one stays for backward-compat). */
+function gatherDescendantCanvasIds(rootCanvasId){
+  const out=new Set();
+  const stack=[rootCanvasId];
+  const seen=new Set();
+  while(stack.length){
+    const cid=stack.pop();
+    if(seen.has(cid))continue;
+    seen.add(cid);
+    const c=S.canvases[cid];
+    if(!c)continue;
+    for(const n of (c.nodes||[])){
+      if(n.childCanvas&&S.canvases[n.childCanvas]&&n.childCanvas!==rootCanvasId){
+        out.add(n.childCanvas);
+        stack.push(n.childCanvas);
+      }
+    }
+  }
+  return out;
+}
+async function clearCanvasWithCascade(){
+  const cid=S.current;
+  const c=S.canvases[cid];
+  if(!c)return;
+  const portals=(c.nodes||[]).filter(n=>n.childCanvas&&S.canvases[n.childCanvas]);
+  const descendants=gatherDescendantCanvasIds(cid);
+  const totalDescNodes=Array.from(descendants).reduce((sum,d)=>sum+((S.canvases[d]?.nodes?.length)||0),0);
+  const nNodes=(c.nodes||[]).length;
+  const nZones=(c.zones||[]).length;
+  const cname=esc(S.canvasMeta?.[cid]?.name||cid);
+  /* If no portal nodes → no modal needed, just clear. */
+  if(portals.length===0){
+    if(!await uiConfirm('Clear "'+cname+'"?\nThis removes '+nNodes+' nodes and '+nZones+' zones.',{title:'Clear canvas',danger:true,okLabel:'Clear'}))return;
+    sn();clr();return;
+  }
+  /* Build the cascade modal body. */
+  const portalNames=portals.map(p=>S.canvasMeta?.[p.childCanvas]?.name||p.childCanvas).slice(0,6);
+  const portalList=portalNames.map(n=>'<code>'+esc(n)+'</code>').join(', ')+(portals.length>portalNames.length?' (+'+(portals.length-portalNames.length)+' more)':'');
+  const body=
+    '<div style="font-family:var(--font-sans,Inter);color:var(--ink,#F0EBE5)">'+
+      '<h3 style="margin:0 0 12px;font-size:16px">Clear "'+cname+'"?</h3>'+
+      '<p style="margin:0 0 12px;color:var(--ink-2,#C8C5BE);font-size:13px">This will remove <b>'+nNodes+' nodes</b> and <b>'+nZones+' zones</b>.</p>'+
+      '<p style="margin:0 0 12px;color:var(--ink-2,#C8C5BE);font-size:13px"><b>'+portals.length+' of these nodes link to child canvases</b> ('+portalList+') containing <b>'+totalDescNodes+' nodes total</b>.</p>'+
+      '<label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line-2,#2A2F3A);border-radius:8px;cursor:pointer;margin:12px 0">'+
+        '<input type="checkbox" id="__clrCascade" style="width:18px;height:18px"/>'+
+        '<span style="font-size:13px;color:var(--ink,#F0EBE5)">Also delete linked child canvases and everything under them</span>'+
+      '</label>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">'+
+        '<button id="__clrCancel" style="padding:8px 16px;background:transparent;color:var(--ink-2,#C8C5BE);border:1px solid var(--line-2,#2A2F3A);border-radius:6px;cursor:pointer">Cancel</button>'+
+        '<button id="__clrOk" style="padding:8px 16px;background:var(--st-blocked,#F87171);color:#0F0F0F;border:none;border-radius:6px;cursor:pointer;font-weight:600">Clear canvas</button>'+
+      '</div>'+
+    '</div>';
+  const m=document.getElementById('modal');const mb=document.getElementById('mcbody');
+  if(!m||!mb)return;
+  mb.innerHTML=body;
+  m.classList.add('on');
+  return new Promise(resolve=>{
+    document.getElementById('__clrCancel').onclick=()=>{m.classList.remove('on');resolve(false)};
+    document.getElementById('__clrOk').onclick=()=>{
+      const cascade=document.getElementById('__clrCascade')?.checked;
+      m.classList.remove('on');
+      sn();
+      if(cascade){
+        for(const did of descendants){
+          delete S.canvases[did];
+          if(S.canvasMeta)delete S.canvasMeta[did];
+        }
+      }
+      /* Either way: also null out childCanvas refs on portal nodes that
+         are about to be deleted (the nodes themselves disappear in clr(),
+         but the descendants if NOT cascaded retain their entries in
+         S.canvases — they're now reachable only via the workspace root
+         because their parentNodeId is gone). */
+      if(!cascade){
+        for(const p of portals){
+          if(S.canvases[p.childCanvas]&&S.canvasMeta?.[p.childCanvas]){
+            S.canvasMeta[p.childCanvas].parentNodeId=null;
+            S.canvasMeta[p.childCanvas].parentCanvas=null;
+          }
+        }
+      }
+      clr();
+      if(typeof renderTabs==='function')renderTabs();
+      resolve(true);
+    };
+  });
+}
+window.clearCanvasWithCascade=clearCanvasWithCascade;
 function dd(){sn();const sx=new Set();C().nodes=ns().filter(n=>{const k=(n.label||'').trim().toLowerCase();if(!k||sx.has(k))return false;sx.add(k);return true});const ids=new Set(ns().map(n=>n.id));C().edges=es().filter(e=>ids.has(e.from)&&ids.has(e.to));sv();render()}
 function fromU(){const u=document.getElementById('urlIn').value.trim();if(!u)return;let lbl=u;const z=(zs().find(x=>x.id==='inbox')||zs()[zs().length-1]).id;try{const p=new URL(u),seg=p.pathname.split('/').filter(Boolean);lbl=(seg[seg.length-1]||p.hostname).replace(/[-_]/g,' ').slice(0,40)}catch(e){}const w=s2w(innerWidth/2,innerHeight/2);const n=addNode(w.x,w.y,{label:lbl,url:u,shape:'resource',zone:z});document.getElementById('urlIn').value='';sel=n;op(n)}
 /* Phase 5 P1 #2 — live preview + autosave for the property panel.
@@ -1794,6 +1938,11 @@ cv.addEventListener('touchstart',e=>{e.preventDefault()},{passive:false});
 cv.addEventListener('touchmove',e=>{e.preventDefault()},{passive:false});
 window.addEventListener('keydown',async e=>{if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='Delete'){if(selSet.size){if(await uiConfirm(`Delete ${selSet.size} selected nodes?`,{title:'Bulk delete',danger:true,okLabel:'Delete'})){sn();for(const id of selSet)delN(id);selSet.clear();render()}}else if(sel)delN(sel.id)}else if((e.ctrlKey||e.metaKey)&&e.shiftKey&&(e.key==='z'||e.key==='Z')){e.preventDefault();re()}else if((e.ctrlKey||e.metaKey)&&(e.key==='y'||e.key==='Y')){e.preventDefault();re()}else if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();un()}else if((e.ctrlKey||e.metaKey)&&e.key==='a'){e.preventDefault();selSet.clear();for(const n of ns())selSet.add(n.id);render()}else if(e.key==='Escape'){selSet.clear();cp();hideCtx();closeModal();ep.style.display='none';hideLegend();hideMore();render()}});
 function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h})),...ns().map(n=>({x1:n.x-60,y1:n.y-60,x2:n.x+60,y2:n.y+60}))];if(!items.length){view={x:0,y:0,k:.5};render();return}const x1=Math.min(...items.map(i=>i.x1)),y1=Math.min(...items.map(i=>i.y1)),x2=Math.max(...items.map(i=>i.x2)),y2=Math.max(...items.map(i=>i.y2)),pad=80;view.k=Math.min(innerWidth/(x2-x1+pad*2),innerHeight/(y2-y1+pad*2),.7);view.x=-(x1+x2)/2;view.y=-(y1+y2)/2;render()}
+/* Sprint 3.4 Issue 2 — fit-to-zone for drawer-row navigation. Same math
+   as zF() but scoped to a single zone's bounding box, with a slightly
+   tighter k cap so a single zone fills more of the viewport. */
+function focusZone(zoneId){const z=zs().find(x=>x.id===zoneId);if(!z)return;const pad=60;view.k=Math.min(innerWidth/(z.w+pad*2),innerHeight/(z.h+pad*2),0.9);view.x=-(z.x+z.w/2);view.y=-(z.y+z.h/2);render()}
+window.focusZone=focusZone;
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}
 function imF(e){
   window.dbg&&window.dbg('IMPORT','imF entered · files='+((e.target.files&&e.target.files.length)||0));

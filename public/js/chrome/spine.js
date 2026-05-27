@@ -63,6 +63,25 @@
         window.ToolsPanel.toggle();
         return;
       }
+      /* Sprint 3.4 Issue 4 — promoted chip actions. */
+      if (act === 'search') {
+        if (window.Palette && typeof window.Palette.open === 'function') window.Palette.open();
+        return;
+      }
+      if (act === 'undo') {
+        // Hard-block the click if the chip is in disabled state (defensive
+        // — CSS pointer-events:none on .disabled handles most of this, but
+        // a tap on the icon glyph could still bubble). Otherwise call un().
+        if (tgt.classList && tgt.classList.contains('disabled')) return;
+        if (typeof window.un === 'function') window.un();
+        return;
+      }
+      if (act === 'lang') {
+        if (typeof window.toggleHebrew === 'function') window.toggleHebrew();
+        return;
+      }
+      // 'import' is a <label for="imp"> — browser opens file picker automatically.
+      if (act === 'import') return;
     });
     render();
     // Re-render when workspaces change. The existing app.js code doesn't
@@ -97,6 +116,29 @@
       wrapped.__spineHooked = true;
       window.switchWorkspace = wrapped;
     }
+    /* Sprint 3.4 Issue 4 — wrap bB() so the spine's Undo chip syncs its
+       disabled state every time app.js updates #undoBtn. Cheap: just
+       toggles a class, no re-render. */
+    if (typeof window.bB === 'function' && !window.bB.__spineHooked) {
+      const orig = window.bB;
+      const wrapped = function () {
+        const r = orig.apply(this, arguments);
+        try { syncUndoChip(); } catch (e) {}
+        return r;
+      };
+      wrapped.__spineHooked = true;
+      window.bB = wrapped;
+    }
+  }
+
+  function syncUndoChip() {
+    if (!root) return;
+    const chip = root.querySelector('[data-act="undo"]');
+    if (!chip) return;
+    const disabled = !!document.getElementById('undoBtn')?.disabled;
+    chip.classList.toggle('disabled', disabled);
+    if (disabled) chip.setAttribute('disabled', '');
+    else chip.removeAttribute('disabled');
   }
 
   async function refresh() {
@@ -128,14 +170,30 @@
       const active = ws === cur ? ' active' : '';
       return '<button class="ws-chip' + active + '" data-ws="' + escAttr(ws) + '" style="background:' + escAttr(c) + ';color:' + textOn(c) + '" title="' + escAttr(ws) + '"><span>' + escHtml(letter) + '</span></button>';
     }).join('');
+    /* Sprint 3.4 Issue 4 — promoted chips above the gear. Bottom-up order:
+         +  add workspace
+         ⚙  Options / Tools panel
+         א/A  Lang toggle
+         ⤓  Import workspace (opens file picker via <label for="imp">)
+         ↶  Undo (disabled when hist stack is empty)
+         ⌕  Search (migrated from #paletteOpenPill — opens palette)
+         ☰  Drawer toggle
+       Workspace chips stack above this in `.spine-top`.
+
+       Undo disabled state is derived from #undoBtn.disabled (set by
+       app.js bB() after every undo / sn() / re()). When disabled, the
+       chip has class "disabled" → CSS dims + blocks pointer events. */
+    const undoDisabled = !!document.getElementById('undoBtn')?.disabled;
     root.innerHTML =
       '<div class="spine-top">' + chips + '</div>' +
       '<div class="spine-bot">' +
-        '<button class="ws-chip add" data-act="new-ws" title="New workspace">+</button>' +
-        /* Sprint 3.3 Issue 7 — Tools chip opens the slide-out panel that
-           replaces the old top toolbar (import / export / add zone / etc). */
-        '<button class="sb tools" data-act="tools-toggle" aria-label="Tools" title="Tools (Import · Export · Add zone · More)">⚙</button>' +
         '<button class="sb" data-act="drawer-toggle" aria-label="Toggle drawer" title="Toggle drawer">☰</button>' +
+        '<button class="sb" data-act="search" aria-label="Search anywhere" title="Search anywhere (⌘K / Ctrl+K)">⌕</button>' +
+        '<button class="sb' + (undoDisabled ? ' disabled' : '') + '" data-act="undo" aria-label="Undo" title="Undo (Ctrl+Z)"' + (undoDisabled ? ' disabled' : '') + '>↶</button>' +
+        '<label class="sb" data-act="import" for="imp" aria-label="Import workspace" title="Import workspace (JSON)">⤓</label>' +
+        '<button class="sb" data-act="lang" aria-label="Toggle Hebrew" title="Toggle Hebrew (RTL)">א/A</button>' +
+        '<button class="sb tools" data-act="tools-toggle" aria-label="Tools" title="More tools (Export · Add zone · Add node · More)">⚙</button>' +
+        '<button class="ws-chip add" data-act="new-ws" title="New workspace">+</button>' +
       '</div>';
     /* Sprint 3.2 Issue 7 — actions wired via root-level event delegation
        in install(); no per-render attach needed. */

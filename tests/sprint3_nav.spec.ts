@@ -232,7 +232,14 @@ test.describe("Sprint 3 · views", () => {
   test("S3.V5 Weak-spot view ranks nodes without throwing on sparse data", async ({ page }) => {
     await openWithFlags(page, { "views-v2": true });
     await seedNodesAndEdges(page);
-    await page.evaluate(() => (window as any).ViewTabs.setMode("weakspot"));
+    /* Sprint 3.4 Issue 6 — weakspot is now per-workspace. */
+    await page.evaluate(() => {
+      if (typeof (window as any).setWeakspotEnabled === "function") {
+        (window as any).setWeakspotEnabled(undefined, true);
+        (window as any).ViewTabs?.refresh?.();
+      }
+      (window as any).ViewTabs.setMode("weakspot");
+    });
     await page.waitForSelector("#viewStage .vs-weakspot");
     const rows = await page.locator("#viewStage .vs-ws-row").count();
     expect(rows).toBeGreaterThan(0);

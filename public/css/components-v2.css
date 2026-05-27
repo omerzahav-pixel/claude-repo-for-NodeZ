@@ -290,6 +290,23 @@ body.holding .nslice,
 #spine .sb.tools { color: var(--ink-2); }
 #spine .sb.tools:hover { color: var(--hot, #FF7A45); border-color: var(--hot-ring, rgba(255,122,69,0.45)); }
 
+/* Sprint 3.4 Issue 4 — promoted spine chips. The bot section now stacks
+   Drawer / Search / Undo / Import / Lang / Tools / + (top-to-bottom).
+   A <label> chip is used for Import so the iOS user-gesture chain
+   forwards to the file input cleanly. */
+#spine .sb[data-act="search"] { color: var(--ink); }
+#spine .sb[data-act="search"]:hover { color: var(--hot, #FF7A45); border-color: var(--hot-ring, rgba(255,122,69,0.45)); }
+#spine .sb.disabled,
+#spine .sb[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+}
+/* The Import label-chip — same dimensions as other .sb buttons. */
+#spine label.sb {
+  display: inline-flex; /* the rest is inherited from .sb */
+}
+
 /* =============================================================================
  * Sprint 3.3 Issue 7 · Tools panel (replaces #tb top toolbar).
  *
@@ -388,6 +405,20 @@ body[dir="rtl"] #toolsPanel.on { transform: translateX(0); }
  * rollback. With nav-v2 ON, the canvas reclaims that 48 px.
  * ============================================================================= */
 body.nav-v2-on #tabs { display: none !important; }
+/* Sprint 3.4 Issue 1 — the top-right breadcrumb (#bc) showed
+   Workspace → Parent → Current canvas lineage. The drawer now shows the
+   same information persistently. Hidden under nav-v2; left visible when
+   the flag is OFF for rollback. */
+body.nav-v2-on #bc { display: none !important; }
+/* Sprint 3.4 Issue 3 — the bottom-left "Nodes/Edges/Zones" sidebar (#sb)
+   showed the current canvas's contents grouped by zone. Drawer Issue 2
+   now exposes the same canvas → zone → node hierarchy persistently in
+   the spine area, so the sidebar is redundant. Hidden under nav-v2;
+   left visible when flag is OFF for rollback. */
+body.nav-v2-on #sb { display: none !important; }
+/* Also hide its toggle button #sbBtn if present, since clicking it now
+   has no effect. */
+body.nav-v2-on #sbBtn { display: none !important; }
 
 /* =============================================================================
  * Sprint 3.3 Issue 7 · Retire the OLD top toolbar when the user opts in
@@ -468,6 +499,32 @@ body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-i
 #drawer .dr-row .child-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; opacity: 0.7; }
 #drawer .dr-row .dr-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #drawer .dr-row .count { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-4); flex-shrink: 0; }
+
+/* Sprint 3.4 Issue 2 — zone rows + node rows in the drawer. */
+#drawer .dr-row .zone-dot {
+  width: 10px; height: 10px; border-radius: 2px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+#drawer .dr-row .zone-dot-empty {
+  background: transparent !important;
+  border: 1px dashed var(--line-3);
+}
+#drawer .dr-row.dr-zone-row {
+  color: var(--ink);
+  font-size: 12px;
+}
+#drawer .dr-row.dr-zone-row:hover { background: rgba(255,255,255,0.04); }
+#drawer .dr-row.dr-node-row {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  min-height: 22px;
+}
+#drawer .dr-row.dr-node-row:hover { color: var(--ink); background: rgba(255,255,255,0.03); }
+#drawer .dr-row .node-glyph {
+  font-family: var(--font-mono); font-size: 14px; color: var(--ink-4);
+  flex-shrink: 0; width: 12px; text-align: center;
+}
 
 /* Sprint 3.2 Issue 5 — drawer-row context menu (Set as default, etc). */
 #drawerRowMenu button {
@@ -693,15 +750,39 @@ body.non-canvas-view #emptyState { visibility: hidden; pointer-events: none; }
 #viewStage .vs-chip { display: inline-block; padding: 1px 8px; border: 1px solid var(--line-2); border-radius: var(--r-pill); font-size: 11px; font-weight: 500; }
 #viewStage .vs-age { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
 
-/* Kanban view */
+/* Kanban view
+   Sprint 3.4 Issue 5 — column sizing rewritten so all 5 columns fit on
+   iPad Pro landscape (1366 × 1024) without horizontal scroll.
+   Approach:
+     · grid-template-columns: repeat(5, minmax(180px, 1fr))
+       → each col gets an equal share of the available width but never
+         shrinks below 180 px (the minimum that keeps card titles
+         legible). 5 × 180 = 900 px minimum before overflow.
+     · overflow-x: auto ONLY when the 900 px minimum exceeds the
+       container — typically only iPad Pro portrait (1024) WITH the
+       drawer + spine eating ~280 px of width.
+     · max-width removed so the grid expands to fill the view stage.
+     · Each col body becomes its own vertical scroll container so a
+       column with many cards doesn't push the column header off-screen.
+     · RTL: container `direction: rtl` reverses grid order
+       (Done leftmost, Idea rightmost) per Hebrew reading flow. */
 #viewStage .vs-kanban {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s-3);
-  max-width: 1200px; margin: 0 auto; min-height: 0;
+  display: grid; grid-template-columns: repeat(5, minmax(180px, 1fr));
+  gap: var(--s-3);
+  margin: 0 auto;
+  min-height: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  height: 100%;
 }
-@media (max-width: 920px) { #viewStage .vs-kanban { grid-template-columns: repeat(2, 1fr); } }
+body[dir="rtl"] #viewStage .vs-kanban { direction: rtl; }
 #viewStage .vs-col {
   background: var(--srf-1); border: 1px solid var(--line); border-radius: var(--r-3);
-  display: flex; flex-direction: column; min-height: 240px;
+  display: flex; flex-direction: column;
+  min-height: 240px;
+  /* Cap column height so #viewStage's scroll stays on the inner column,
+     not the whole grid (vertical). 100vh - some chrome ≈ 80vh works. */
+  max-height: calc(100vh - 120px);
 }
 #viewStage .vs-col-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -712,7 +793,17 @@ body.non-canvas-view #emptyState { visibility: hidden; pointer-events: none; }
   text-transform: uppercase; letter-spacing: 0.08em;
 }
 #viewStage .vs-col-count { color: var(--ink-4); }
-#viewStage .vs-col-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 100px; }
+#viewStage .vs-col-body {
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+  min-height: 100px;
+  /* Sprint 3.4 Issue 5 — vertical scroll lives inside each column body,
+     not the whole grid. Allows many cards in one column without pushing
+     other columns out of view. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+}
 #viewStage .vs-col-body.drop-target { background: var(--hot-wash); border-radius: 0 0 var(--r-3) var(--r-3); }
 #viewStage .vs-card {
   background: var(--srf-3); border: 1px solid var(--line-2); border-radius: var(--r-2);

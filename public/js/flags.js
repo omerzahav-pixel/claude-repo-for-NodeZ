@@ -80,6 +80,30 @@
   // Merge in precedence order: defaults < stored < query.
   const state = Object.assign({}, DEFAULTS, stored, queried);
 
+  /* Sprint 3.4 — auto-persist URL-set flags to localStorage so iPad
+     users who can't easily use devtools can open a single magic URL
+     once and have it remembered for every subsequent visit. Without
+     this they'd have to keep the query string in the URL forever
+     (or every reload would clear the flags).
+
+     Only writes when the URL actually contained flag overrides —
+     plain visits to the production URL never touch storage here.
+
+     Skip if storage is unavailable (private mode / quota). */
+  if (Object.keys(queried).length) {
+    try {
+      const persisted = loadStored();
+      let dirty = false;
+      for (const k of Object.keys(queried)) {
+        if (persisted[k] !== queried[k]) {
+          persisted[k] = queried[k];
+          dirty = true;
+        }
+      }
+      if (dirty) localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+    } catch (e) {}
+  }
+
   function on(name) { return state[name] === true; }
   function off(name) { return !on(name); }
 

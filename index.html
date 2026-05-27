@@ -133,10 +133,13 @@
      through the hop. The More-menu items below are <label for="imp">/…impC
      so the browser treats a tap on the menu item as a tap on the input,
      which keeps the gesture intact. For that, the inputs must be in the
-     layout tree (not display:none), so they're visually hidden instead. -->
+     layout tree (not display:none), so they're visually hidden instead.
+     Sprint 3.4 Issue 4 — extracted out of #tb so the spine's Import chip
+     (and the Tools panel's deleted Import row) still triggers them when
+     --toolbar-migrated hides #tb. -->
+</div>
 <input id="imp" type="file" accept=".json" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0" onclick="window.dbg&&window.dbg('IMPORT','#imp received click event (iOS user-gesture forwarded)')" onchange="window.dbg&&window.dbg('IMPORT','#imp change event fired · files='+(this.files&&this.files.length||0));imF(event)"/>
 <input id="impC" type="file" accept=".json" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0" onclick="window.dbg&&window.dbg('IMPORT','#impC received click event')" onchange="window.dbg&&window.dbg('IMPORT','#impC change event fired · files='+(this.files&&this.files.length||0));imFCanvas(event)"/>
-</div>
 <div id="bc"></div>
 <div id="fl"></div>
 <button id="lgBtn" onclick="toggleLegend()" title="Legend">?</button>

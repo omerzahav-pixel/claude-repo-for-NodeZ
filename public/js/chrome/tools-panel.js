@@ -59,21 +59,20 @@
           '<span class="tp-ic" aria-hidden="true">⤧</span>' +
           '<span class="tp-name">Fit view</span>' +
         '</button>' +
-        '<button class="tp-row" data-act="undo">' +
-          '<span class="tp-ic" aria-hidden="true">↶</span>' +
-          '<span class="tp-name">Undo</span>' +
-        '</button>' +
         '<button class="tp-row" data-act="redo">' +
           '<span class="tp-ic" aria-hidden="true">↷</span>' +
           '<span class="tp-name">Redo</span>' +
         '</button>' +
+        /* Sprint 3.4 Issue 8 — Clear-canvas with cascade-delete option. */
+        '<button class="tp-row danger" data-act="clear-canvas">' +
+          '<span class="tp-ic" aria-hidden="true">⊘</span>' +
+          '<span class="tp-name">Clear canvas</span>' +
+        '</button>' +
       '</div>' +
       '<div class="tp-section">' +
         '<div class="tp-section-head">Workspace</div>' +
-        '<label class="tp-row" data-act="import" for="imp">' +
-          '<span class="tp-ic" aria-hidden="true">📥</span>' +
-          '<span class="tp-name">Import workspace</span>' +
-        '</label>' +
+        /* Sprint 3.4 Issue 4 — Import promoted to a spine chip; removed
+           from here. Export + Patch + workspace settings stay. */
         '<button class="tp-row" data-act="export">' +
           '<span class="tp-ic" aria-hidden="true">📤</span>' +
           '<span class="tp-name">Export workspace</span>' +
@@ -81,6 +80,12 @@
         '<button class="tp-row" data-act="patch">' +
           '<span class="tp-ic" aria-hidden="true">📋</span>' +
           '<span class="tp-name">Paste patch JSON</span>' +
+        '</button>' +
+        /* Sprint 3.4 Issue 6 — Workspace settings = the per-workspace
+           weakspot toggle (and future per-ws prefs). */
+        '<button class="tp-row" data-act="ws-settings">' +
+          '<span class="tp-ic" aria-hidden="true">⚙</span>' +
+          '<span class="tp-name">Workspace settings</span>' +
         '</button>' +
       '</div>' +
       '<div class="tp-section">' +
@@ -94,10 +99,8 @@
           '<span class="tp-ic" aria-hidden="true">?</span>' +
           '<span class="tp-name">Toggle legend</span>' +
         '</button>' +
-        '<button class="tp-row" data-act="lang">' +
-          '<span class="tp-ic" aria-hidden="true">א/A</span>' +
-          '<span class="tp-name">Toggle Hebrew (RTL)</span>' +
-        '</button>' +
+        /* Sprint 3.4 Issue 4 — Lang toggle promoted to a spine chip;
+           removed from here. */
       '</div>'
     );
   }
@@ -111,15 +114,15 @@
       if (act === 'add-node')     { safeCall('addC'); close(); return; }
       if (act === 'add-zone')     { safeCall('addZoneCenter'); close(); return; }
       if (act === 'fit')          { safeCall('zF'); close(); return; }
-      if (act === 'undo')         { safeCall('un'); return; }
       if (act === 'redo')         { safeCall('re'); return; }
       if (act === 'export')       { safeCall('ex'); close(); return; }
       if (act === 'patch')        { safeCall('showPatch'); close(); return; }
       if (act === 'more')         { safeCall('toggleMore'); close(); return; }
       if (act === 'legend')       { safeCall('toggleLegend'); close(); return; }
-      if (act === 'lang')         { safeCall('toggleHebrew'); close(); return; }
-      // 'import' is a <label for="imp"> — browser handles the file picker.
-      if (act === 'import')       { close(); return; }
+      /* Sprint 3.4 Issue 8 — clear-canvas with cascade option. */
+      if (act === 'clear-canvas') { safeCall('clearCanvasWithCascade'); close(); return; }
+      /* Sprint 3.4 Issue 6 — per-workspace settings (weakspot toggle). */
+      if (act === 'ws-settings')  { safeCall('openWorkspaceSettings'); close(); return; }
     });
     // Outside-click + ESC dismiss.
     document.addEventListener('click', outsideClick, true);

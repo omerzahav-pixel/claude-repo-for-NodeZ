@@ -163,6 +163,12 @@ test.describe("Sprint 3.3 · Issue 5 — weakspot adjustments", () => {
   async function seed(page: Page) {
     await open(page, { "views-v2": true });
     await page.evaluate(() => {
+      /* Sprint 3.4 Issue 6 — Weak-spot is now per-workspace; enable it
+         before any test that needs the tab visible. */
+      if (typeof (window as any).setWeakspotEnabled === "function") {
+        (window as any).setWeakspotEnabled(undefined, true);
+        (window as any).ViewTabs?.refresh?.();
+      }
       const E = (window as any).__E2E;
       const z = E.current().zones[0]?.id || "ideas";
       const old = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();

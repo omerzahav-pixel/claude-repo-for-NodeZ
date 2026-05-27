@@ -55,6 +55,19 @@
     else { try { const s = localStorage.getItem(STORE_KEY); if (s && MODES.includes(s)) activeMode = s; } catch (e) {} }
     renderTabs();
     applyMode(activeMode);
+    /* Sprint 3.4 Issue 6 — re-render the tab strip after every workspace
+       switch so the Weak-spot tab visibility tracks the new workspace's
+       setting. */
+    if (typeof window.switchWorkspace === 'function' && !window.switchWorkspace.__viewsHooked) {
+      const o = window.switchWorkspace;
+      const w = async function () {
+        const r = await o.apply(this, arguments);
+        try { renderTabs(); } catch (e) {}
+        return r;
+      };
+      w.__viewsHooked = true;
+      window.switchWorkspace = w;
+    }
     // Re-render the active non-canvas view when the underlying data changes.
     if (typeof window.render === 'function' && !window.render.__viewsHooked) {
       const orig = window.render;
@@ -72,7 +85,20 @@
 
   function renderTabs() {
     if (!tabsEl) return;
-    tabsEl.innerHTML = MODES.map(m =>
+    /* Sprint 3.4 Issue 6 — Weak-spot tab is hidden when the current
+       workspace has weakspot disabled. Default per-ws is OFF; the
+       one-time migration enables it for the workspace named "uni". */
+    const visibleModes = MODES.filter(m => {
+      if (m !== 'weakspot') return true;
+      try { return typeof window.isWeakspotEnabled === 'function' && window.isWeakspotEnabled(); }
+      catch (e) { return false; }
+    });
+    // If user is currently on weakspot but it's now disabled, jump to canvas.
+    if (activeMode === 'weakspot' && !visibleModes.includes('weakspot')) {
+      activeMode = 'canvas';
+      applyMode('canvas');
+    }
+    tabsEl.innerHTML = visibleModes.map(m =>
       '<button class="vt-tab' + (m === activeMode ? ' active' : '') + '" data-mode="' + m + '" title="' + LABEL[m] + '">' +
         '<span class="vt-ic">' + ICON[m] + '</span>' +
         '<span class="vt-lbl">' + LABEL[m] + '</span>' +
@@ -82,6 +108,9 @@
       b.addEventListener('click', () => setMode(b.getAttribute('data-mode')));
     });
   }
+  /* Sprint 3.4 Issue 6 — expose for the workspace-settings dialog so
+     it can re-render tabs after toggling weakspot on/off. */
+  function refresh() { renderTabs(); }
 
   function setMode(m) {
     if (!MODES.includes(m) || m === activeMode) return;
@@ -127,7 +156,7 @@
     }
   }
 
-  window.ViewTabs = Object.freeze({ setMode, current: () => activeMode });
+  window.ViewTabs = Object.freeze({ setMode, current: () => activeMode, refresh });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot, { once: true });

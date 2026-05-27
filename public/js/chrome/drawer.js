@@ -17,9 +17,31 @@
 
   const STATE_KEY = 'edgespace-drawer-collapsed';
   const TREE_OPEN_KEY = 'edgespace-drawer-tree-open';
+  /* Sprint 3.4 Issue 2 — separate per-canvas key for zone-expansion
+     state so it doesn't share the canvas-tree expansion namespace
+     (different lifecycle). Stored as { [canvasId]: [zoneId, ...] }. */
+  const ZONE_OPEN_KEY = 'edgespace-drawer-zone-open';
   let root = null;
   let collapsed = false;
   let openIds = new Set();
+  let openZonesByCanvas = {}; // canvasId → Set<zoneId>
+  function loadOpenZones() {
+    try {
+      const raw = localStorage.getItem(ZONE_OPEN_KEY);
+      if (!raw) return {};
+      const o = JSON.parse(raw);
+      const out = {};
+      for (const k of Object.keys(o || {})) out[k] = new Set(o[k] || []);
+      return out;
+    } catch (e) { return {}; }
+  }
+  function saveOpenZones() {
+    try {
+      const o = {};
+      for (const k of Object.keys(openZonesByCanvas)) o[k] = Array.from(openZonesByCanvas[k]);
+      localStorage.setItem(ZONE_OPEN_KEY, JSON.stringify(o));
+    } catch (e) {}
+  }
 
   function boot() {
     if (!window.Flags || !window.Flags.on('nav-v2')) return;
@@ -32,6 +54,7 @@
       const raw = localStorage.getItem(TREE_OPEN_KEY);
       if (raw) openIds = new Set(JSON.parse(raw));
     } catch (e) {}
+    openZonesByCanvas = loadOpenZones();
     install();
   }
 
@@ -143,32 +166,139 @@
   }
 
   function renderNode(id, tree, indent) {
-    const { meta, current, children } = tree;
+    const { meta, byId, current, children } = tree;
     const name = meta[id]?.name || id;
     const kids = children[id] || [];
     const isOpen = openIds.has(id) || id === 'vault';
     const isActive = id === current;
     const cnt = nodeCount(id);
     const descCnt = descendantCount(id, children);
-    const caret = kids.length ? ('<span class="caret">' + (isOpen ? '▾' : '▸') + '</span>') : '<span class="caret">&nbsp;</span>';
+    /* Sprint 3.4 Issue 2 — the ACTIVE canvas always gets its zones-and-
+       nodes sub-tree, even if it has no child canvases. Non-active
+       canvases show a caret only when they have child canvases. */
+    const hasZonesInside = isActive;
+    const showCaret = kids.length || hasZonesInside;
+    const caret = showCaret ? ('<span class="caret">' + (isOpen || isActive ? '▾' : '▸') + '</span>') : '<span class="caret">&nbsp;</span>';
     const statusDot = '<span class="child-dot" style="background:' + escAttr(wsColorHex(name)) + '"></span>';
     const badge = descCnt ? '<span class="count">' + descCnt + '</span>' : (cnt ? '<span class="count">' + cnt + '</span>' : '');
     let out = '<div class="dr-row' + (isActive ? ' active' : '') + '" data-id="' + escAttr(id) + '" style="padding-inline-start:' + (indent * 14 + 6) + 'px">' +
       caret + statusDot + '<span class="dr-name">' + escHtml(name) + '</span>' + badge + '</div>';
+    /* Sprint 3.4 Issue 2 — render the active canvas's zones + nodes
+       inline below its row. Non-active canvases just show child canvases
+       as before. */
+    if (isActive) {
+      out += renderZonesAndNodes(id, byId, indent + 1);
+    }
     if (isOpen && kids.length) {
       for (const kid of kids) out += renderNode(kid, tree, indent + 1);
     }
     return out;
   }
 
+  /* Sprint 3.4 Issue 2 — three-level hierarchy: canvas → zone → node.
+     Zones rendered as sub-rows with color chip + name + count + caret.
+     Expanded zones reveal their nodes. Unzoned nodes appear under a
+     synthetic "Unzoned" group ONLY when at least one zone exists on the
+     canvas (otherwise the flat node list reads cleaner). Zero-node zones
+     still render so the user can navigate to them. */
+  function renderZonesAndNodes(canvasId, byId, indent) {
+    const c = byId[canvasId];
+    if (!c) return '';
+    const zones = c.zones || [];
+    const nodes = c.nodes || [];
+    const openZones = openZonesByCanvas[canvasId] || new Set();
+    let out = '';
+    if (zones.length === 0) {
+      // Flat list of nodes — no Unzoned header, that would be noise.
+      for (const n of nodes) {
+        out += renderNodeRow(n, indent);
+      }
+      return out;
+    }
+    for (const z of zones) {
+      const inZone = nodes.filter(n => n.zone === z.id);
+      const isOpen = openZones.has(z.id);
+      const caret = '<span class="caret">' + (isOpen ? '▾' : '▸') + '</span>';
+      const dot = '<span class="zone-dot" style="background:' + escAttr(z.color || '#777') + '"></span>';
+      out += '<div class="dr-row dr-zone-row" data-zid="' + escAttr(z.id) + '" style="padding-inline-start:' + (indent * 14 + 6) + 'px">' +
+        caret + dot + '<span class="dr-name">' + escHtml(z.name || 'Zone') + '</span>' +
+        '<span class="count">' + inZone.length + '</span>' +
+      '</div>';
+      if (isOpen) {
+        for (const n of inZone) out += renderNodeRow(n, indent + 1);
+      }
+    }
+    // Unzoned bucket — only if there ARE unzoned nodes alongside zones.
+    const unzoned = nodes.filter(n => !n.zone || !zones.some(z => z.id === n.zone));
+    if (unzoned.length) {
+      const key = '__unzoned__';
+      const isOpen = openZones.has(key);
+      const caret = '<span class="caret">' + (isOpen ? '▾' : '▸') + '</span>';
+      const dot = '<span class="zone-dot zone-dot-empty"></span>';
+      out += '<div class="dr-row dr-zone-row" data-zid="' + key + '" style="padding-inline-start:' + (indent * 14 + 6) + 'px">' +
+        caret + dot + '<span class="dr-name">Unzoned</span>' +
+        '<span class="count">' + unzoned.length + '</span>' +
+      '</div>';
+      if (isOpen) {
+        for (const n of unzoned) out += renderNodeRow(n, indent + 1);
+      }
+    }
+    return out;
+  }
+  function renderNodeRow(n, indent) {
+    const label = n.label || '(untitled)';
+    return '<div class="dr-row dr-node-row" data-nid="' + (+n.id) + '" style="padding-inline-start:' + (indent * 14 + 6) + 'px">' +
+      '<span class="caret">&nbsp;</span>' +
+      '<span class="node-glyph">·</span>' +
+      '<span class="dr-name">' + escHtml(label) + '</span>' +
+    '</div>';
+  }
+
   function wireActions(tree) {
     root.querySelector('[data-act="collapse"]')?.addEventListener('click', toggle);
     root.querySelectorAll('.dr-row').forEach(row => {
       row.addEventListener('click', (e) => {
-        const id = row.getAttribute('data-id');
+        /* Sprint 3.4 Issue 2 — three row kinds:
+             data-id   : canvas row (existing)
+             data-zid  : zone row   (new)
+             data-nid  : node row   (new)
+           Caret on any row toggles its open state in the relevant
+           expansion store. */
+        const zid = row.getAttribute('data-zid');
+        const nid = row.getAttribute('data-nid');
+        const id  = row.getAttribute('data-id');
+        const onCaret = e.target.classList && e.target.classList.contains('caret');
+        // Zone row
+        if (zid) {
+          if (onCaret) {
+            const curC = tree.current;
+            if (!openZonesByCanvas[curC]) openZonesByCanvas[curC] = new Set();
+            const set = openZonesByCanvas[curC];
+            if (set.has(zid)) set.delete(zid); else set.add(zid);
+            saveOpenZones();
+            render();
+          } else if (zid !== '__unzoned__' && typeof window.focusZone === 'function') {
+            window.focusZone(zid);
+            if (window.ViewTabs && window.ViewTabs.current && window.ViewTabs.current() !== 'canvas') {
+              window.ViewTabs.setMode('canvas');
+            }
+          }
+          return;
+        }
+        // Node row
+        if (nid) {
+          const id = +nid;
+          if (window.ViewTabs && window.ViewTabs.current && window.ViewTabs.current() !== 'canvas') {
+            window.ViewTabs.setMode('canvas');
+          }
+          if (typeof window.focusNode === 'function') {
+            requestAnimationFrame(() => window.focusNode(id));
+          }
+          return;
+        }
+        // Canvas row
         if (!id) return;
-        // Tap on caret toggles the children; tap on name navigates.
-        if (e.target.classList && e.target.classList.contains('caret')) {
+        if (onCaret) {
           if (openIds.has(id)) openIds.delete(id); else openIds.add(id);
           try { localStorage.setItem(TREE_OPEN_KEY, JSON.stringify(Array.from(openIds))); } catch (e) {}
           render();
