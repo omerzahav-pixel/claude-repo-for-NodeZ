@@ -18,3 +18,28 @@ Issues that have been investigated but not resolved, parked for fresh evidence.
   positioning fix. Line break itself works (confirmed by user). The
   toast just doesn't appear. Deferred per user — "not that important
   if you just have issues with that."
+
+---
+
+## Sprint 3.5 — Import-doubling cleanup (auto-applied)
+
+Earlier sprints (probably the period when both the old top toolbar's
+`<label for="imp">` and the new spine Import chip's `<label for="imp">`
+co-existed without flag-gating) appear to have caused some users'
+workspaces to ingest the same canvases twice. The user reported
+duplicate `probability` and `execution` canvases that could not be
+removed.
+
+**Mitigation shipped in Sprint 3.5:**
+1. `imF()` now has a 1.5 s re-entry guard so iOS Safari can't dispatch
+   the change event twice within one file-picker session.
+2. `reconcileCanvases()` runs a new `dedupeIdenticalCanvases()` pass
+   that removes byte-equal duplicate canvas pairs within a workspace.
+   Conservative — anything non-identical is left alone and surfaced as
+   a `console.warn` so the user can inspect manually.
+3. Issue 5 of Sprint 3.5 adds an explicit "Delete canvas" option in the
+   drawer-row context menu for any remaining manual cleanup.
+
+Migration runs automatically on every workspace load (it's inside
+`reconcileCanvases`). Idempotent — safe to run repeatedly. No data
+loss for divergent canvases.

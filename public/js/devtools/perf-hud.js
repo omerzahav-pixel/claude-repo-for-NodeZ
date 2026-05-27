@@ -58,6 +58,12 @@
       '<div id="ph-fps">fps —</div>' +
       '<div id="ph-drop">drop —</div>' +
       '<div id="ph-commit">commit —</div>' +
+      /* Sprint 3.5 Issue 4 — frame-budget warning. Counts commits that
+         exceed 16 ms and shows a colored badge. Sustained > 33 % rate
+         in the rolling window means the canvas is too dense for the
+         current substrate — this is the signal Phase 4 (Canvas Tile
+         Cache) will baseline against. */
+      '<div id="ph-budget">budget —</div>' +
       '<div id="ph-state">state —</div>' +
       '<div id="ph-mem" style="margin-top:4px;color:#7C828E"></div>';
     document.body.appendChild(root);
@@ -65,6 +71,7 @@
     const fpsEl    = root.querySelector('#ph-fps');
     const dropEl   = root.querySelector('#ph-drop');
     const commitEl = root.querySelector('#ph-commit');
+    const budgetEl = root.querySelector('#ph-budget');
     const stateEl  = root.querySelector('#ph-state');
     const memEl    = root.querySelector('#ph-mem');
 
@@ -93,6 +100,18 @@
           const sum = commitSamples.reduce((a,b)=>a+b, 0);
           const avg = sum / commitSamples.length;
           commitEl.textContent = 'commit ' + avg.toFixed(2).padStart(5) + 'ms';
+          /* Sprint 3.5 Issue 4 — budget bar. Show the over-budget rate
+             as a percentage with a color cue:
+               < 10 %  green   (canvas comfortable for current substrate)
+              10-33 %  amber   (intermittent stutter under heavy gestures)
+               > 33 %  red     (canvas too dense; Phase 4 tile cache needed) */
+          const over = commitSamples.filter(s => s > FRAME_BUDGET_MS).length;
+          const rate = over / commitSamples.length;
+          const pct  = (rate * 100).toFixed(0).padStart(3);
+          let color = '#4FD18B';
+          if (rate >= 0.33) color = '#F87171';
+          else if (rate >= 0.10) color = '#F2C462';
+          budgetEl.innerHTML = 'budget <span style="color:' + color + '">' + pct + '%</span> over 16ms';
         }
         const gs = window.GestureV2 ? window.GestureV2.getState() : '—';
         stateEl.textContent  = 'state  ' + gs.padStart(7);

@@ -276,14 +276,24 @@ body.holding .nslice,
 }
 #spine .sb {
   /* Sprint 3.2 Issue 7 — bigger + bordered + brighter so the hamburger
-     reads as an actionable button instead of a faint glyph. */
+     reads as an actionable button instead of a faint glyph.
+     Sprint 3.5 Issue 2 — `touch-action: manipulation` eliminates iOS
+     Safari's 300 ms tap delay AND prevents iOS from interpreting a
+     1-px finger micro-movement as a drag; this was the most likely
+     cause of the "gear chip doesn't open Tools" report. */
   width: 36px; height: 36px; border-radius: 10px;
   background: var(--srf-2); border: 1px solid var(--line-2); color: var(--ink-2); cursor: pointer;
   font-size: 18px; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 #spine .sb:hover { background: var(--srf-3); color: var(--ink); border-color: var(--line-3); }
-#spine .sb:active { transform: scale(0.95); }
+/* Sprint 3.5 Issue 2 — softened :active scale (was 0.95) so the touch's
+   sub-pixel movement during the scale doesn't trip iOS's drag detection. */
+#spine .sb:active { transform: scale(0.97); }
+/* Same touch-action for workspace chips, which also sit in the spine. */
+#spine .ws-chip { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 /* Sprint 3.3 Issue 7 — Tools (gear) chip distinguished from the drawer
    hamburger by a faint hot tint, since it opens a meaningfully different
    surface (a tools menu vs a layout toggle). */
@@ -448,9 +458,21 @@ body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-i
   -webkit-user-select: none; user-select: none;
   transition: width var(--t-base) var(--e-out);
 }
-#drawer.collapsed { width: 40px; padding: 16px 4px; }
+/* Sprint 3.5 Issue 3 — collapsed drawer must be ZERO pixels visible.
+   The previous 40-px vertical strip with a chevron was: (a) a redundant
+   second entry point alongside the hamburger chip on the spine, (b)
+   clipping the bottom-left "shift+drag = connect" help legend and the
+   trailing edge of Kanban columns. Now the entire drawer is fully
+   hidden when collapsed; the spine's hamburger is the only way to
+   reopen it. */
+#drawer.collapsed {
+  width: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+}
 #drawer.collapsed > * { display: none; }
-#drawer.collapsed .dr-toggle { display: block; }
 #drawer .dr-head {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 14px; gap: 8px;
@@ -537,6 +559,8 @@ body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-i
   cursor: pointer;
 }
 #drawerRowMenu button:hover { background: var(--srf-4, #2A3038); }
+#drawerRowMenu button.danger { color: var(--st-blocked, #F87171); }
+#drawerRowMenu button.danger:hover { background: rgba(248,113,113,0.10); }
 #drawer .dr-section-head {
   font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
   letter-spacing: 0.12em; text-transform: uppercase;
@@ -550,9 +574,11 @@ body[dir="rtl"] #drawer { inset-inline-start: auto; inset-inline-end: 56px; bord
 body.nav-v2-on #tb { inset-inline-start: calc(280px + 12px); max-width: calc(100vw - 280px - 24px); }
 body.nav-v2-on #sb { inset-inline-start: calc(280px + 12px); }
 body.nav-v2-on #fl { inset-inline-start: calc(280px + 12px); }
-body.nav-v2-on.drawer-collapsed #tb { inset-inline-start: calc(96px + 12px); max-width: calc(100vw - 96px - 24px); }
-body.nav-v2-on.drawer-collapsed #sb { inset-inline-start: calc(96px + 12px); }
-body.nav-v2-on.drawer-collapsed #fl { inset-inline-start: calc(96px + 12px); }
+/* Sprint 3.5 Issue 3 — drawer collapsed is now zero pixels (was 40 px),
+   so canvas chrome only needs to clear the 56-px spine, not 96 px. */
+body.nav-v2-on.drawer-collapsed #tb { inset-inline-start: calc(56px + 12px); max-width: calc(100vw - 56px - 24px); }
+body.nav-v2-on.drawer-collapsed #sb { inset-inline-start: calc(56px + 12px); }
+body.nav-v2-on.drawer-collapsed #fl { inset-inline-start: calc(56px + 12px); }
 
 /* =============================================================================
  * Sprint 3 · ⌘K command palette (Pass 4 § 02).

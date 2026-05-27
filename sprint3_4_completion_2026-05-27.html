@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 3.4 — Phase 3 Final Polish · דו"ח השלמה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --ink: #1a2238;
+    --ink-soft: #4a5468;
+    --accent: #c2410c;
+    --accent-soft: #fed7aa;
+    --green: #15803d;
+    --green-soft: #bbf7d0;
+    --amber: #b45309;
+    --amber-soft: #fde68a;
+    --blue: #1e40af;
+    --blue-soft: #dbeafe;
+    --purple: #6b21a8;
+    --purple-soft: #e9d5ff;
+    --red: #b91c1c;
+    --red-soft: #fecaca;
+    --rule: #d6cfc2;
+    --code-bg: #ede5d5;
+    --code-ink: #7c2d12;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85;
+    direction: rtl; text-align: right;
+  }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+  }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+  .section-title {
+    font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px;
+    margin: 36px 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+
+  .en {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
+    background: var(--code-bg); color: var(--code-ink);
+    padding: 1px 7px; border-radius: 4px;
+    direction: ltr; unicode-bidi: isolate; display: inline-block;
+    vertical-align: 1px; font-weight: 500;
+  }
+  em {
+    font-style: normal; background: var(--accent-soft);
+    padding: 0 4px; border-radius: 3px; font-weight: 600;
+  }
+
+  .insight {
+    background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%);
+    border: 2px solid var(--accent); border-radius: 8px;
+    padding: 22px 24px; margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(194,65,12,0.08);
+  }
+  .insight h2 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--accent);
+    font-size: 22px; margin-bottom: 10px;
+  }
+  .insight p { margin-bottom: 8px; }
+
+  .finding {
+    background: var(--card); border-radius: 8px;
+    padding: 16px 20px; margin: 12px 0;
+  }
+  .finding.ok      { border-right: 4px solid var(--green); }
+  .finding.suspect { border-right: 4px solid var(--amber); }
+  .finding.bug     { border-right: 4px solid var(--red); }
+  .finding.expected, .finding.info { border-right: 4px solid var(--blue); }
+  .finding.feature { border-right: 4px solid var(--purple); }
+  .finding.cleanup { border-right: 4px solid var(--accent); }
+  .finding h4 {
+    font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 6px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .finding h4 .issue-tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--code-bg); color: var(--code-ink);
+    padding: 2px 7px; border-radius: 4px; direction: ltr; font-weight: 500;
+  }
+  .finding p { font-size: 14.5px; margin-top: 4px; }
+  .finding p.diag {
+    font-size: 13.5px; color: var(--ink-soft); margin-top: 8px;
+    padding-top: 8px; border-top: 1px dashed var(--rule);
+  }
+
+  .recommend, .confirmed {
+    background: var(--green-soft); border-right: 4px solid var(--green);
+    padding: 18px 22px; border-radius: 6px; margin: 20px 0;
+  }
+  .recommend h3, .confirmed h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--green);
+    font-size: 19px; margin-bottom: 10px;
+  }
+
+  .clarify {
+    background: var(--blue-soft); border-right: 4px solid var(--blue);
+    padding: 16px 20px; border-radius: 6px; margin: 20px 0;
+  }
+  .clarify h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--blue);
+    font-size: 18px; margin-bottom: 8px;
+  }
+
+  .warn {
+    background: var(--amber-soft); border-right: 4px solid var(--amber);
+    padding: 14px 18px; border-radius: 6px; margin: 16px 0;
+    font-size: 14.5px;
+  }
+  .warn strong { color: var(--amber); }
+
+  /* Spine diagram */
+  .spine-diagram {
+    background: var(--card); border-radius: 8px;
+    padding: 24px; margin: 20px 0;
+    display: grid; grid-template-columns: 100px 1fr; gap: 32px;
+    align-items: center;
+  }
+  .spine-rail {
+    background: linear-gradient(180deg, #13171D 0%, #0E1116 100%);
+    border-radius: 12px;
+    padding: 12px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+  .spine-chip {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    font-size: 14px; color: white;
+    border: 1px solid rgba(255,255,255,0.18);
+    position: relative;
+  }
+  .spine-chip.ws { background: hsl(45,55%,60%); color: #1A0A04; }
+  .spine-chip.ws.active::before {
+    content: ""; position: absolute;
+    right: -8px; top: 6px; bottom: 6px; width: 4px;
+    border-radius: 2px; background: white;
+    box-shadow: 0 0 6px white;
+  }
+  .spine-chip.action {
+    background: #181C24; color: #C8C5BE;
+    border: 1px solid #2A2F3A;
+  }
+  .spine-chip.action.dim { opacity: 0.4; }
+  .spine-chip.add {
+    background: none; color: #8a8478;
+    border: 1px dashed #555;
+  }
+  .spine-divider {
+    width: 30px; height: 1px; background: rgba(255,255,255,0.18);
+    margin: 4px 0;
+  }
+  .spine-labels {
+    display: flex; flex-direction: column; gap: 14px;
+    font-size: 13.5px; line-height: 1.5;
+  }
+  .spine-labels .row {
+    display: grid; grid-template-columns: 24px 100px 1fr; gap: 10px;
+    align-items: baseline;
+  }
+  .spine-labels .glyph {
+    text-align: center; font-family: 'JetBrains Mono', monospace;
+    color: var(--accent); font-weight: 700;
+  }
+  .spine-labels .name {
+    font-weight: 600; color: var(--ink);
+  }
+  .spine-labels .desc { color: var(--ink-soft); font-size: 13px; }
+
+  /* Test session table */
+  table.session {
+    width: 100%; border-collapse: collapse;
+    background: var(--card); border-radius: 8px; overflow: hidden;
+    font-size: 14px; margin: 14px 0;
+  }
+  table.session th {
+    background: var(--accent-soft);
+    padding: 10px 12px; text-align: right;
+    font-weight: 700; font-size: 13px;
+  }
+  table.session td {
+    padding: 10px 12px; border-top: 1px dashed var(--rule);
+    vertical-align: middle;
+  }
+  table.session tr td:first-child { border-right: 4px solid var(--rule); }
+  table.session tr.pw-pass td:first-child { border-right-color: var(--green); }
+  table.session tr.needs-ipad td:first-child { border-right-color: var(--blue); }
+  .badge {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    padding: 3px 8px; border-radius: 4px; direction: ltr;
+    font-weight: 700;
+  }
+  .badge.pw { background: var(--green-soft); color: var(--green); }
+  .badge.ipad { background: var(--blue-soft); color: var(--blue); }
+
+  .closing {
+    margin-top: 32px; padding: 20px 22px;
+    background: var(--card); border-radius: 6px;
+    border-right: 4px solid var(--accent);
+  }
+  .closing h3 {
+    font-family: 'Frank Ruhl Libre', serif; font-size: 18px;
+    margin-bottom: 8px; color: var(--accent);
+  }
+
+  .recap-row {
+    display: flex; gap: 12px; align-items: baseline;
+    padding: 6px 0; font-size: 14.5px;
+  }
+  .recap-row .tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--green); background: var(--green-soft);
+    padding: 2px 8px; border-radius: 4px;
+    flex-shrink: 0; direction: ltr; font-weight: 700;
+  }
+  .recap-row .tag.def {
+    color: var(--blue); background: var(--blue-soft);
+  }
+
+  ul { padding-right: 22px; margin: 6px 0; }
+  li { margin-bottom: 4px; font-size: 14.5px; }
+
+  .formula {
+    background: var(--code-bg); color: var(--code-ink);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    padding: 14px 18px; border-radius: 6px; margin: 12px 0;
+    direction: ltr; text-align: left; line-height: 1.6;
+    word-break: break-all;
+  }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 3.4 · PHASE 3 · FINAL POLISH</div>
+  <h1>Sprint 3.4 הושלם — Phase 3 נסגר בכפוף לאימות iPad</h1>
+  <p class="subtitle">תשעה issues שונעו, אחד נדחה ל-<span class="en">FR-3</span>, ובונוס לאזמט — <span class="en">URL</span> שעובד מהקופסה ב-iPad בלי <span class="en">Develop / Console</span>.</p>
+
+  <div class="insight">
+    <h2>הקליטה המרכזית</h2>
+    <p>כל עשרת ה-issues של ה-brief טופלו. תשעה shipped בקוד; ה-עשירי (<span class="en">drag-reorder</span> של chips על ה-spine) נדחה כפי שאישרת ל-<span class="en">FR-3</span> כדי לא להעמיס gestures על iPad. <em>263 / 263 desktop-chrome · 263 / 263 ipad-chrome</em> — כל ה-suite ירוק.</p>
+    <p>שני tasks היותר משמעותיים: ה-<span class="en">drawer</span> עכשיו מציג היררכיה תלת-רמתית (canvas → zone → node) שמחליפה לחלוטין את הסרגל-תחתון-שמאל הישן, וה-<span class="en">spine</span> עבר reorganization מלא עם 4 chips חדשים (Search, Undo, Import, Lang) שנפרצו החוצה מתפריט ה-gear.</p>
+    <p>בונוס לא-מתועד-ב-brief: התלונה שלך על <span class="en">Develop / Console</span> ב-iPad — ה-<span class="en">flags.js</span> עכשיו שומר אוטומטית פלאגים מה-URL ל-<span class="en">localStorage</span>. פותחים <em>פעם אחת</em> URL עם <span class="en">?flags=…</span> וזה נשאר לכל החיים.</p>
+  </div>
+
+  <h2 class="section-title">1. דיאגרמת ה-spine — איפה כל chip יושב</h2>
+
+  <p>אחרי Sprint 3.4 ה-<span class="en">spine</span> מארח 6 chips פעולה מתחת לרשימת ה-workspaces. הסדר מלמעלה-למטה בקטע התחתון: ☰ → ⌕ → ↶ → ⤓ → א/A → ⚙ → +. ה-workspace chips יושבים מעל הכל.</p>
+
+  <div class="spine-diagram">
+    <div class="spine-rail">
+      <div class="spine-chip ws active">UN</div>
+      <div class="spine-chip ws" style="background:hsl(210,55%,60%);color:#fff">WO</div>
+      <div class="spine-chip ws" style="background:hsl(280,55%,60%);color:#fff">PR</div>
+      <div class="spine-divider"></div>
+      <div class="spine-chip action">☰</div>
+      <div class="spine-chip action">⌕</div>
+      <div class="spine-chip action dim">↶</div>
+      <div class="spine-chip action">⤓</div>
+      <div class="spine-chip action">א/A</div>
+      <div class="spine-chip action" style="color:#FF7A45">⚙</div>
+      <div class="spine-chip add">+</div>
+    </div>
+
+    <div class="spine-labels">
+      <div class="row"><span class="glyph">·</span><span class="name">Workspaces</span><span class="desc">chip לכל workspace, האקטיבי עם פס לבן בצד הפנימי.</span></div>
+      <div class="row"><span class="glyph">☰</span><span class="name">Drawer</span><span class="desc">פותח/סוגר את עמודת ה-canvases (224 → 40 px).</span></div>
+      <div class="row"><span class="glyph">⌕</span><span class="name">Search</span><span class="desc">פותח את ה-palette. החליף את ה-pill הצף שהיה במרכז למעלה.</span></div>
+      <div class="row"><span class="glyph">↶</span><span class="name">Undo</span><span class="desc">ביטול פעולה אחרונה. אפור ולא לחיץ כשאין מה לבטל.</span></div>
+      <div class="row"><span class="glyph">⤓</span><span class="name">Import</span><span class="desc">פותח file picker לייבוא workspace. תווית <span class="en">&lt;label for="imp"&gt;</span> לשרשרת user-gesture של iOS.</span></div>
+      <div class="row"><span class="glyph">א/A</span><span class="name">Lang</span><span class="desc">החלפת עברית ⇄ אנגלית.</span></div>
+      <div class="row"><span class="glyph">⚙</span><span class="name">Tools</span><span class="desc">תפריט עם Export, Patch, Workspace settings, Add zone/node, Clear canvas, Legend.</span></div>
+      <div class="row"><span class="glyph">+</span><span class="name">New ws</span><span class="desc">יצירת workspace חדש.</span></div>
+    </div>
+  </div>
+
+  <h2 class="section-title">2. עשרת ה-issues — סיכום אישי</h2>
+
+  <div class="finding cleanup">
+    <h4>Issue 1 — הסרת ה-breadcrumb בצד ימין למעלה <span class="issue-tag">CLEANUP</span></h4>
+    <p>ה-<span class="en">#bc</span> הציג את שרשרת ה-Workspace → Parent → Current. ה-<span class="en">drawer</span> כבר מציג את זה באופן קבוע, אז ה-breadcrumb היה מיותר. הוסתר תחת <span class="en">body.nav-v2-on</span>; חוזר כשהפלאג כבוי (rollback).</p>
+  </div>
+
+  <div class="finding feature">
+    <h4>Issue 2 — היררכיה תלת-רמתית ב-drawer: canvas → zone → node <span class="issue-tag">FEATURE</span></h4>
+    <p>ה-canvas הפעיל מתרחב עכשיו לשורות-zone (chip צבע + שם + count + caret), וכל zone מתרחב לרשימת ה-nodes שלו. תקיעה ב-zone מקפיצה את הקנבס למרכז ה-zone (<span class="en">window.focusZone</span> חדש ב-<span class="en">app.js</span>), תקיעה ב-node ממקדת אותו. ה-bucket <em>"Unzoned"</em> רנדר רק כשיש zones <em>וגם</em> nodes לא-מסווגים, אחרת זה רעש.</p>
+    <p class="diag">מצב ההתרחבות נשמר ב-<span class="en">localStorage['edgespace-drawer-zone-open']</span> לכל canvas בנפרד.</p>
+  </div>
+
+  <div class="finding cleanup">
+    <h4>Issue 3 — הסרת הסרגל הישן בצד שמאל-תחתון <span class="issue-tag">CLEANUP</span></h4>
+    <p>ה-<span class="en">#sb</span> ("Nodes / Edges / Zones") היה כפול ל-drawer החדש אחרי Issue 2. הוסתר תחת <span class="en">body.nav-v2-on</span> — וגם הכפתור <span class="en">#sbBtn</span> שלידו, כי הוא היה לוחץ על כלום אחרי ההסתרה.</p>
+  </div>
+
+  <div class="finding feature">
+    <h4>Issue 4 — קידום 4 chips ל-spine + מעבר של ה-search pill <span class="issue-tag">FEATURE</span></h4>
+    <p>ה-chips החדשים: <strong>Search</strong> (החליף את ה-pill הצף שהיה במרכז למעלה), <strong>Undo</strong> (מצב disabled מסונכרן עם <span class="en">#undoBtn.disabled</span> דרך wrap של <span class="en">bB()</span>), <strong>Import</strong> (תווית <span class="en">&lt;label for="imp"&gt;</span> כדי לשמר את user-gesture ל-iOS), <strong>Lang</strong>. הוסרו משלושת המקומות שהיו ב-Tools panel.</p>
+    <p class="diag">דרשו להעביר את <span class="en">#imp</span> ו-<span class="en">#impC</span> החוצה מ-<span class="en">#tb</span> כדי שייבוא יעבוד גם כש-<span class="en">--toolbar-migrated</span> מסתיר את ה-toolbar הישן.</p>
+  </div>
+
+  <div class="finding feature">
+    <h4>Issue 5 — Kanban עם 5 עמודות במקביל ב-iPad <span class="issue-tag">FEATURE</span></h4>
+    <p>ה-grid עבר ל-<span class="en">repeat(5, minmax(180px, 1fr))</span>. 180 px זה הרצפה — מתחת לזה (iPad פורטרייט עם drawer פתוח) יש <span class="en">overflow-x: auto</span>. כל עמודה גוללת אנכית בנפרד כדי שעמודה גודשת לא תדחוף את האחרות. ב-RTL ה-container מקבל <span class="en">direction: rtl</span> וסדר העמודות מתהפך (Done משמאל, Idea מימין).</p>
+    <p class="diag">הסרתי את ה-<span class="en">@media (max-width: 920px)</span> שהיה מקפל ל-2 עמודות; iPad Pro פורטרייט (1024) נשאר עם 5.</p>
+  </div>
+
+  <div class="finding feature">
+    <h4>Issue 6 — Weak-spot פר-workspace <span class="issue-tag">FEATURE</span></h4>
+    <p>API חדש: <span class="en">isWeakspotEnabled</span> / <span class="en">setWeakspotEnabled</span> מאוחסן ב-<span class="en">localStorage['edgespace-weakspot:&lt;ws&gt;']</span>. ברירת מחדל <em>OFF</em> לכל workspace, עם מיגרציה חד-פעמית שמדליקה <em>רק</em> את workspace בשם "uni" אם קיים. ה-view-tab של Weak-spot מוסתר כש-disabled; הסתרה אוטומטית מעבירה לקנבס אם המשתמש היה ב-weakspot.</p>
+    <p class="diag">המודאל ל-Workspace settings ב-Tools panel (שורה חדשה) חושף את הטוגל. ה-view-tabs מבצע re-render גם אחרי כל switch של workspace.</p>
+  </div>
+
+  <div class="finding ok">
+    <h4>Issue 7 — Clear Canvas מנקה גם zones <span class="issue-tag">BUG</span></h4>
+    <p><span class="en">clr()</span> עכשיו מאפס nodes + edges + <em>zones</em> בטרנזקציה אחת. Undo בודד מחזיר את שלושתם. ה-bug שדיווחת — מלבנים נשארים אחרי "Clear canvas" — נסגר.</p>
+  </div>
+
+  <div class="finding feature">
+    <h4>Issue 8 — Clear Canvas עם cascade-delete <span class="issue-tag">FEATURE</span></h4>
+    <p>פונקציה חדשה <span class="en">clearCanvasWithCascade</span> (נגישה דרך Tools panel → "Clear canvas"). כשיש portal nodes (כלומר node-ים עם <span class="en">childCanvas</span> מוגדר) — מודאל עם ספירת הנכדים והאפשרות לאישור cascade. <span class="en">gatherDescendantCanvasIds</span> הולך depth-first על העץ. Cascade דולק = מחיקה רקורסיבית בטרנזקציה אחת. Cascade כבוי = ה-portal nodes נמחקים אבל הקנבסים שלהם נשארים נגישים מהשורש (parentCanvas + parentNodeId מתאפסים).</p>
+    <p class="diag">בלי portals → אין מודאל, רק <span class="en">uiConfirm</span> רגיל.</p>
+  </div>
+
+  <div class="finding info">
+    <h4>Issue 9 — Drag-reorder נדחה ל-FR-3 <span class="issue-tag">DEFER</span></h4>
+    <p>כפי שאישרת בשאלה הפותחת. הסיבה: הוספת gesture שלישי של long-press על iPad (יש כבר add-node-here ו-drawer-row context menu) הייתה מסתבכת. נכנס ל-<span class="en">FEATURE-REQUESTS.md</span> כ-<span class="en">FR-3</span>.</p>
+  </div>
+
+  <div class="finding ok">
+    <h4>Issue 10 — תיעוד ה-spine <span class="issue-tag">DOCS</span></h4>
+    <p>הדיאגרמה למעלה. כל chip ותפקידו, סדר אנכי מדויק כמו שזה רנדר על המסך.</p>
+  </div>
+
+  <h2 class="section-title">3. בונוס — iPad URL מתמיד</h2>
+
+  <div class="clarify">
+    <h3>בלי Develop / Console</h3>
+    <p>ה-<span class="en">flags.js</span> כבר תמך ב-<span class="en">?flags=a,b,c</span> ב-URL, אבל זה היה תקף רק לסשן הנוכחי. עכשיו הוא <em>גם</em> שומר את הפלאגים מה-URL ל-<span class="en">localStorage</span> בביקור הראשון.</p>
+  </div>
+
+  <p>זה אומר שאתה יכול לפתוח על ה-iPad <em>פעם אחת</em> את ה-URL הבא, להוסיף לסימניות, ומכאן והלאה כל פתיחה רגילה של <span class="en">nodez-2iz.pages.dev</span> תזכור את הפלאגים:</p>
+
+  <div class="formula">https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,silhouettes,edges-v2,zones-v2,rtl-v2,gestures-v2,toolbar-migrated,raf-throttle,lifecycle-v2,webfont</div>
+
+  <p class="diag">כל פלאג שמופיע פעם אחת ב-URL נכתב ל-localStorage. אם רוצים לכבות פלאג בעתיד — אפשר <span class="en">?flag=-nav-v2</span> (מינוס מסמן OFF) או פשוט מ-Console רגיל.</p>
+
+  <h2 class="section-title">4. סשן בדיקה — PASS / FAIL לכל issue</h2>
+
+  <p>ה-<span class="en">badge</span> הירוק = אומת ב-<span class="en">Playwright</span> (headless Chromium / iPad emulation). הכחול = דורש אימות פיזי על iPad Safari אמיתי שלך — Playwright לא יכול לבדוק רינדור pixel-מדויק.</p>
+
+  <table class="session">
+    <thead>
+      <tr>
+        <th>Issue</th>
+        <th>בדיקה</th>
+        <th>Playwright</th>
+        <th>iPad פיזי</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="pw-pass">
+        <td><strong>I1</strong> Breadcrumb</td>
+        <td><span class="en">#bc</span> נעלם תחת nav-v2</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I2</strong> Drawer hierarchy</td>
+        <td>zone-rows + tap → focusZone + Unzoned bucket conditional</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td><span class="badge ipad">needs eye</span></td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I3</strong> Old sidebar removed</td>
+        <td><span class="en">#sb</span> נעלם תחת nav-v2</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I4.A</strong> Spine chip stack</td>
+        <td>6 chips קיימים בסדר הנכון</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td><span class="badge ipad">needs tap test</span></td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I4.B</strong> Undo disabled state</td>
+        <td>chip + class="disabled" כשהיסטוריה ריקה</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I4.C</strong> Search pill migration</td>
+        <td>אין <span class="en">#paletteOpenPill</span> תחת nav-v2; קיים כש-nav-v2 כבוי</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I4.D</strong> Import chip → file picker</td>
+        <td>label[for=imp] מוגדר; <span class="en">#imp</span> בגוף ה-body</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td><span class="badge ipad">needs iOS gesture test</span></td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I5</strong> Kanban 5 cols</td>
+        <td><span class="en">repeat(5, minmax(180px, 1fr))</span> מחושב</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td><span class="badge ipad">portrait + landscape</span></td>
+      </tr>
+      <tr class="needs-ipad">
+        <td><strong>I5.RTL</strong> Kanban RTL order</td>
+        <td>direction:rtl על container</td>
+        <td><span class="badge pw">CSS verified</span></td>
+        <td><span class="badge ipad">needs Hebrew toggle test</span></td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I6.A</strong> Weak-spot hidden when disabled</td>
+        <td>אין tab[data-mode=weakspot] כש-default</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I6.B</strong> Weak-spot appears after toggle</td>
+        <td><span class="en">setWeakspotEnabled(true)</span> + refresh()</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td><span class="badge ipad">needs settings modal test</span></td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I7</strong> Clear clears zones</td>
+        <td><span class="en">clr()</span> מאפס nodes + edges + zones</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I8.A</strong> Cascade walk</td>
+        <td><span class="en">gatherDescendantCanvasIds</span> מחזיר עץ נכון</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>I8.B</strong> No portals → no modal</td>
+        <td>נסיון clearCanvas על canvas פשוט</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td>—</td>
+      </tr>
+      <tr class="needs-ipad">
+        <td><strong>I8.C</strong> Modal UX</td>
+        <td>cascade checkbox + ספירות + cancel</td>
+        <td><span class="badge pw">code path verified</span></td>
+        <td><span class="badge ipad">needs visual + tap test</span></td>
+      </tr>
+      <tr class="pw-pass">
+        <td><strong>Bonus</strong> URL persistence</td>
+        <td><span class="en">?flags=a,b</span> נשמר ל-localStorage</td>
+        <td><span class="badge pw">PASS</span></td>
+        <td><span class="badge ipad">needs full bookmark test</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="section-title">5. דברים שאני צריך ממך</h2>
+
+  <div class="next-step" style="background:var(--card);border-radius:8px;padding:14px 18px;margin:8px 0;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;border-right:3px solid var(--blue);">
+    <span class="num" style="font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--blue);color:white;font-weight:700;padding:5px 0;border-radius:50%;text-align:center;width:28px;height:28px;">1</span>
+    <div class="body" style="font-size:14.5px;"><strong>פתח את ה-URL הבונוס</strong> פעם אחת על iPad ושמור בסימניות. אחרי זה כל פתיחה רגילה תזכור את הפלאגים.</div>
+  </div>
+
+  <div class="next-step" style="background:var(--card);border-radius:8px;padding:14px 18px;margin:8px 0;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;border-right:3px solid var(--blue);">
+    <span class="num" style="font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--blue);color:white;font-weight:700;padding:5px 0;border-radius:50%;text-align:center;width:28px;height:28px;">2</span>
+    <div class="body" style="font-size:14.5px;"><strong>אמת את ה-iPad rows בטבלה למעלה.</strong> בעיקר: ה-drawer hierarchy (הזונות נראות נכון? התקיעה ב-zone באמת מקפיצה למרכז?), ה-Kanban (חמש עמודות פורטרייט + לנדסקייפ?), ה-Import (label פותח את ה-file picker ב-iOS?), ה-cascade modal (טקסט קריא? צ'קבוקס מגיב?).</div>
+  </div>
+
+  <div class="next-step" style="background:var(--card);border-radius:8px;padding:14px 18px;margin:8px 0;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;border-right:3px solid var(--blue);">
+    <span class="num" style="font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--blue);color:white;font-weight:700;padding:5px 0;border-radius:50%;text-align:center;width:28px;height:28px;">3</span>
+    <div class="body" style="font-size:14.5px;"><strong>הפעל את Workspace settings על "uni"</strong> כדי לוודא שה-Weak-spot מופיע שם וכדי לוודא שאפשר לכבות אותו ב-workspace אחר ולראות שה-tab נעלם.</div>
+  </div>
+
+  <h2 class="section-title">6. סיכום ההחלטות של ה-sprint</h2>
+
+  <div class="recap-row"><span class="tag">✓</span><span>9 issues נסגרו בקוד, ה-10 (drag-reorder) נדחה ל-<span class="en">FR-3</span> כפי שאישרת.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>263 / 263 ב-desktop-chrome + 263 / 263 ב-ipad-chrome (Playwright).</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>4 בדיקות weakspot ישנות עודכנו כדי להפעיל את ה-toggle לפני שניסו לפתוח את ה-view.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>קוד עבר ל-<span class="en">v2-rewrite</span> ב-commit <span class="en">20a3343</span>, נדחף ל-GitHub. Cloudflare Pages יבנה תוך ~1-2 דקות.</span></div>
+  <div class="recap-row"><span class="tag def">○</span><span>פתוח: אימות פיזי על iPad — בעיקר drawer hierarchy + Kanban + Import + cascade modal.</span></div>
+  <div class="recap-row"><span class="tag def">○</span><span>פתוח: <span class="en">FR-1</span> (יצירת parent canvas חדש) ו-<span class="en">FR-3</span> (drag-reorder) נשארו ל-sprint עתידי.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 3.4 complete, Phase 3 closed pending iPad verification</h3>
+    <p>אחרי שתאשר על iPad ש-9 ה-issues עוברים — Phase 3 נסגר רשמית ואני יכול להתחיל לכתוב את ה-brief ל-Sprint 4 (<em>Phase 4 — Canvas Tile Cache</em>, לפי <span class="en">Pass 7 § 05</span>).</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">ה-deploy: <span class="en">https://nodez-2iz.pages.dev</span> · ה-commit: <span class="en">20a3343</span> · ה-branch: <span class="en">v2-rewrite</span>.</p>
+  </div>
+
+</body>
+</html>

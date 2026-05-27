@@ -212,9 +212,19 @@
        Combined with the visibilitychange / window.blur full reset below
        this catches every known stuck-state path. */
     const POINTER_STALE_MS = 5_000;
+    /* Sprint 3.5 Issue 4 — quiet-period heuristic. If pointerdown fires
+       after > QUIET_MS of no events at all, the previous gesture is
+       definitely over and any leftover activePtrs entries are stale.
+       Wipe them before starting the new gesture. Much more aggressive
+       than the 5 s staleness GC, but only triggered on the "fresh
+       gesture starts here" boundary. */
+    const QUIET_MS = 1_000;
+    let lastAnyEventTs = 0;
     const pointerSeen = new Map(); // pointerId → ts of last event
     function noteSeen(e) {
-      pointerSeen.set(e.pointerId, performance.now());
+      const now = performance.now();
+      pointerSeen.set(e.pointerId, now);
+      lastAnyEventTs = now;
     }
     function gcStalePointers() {
       const now = performance.now();
@@ -223,6 +233,22 @@
           pointerSeen.delete(pid);
           activePtrs.delete(pid);
         }
+      }
+    }
+    function freshGestureCleanIfQuiet() {
+      const now = performance.now();
+      if (lastAnyEventTs && (now - lastAnyEventTs > QUIET_MS) && activePtrs.size > 0) {
+        /* No event in over 1 second. Anything in activePtrs is stale
+           (a dropped touchend that never fired). Wipe it before the
+           current pointerdown so this gesture starts from idle. */
+        activePtrs.clear();
+        pointerSeen.clear();
+        gestureHadMultiTouch = false;
+        pinch = null;
+        vel.x = 0; vel.y = 0;
+        if (rafInertia != null) { cancelAnimationFrame(rafInertia); rafInertia = null; }
+        if (rafPan != null) { cancelAnimationFrame(rafPan); rafPan = null; }
+        state = 'idle';
       }
     }
     function reconcileState() {
@@ -270,6 +296,9 @@
 
     cv.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse' && e.button === 2) return; // right-click → ctx menu
+      /* Sprint 3.5 Issue 4 — fresh-gesture clean BEFORE noting this
+         pointer, so the wipe doesn't take out the event we're processing. */
+      freshGestureCleanIfQuiet();
       noteSeen(e);
       gcStalePointers();
       /* Phase 2.9 Fix 1 — start-of-gesture reset. If no pointers were

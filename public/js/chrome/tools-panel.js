@@ -105,7 +105,14 @@
     );
   }
 
+  let actionsWired = false;
   function wireActions() {
+    /* Sprint 3.5 Issue 2 — idempotency guard. ensurePanel() recreates the
+       panel only when the previous one is gone from the DOM, but if it
+       runs after a manual removal we'd otherwise pile up two document-
+       level outsideClick listeners. */
+    if (actionsWired) return;
+    actionsWired = true;
     panel.addEventListener('click', (e) => {
       const t = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
       if (!t) return;
@@ -135,6 +142,9 @@
   }
   function outsideClick(e) {
     if (!opened || !panel) return;
+    /* Sprint 3.5 Issue 2 — 200 ms grace period after open() so a stray
+       second tap event from iOS Safari can't immediately re-close. */
+    if (performance.now() - openedAt < 200) return;
     const t = e.target;
     if (!t) return;
     if (t.closest && (t.closest('#toolsPanel') || t.closest('#spine'))) return;
@@ -145,10 +155,20 @@
     if (e.key === 'Escape') { e.preventDefault(); close(); }
   }
 
+  /* Sprint 3.5 Issue 2 — track when open() was last called so the
+     document-level outsideClick handler (capture phase) can ignore the
+     same-tick click that opened the panel. Without this guard, a tap on
+     the gear chip that hits the chip's bubble-phase listener AFTER the
+     document's capture-phase outsideClick has already decided "still
+     opened=false, no-op" — then opens, then *re-fires* outsideClick
+     when iOS quirks dispatch a second pointerdown / click — would
+     immediately close. */
+  let openedAt = 0;
   function open() {
     ensurePanel();
     if (opened) return;
     opened = true;
+    openedAt = performance.now();
     panel.classList.add('on');
     panel.setAttribute('aria-hidden', 'false');
   }

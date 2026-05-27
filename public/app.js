@@ -1944,7 +1944,22 @@ function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h}
 function focusZone(zoneId){const z=zs().find(x=>x.id===zoneId);if(!z)return;const pad=60;view.k=Math.min(innerWidth/(z.w+pad*2),innerHeight/(z.h+pad*2),0.9);view.x=-(z.x+z.w/2);view.y=-(z.y+z.h/2);render()}
 window.focusZone=focusZone;
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}
+/* Sprint 3.5 Issue 1 — re-entry guard. The user reported workspaces
+   getting doubled after every import. Playwright cannot reproduce the
+   doubling, which strongly suggests iOS Safari is firing the #imp
+   change event twice within the same gesture (or that an iOS-specific
+   label-forwarding quirk delivers a second click event after the file
+   picker closes). 1500 ms is conservative — the user can't realistically
+   import twice that fast — and it never blocks a legitimate sequential
+   import session of two different files. */
+let __lastImportTs = 0;
 function imF(e){
+  const now = Date.now();
+  if (now - __lastImportTs < 1500) {
+    window.dbg&&window.dbg('IMPORT','re-entry blocked — < 1500ms since last import');
+    return;
+  }
+  __lastImportTs = now;
   window.dbg&&window.dbg('IMPORT','imF entered · files='+((e.target.files&&e.target.files.length)||0));
   const f=e.target.files[0];
   if(!f){window.dbg&&window.dbg('IMPORT','no file selected — abort');return}
@@ -2030,7 +2045,159 @@ function reconcileCanvases(){
     if(m.parentCanvas&&!S.canvases[m.parentCanvas]){m.parentCanvas='vault';fixedOrphans++}
   }
   if(fixedOrphans>0&&window.dbg)window.dbg('SYS','reconcile · auto-healed '+fixedOrphans+' orphan canvas(es) to vault parent');
+  /* Sprint 3.5 Issue 1 — dedupe identical canvas pairs.
+     Conservative: only deletes when two canvases under the same parent
+     have byte-equal node lists, byte-equal zone lists, and byte-equal
+     metadata names. Anything else (one node differs, one zone color
+     changed) is left alone and surfaced as a console warning. This
+     cleans up workspaces that were already-doubled by a previous import
+     event, without ever wiping legitimately-different canvases the user
+     may have meaningfully forked. */
+  dedupeIdenticalCanvases();
 }
+
+function dedupeIdenticalCanvases(){
+  if(!S||!S.canvases)return;
+  const ids = Object.keys(S.canvases).filter(id => id !== 'vault');
+  /* Hash each canvas's signature: name + sorted-node-ids + sorted-edge-ids
+     + sorted-zone-ids + parentCanvas. If two canvases share the same
+     signature AND identical content under it, the LATER one (by id
+     comparison) is removed. */
+  function sigOf(cid){
+    const c = S.canvases[cid];
+    const m = S.canvasMeta?.[cid] || {};
+    if(!c) return null;
+    const nodeIds = (c.nodes||[]).map(n => n.id).sort().join(',');
+    const edgeIds = (c.edges||[]).map(e => e.id).sort().join(',');
+    const zoneIds = (c.zones||[]).map(z => z.id).sort().join(',');
+    return (m.name||cid) + '|' + (m.parentCanvas||'') + '|' + nodeIds + '|' + edgeIds + '|' + zoneIds;
+  }
+  function contentEq(aId, bId){
+    try {
+      const a = S.canvases[aId], b = S.canvases[bId];
+      if(!a || !b) return false;
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch(e) { return false; }
+  }
+  const bySig = new Map();
+  for(const cid of ids){
+    const sig = sigOf(cid);
+    if(!sig) continue;
+    if(!bySig.has(sig)) bySig.set(sig, []);
+    bySig.get(sig).push(cid);
+  }
+  let removed = 0;
+  const warned = [];
+  for(const [sig, group] of bySig){
+    if(group.length < 2) continue;
+    group.sort();
+    const keep = group[0];
+    for(let i = 1; i < group.length; i++){
+      const dup = group[i];
+      if(contentEq(keep, dup)){
+        delete S.canvases[dup];
+        if(S.canvasMeta) delete S.canvasMeta[dup];
+        removed++;
+      } else {
+        warned.push({sig, keep, dup});
+      }
+    }
+  }
+  if(removed > 0 && window.dbg) window.dbg('SYS', 'dedupe · removed '+removed+' identical canvas duplicate(s)');
+  if(warned.length && typeof console !== 'undefined'){
+    console.warn('[EdgeSpace] Found '+warned.length+' canvas pair(s) with matching signature but differing content — not deduped. Open Tools → Workspace settings to inspect.', warned);
+  }
+}
+window.dedupeIdenticalCanvases = dedupeIdenticalCanvases;
+
+/* Sprint 3.5 Issue 5 — delete a canvas (with optional cascade). Same
+   confirmation shape as clearCanvasWithCascade from 3.4 Issue 8. Single
+   undo restores the canvas and any cascaded descendants.
+
+   Counts shown in the modal:
+     · nodes + zones on this canvas
+     · whether this canvas itself has a portal node pointing IN to it
+       (the parentNodeId field) — getting deleted means that portal
+       node's childCanvas attribute is cleared so it stays in the
+       parent canvas but no longer drills down
+     · descendant canvases that would be orphaned if cascade is off
+*/
+async function deleteCanvasWithConfirm(cid){
+  if(!cid || cid === 'vault') return;
+  const c = S.canvases[cid];
+  if(!c){ return; }
+  const meta = S.canvasMeta?.[cid] || {};
+  const name = esc(meta.name || cid);
+  const nNodes = (c.nodes||[]).length;
+  const nZones = (c.zones||[]).length;
+  /* Children of THIS canvas (portal nodes inside it pointing OUT). */
+  const childCanvases = gatherDescendantCanvasIds(cid);
+  const totalDescNodes = Array.from(childCanvases).reduce((sum, d) => sum + ((S.canvases[d]?.nodes?.length)||0), 0);
+  /* Build modal body. */
+  const cascadeBlock = childCanvases.size
+    ? '<p style="margin:8px 0 12px;color:var(--ink-2,#C8C5BE);font-size:13px"><b>'+childCanvases.size+' child canvas(es)</b> would become reachable from the workspace root, containing <b>'+totalDescNodes+' nodes</b> in total.</p>'+
+      '<label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line-2,#2A2F3A);border-radius:8px;cursor:pointer;margin:8px 0">'+
+        '<input type="checkbox" id="__delCascade" style="width:18px;height:18px"/>'+
+        '<span style="font-size:13px;color:var(--ink,#F0EBE5)">Also delete those child canvases and everything under them</span>'+
+      '</label>'
+    : '';
+  const body =
+    '<div style="font-family:var(--font-sans,Inter);color:var(--ink,#F0EBE5)">'+
+      '<h3 style="margin:0 0 12px;font-size:16px">Delete "'+name+'"?</h3>'+
+      '<p style="margin:0 0 8px;color:var(--ink-2,#C8C5BE);font-size:13px">'+
+        '<b>'+nNodes+' nodes</b> and <b>'+nZones+' zones</b> will be removed.'+
+      '</p>'+
+      cascadeBlock+
+      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">'+
+        '<button id="__delCancel" style="padding:8px 16px;background:transparent;color:var(--ink-2,#C8C5BE);border:1px solid var(--line-2,#2A2F3A);border-radius:6px;cursor:pointer">Cancel</button>'+
+        '<button id="__delOk" style="padding:8px 16px;background:var(--st-blocked,#F87171);color:#0F0F0F;border:none;border-radius:6px;cursor:pointer;font-weight:600">Delete canvas</button>'+
+      '</div>'+
+    '</div>';
+  const m = document.getElementById('modal');
+  const mb = document.getElementById('mcbody');
+  if(!m || !mb) return;
+  mb.innerHTML = body;
+  m.classList.add('on');
+  return new Promise(resolve => {
+    document.getElementById('__delCancel').onclick = () => { m.classList.remove('on'); resolve(false); };
+    document.getElementById('__delOk').onclick = () => {
+      const cascade = document.getElementById('__delCascade')?.checked;
+      m.classList.remove('on');
+      sn();
+      if(cascade){
+        for(const did of childCanvases){
+          delete S.canvases[did];
+          if(S.canvasMeta) delete S.canvasMeta[did];
+        }
+      } else {
+        /* Re-parent child canvases to vault so they stay reachable. */
+        for(const did of childCanvases){
+          if(S.canvasMeta?.[did]){
+            S.canvasMeta[did].parentCanvas = 'vault';
+            S.canvasMeta[did].parentNodeId = null;
+          }
+        }
+      }
+      /* Null out any portal node elsewhere pointing TO this canvas. */
+      for(const otherCid of Object.keys(S.canvases)){
+        if(otherCid === cid) continue;
+        for(const n of (S.canvases[otherCid].nodes||[])){
+          if(n.childCanvas === cid) n.childCanvas = null;
+        }
+      }
+      delete S.canvases[cid];
+      if(S.canvasMeta) delete S.canvasMeta[cid];
+      /* If the user was on the deleted canvas, jump back to vault. */
+      if(S.current === cid) S.current = 'vault';
+      sv();
+      render();
+      if(typeof renderTabs === 'function') renderTabs();
+      if(window.Drawer && window.Drawer.refresh) window.Drawer.refresh();
+      resolve(true);
+    };
+  });
+}
+window.deleteCanvasWithConfirm = deleteCanvasWithConfirm;
 async function cleanOrphanCanvases(){const orphans=[];for(const cid of Object.keys(S.canvases)){if(cid==='vault')continue;const m=S.canvasMeta[cid];const empty=(S.canvases[cid].nodes||[]).length===0;const noParentRef=!m?.parentNodeId||!S.canvases[m.parentCanvas||'vault']?.nodes.find(n=>n.id===m.parentNodeId&&n.childCanvas===cid);if(empty&&noParentRef)orphans.push(cid)}
   if(!orphans.length){await uiNotice('No orphan canvases found.');return}
   if(!await uiConfirm(`Found ${orphans.length} orphan canvas(es) (empty + not linked to any node):\n\n${orphans.map(c=>'• '+(S.canvasMeta[c]?.name||c)).join('\n')}\n\nDelete them?`,{title:'Clean orphans',danger:true,okLabel:'Delete'}))return;

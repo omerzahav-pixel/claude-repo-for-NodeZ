@@ -129,10 +129,12 @@
 
   function render() {
     if (!root) return;
+    /* Sprint 3.5 Issue 3 — when collapsed, the drawer is now width:0 and
+       hidden. No chevron, no inner content — the spine's hamburger chip
+       is the only way to expand. Clear innerHTML so nothing renders
+       (and so screen-readers don't see a dangling expand button). */
     if (collapsed) {
-      root.innerHTML =
-        '<button class="dr-toggle" data-act="expand" aria-label="Expand drawer" title="Expand">▶</button>';
-      root.querySelector('[data-act="expand"]').onclick = toggle;
+      root.innerHTML = '';
       return;
     }
     const tree = buildTree();
@@ -333,19 +335,27 @@
     if (!canvasId) return;
     const isDefault = typeof window.getDefaultCanvasForWorkspace === 'function'
       && window.getDefaultCanvasForWorkspace() === canvasId;
+    const isVault = canvasId === 'vault';
     menuEl = document.createElement('div');
     menuEl.id = 'drawerRowMenu';
     menuEl.setAttribute('role', 'menu');
+    /* Sprint 3.5 Issue 5 — added Delete row. Vault is special: cannot
+       be deleted (it's the workspace root). */
     menuEl.innerHTML =
       '<button data-act="set-default">' +
         (isDefault ? '✓ Default for this workspace' : 'Set as default for this workspace') +
       '</button>' +
       (isDefault
         ? '<button data-act="clear-default">Clear default</button>'
+        : '') +
+      (!isVault
+        ? '<button data-act="delete-canvas" class="danger">Delete canvas…</button>'
         : '');
     document.body.appendChild(menuEl);
     // Position; clamp inside viewport.
-    const w = 240, h = isDefault ? 60 : 32;
+    const w = 240;
+    const rowCount = 1 + (isDefault ? 1 : 0) + (!isVault ? 1 : 0);
+    const h = rowCount * 36 + 8;
     const left = Math.min(x, window.innerWidth - w - 8);
     const top  = Math.min(y, window.innerHeight - h - 8);
     menuEl.style.cssText =
@@ -367,6 +377,12 @@
       }
       closeRowMenu();
       render();
+    });
+    menuEl.querySelector('[data-act="delete-canvas"]')?.addEventListener('click', () => {
+      closeRowMenu();
+      if (typeof window.deleteCanvasWithConfirm === 'function') {
+        window.deleteCanvasWithConfirm(canvasId);
+      }
     });
     // Auto-dismiss on outside click / escape.
     setTimeout(() => {

@@ -65,6 +65,11 @@ test.describe("Phase 2.6 · import format detection", () => {
     expect(afterFull.nodes).toBe(1);
     expect(afterFull.labels).toContain("Imported");
 
+    /* Sprint 3.5 Issue 1 — imF() now has a 1500 ms re-entry guard
+       against iOS Safari double-firing the change event. The second
+       import in this test must wait past that window. */
+    await page.waitForTimeout(1600);
+
     // Case B: patch-shape file (no `canvases` map) — must route to patch modal
     await page.evaluate(() => {
       const patch = JSON.stringify({
