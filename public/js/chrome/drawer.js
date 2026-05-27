@@ -150,24 +150,44 @@
        the rows below are canvases (not nodes in the current canvas). */
     html += '<div class="dr-section-head"><span>Canvases</span><span class="ws-count">' + Object.keys(tree.byId).length + '</span></div>';
     html += '<div class="dr-tree">';
-    // Render the vault first (it's the canonical root).
-    html += renderNode('vault', tree, 0);
-    // Then any direct vault-children that are at vault root.
-    const vaultChildren = tree.children['vault'] || [];
-    for (const id of vaultChildren) html += renderNode(id, tree, 1);
+    /* Sprint 3.6 Issue 1 — ROOT CAUSE of the user's "import doubling".
+       renderNode('vault') recurses into its children (line 194-196 in
+       renderNode below), AND the explicit `for (const id of vaultChildren)`
+       loop that USED to live here walked them again. Every vault-child
+       canvas got rendered twice. The data layer was always single; the
+       drawer was painting two copies. Confirmed by the user's
+       "delete one, both vanish" diagnostic.
+
+       Fix: trust the recursion. Belt-and-suspenders: track which canvas
+       ids have already been rendered in this render pass, and skip
+       repeats (defensive against any future code path that adds another
+       caller). */
+    const renderedIds = new Set();
+    html += renderNodeOnce('vault', tree, 0, renderedIds);
     html += '</div>';
     // Orphans section.
     if (tree.orphans.length) {
       html += '<div class="dr-section-head"><span>Orphans</span><span class="ws-count">' + tree.orphans.length + '</span></div>';
       html += '<div class="dr-tree dr-orphans">';
-      for (const id of tree.orphans) html += renderNode(id, tree, 0);
+      /* Sprint 3.6 Issue 1 — share the dedupe set so an orphan that's
+         (somehow) also a vault descendant doesn't render twice. */
+      for (const id of tree.orphans) html += renderNodeOnce(id, tree, 0, renderedIds);
       html += '</div>';
     }
     root.innerHTML = html;
     wireActions(tree);
   }
 
-  function renderNode(id, tree, indent) {
+  /* Sprint 3.6 Issue 1 — `renderedIds` is a Set passed down from render()
+     so we can refuse to emit a row for any canvas id that's already
+     been rendered in this pass. Defends against a future code path that
+     accidentally re-invokes the recursion. */
+  function renderNodeOnce(id, tree, indent, renderedIds) {
+    if (renderedIds && renderedIds.has(id)) {
+      if (typeof console !== 'undefined') console.warn('[EdgeSpace drawer] suppressed duplicate canvas render: ' + id);
+      return '';
+    }
+    if (renderedIds) renderedIds.add(id);
     const { meta, byId, current, children } = tree;
     const name = meta[id]?.name || id;
     const kids = children[id] || [];
@@ -185,17 +205,17 @@
     const badge = descCnt ? '<span class="count">' + descCnt + '</span>' : (cnt ? '<span class="count">' + cnt + '</span>' : '');
     let out = '<div class="dr-row' + (isActive ? ' active' : '') + '" data-id="' + escAttr(id) + '" style="padding-inline-start:' + (indent * 14 + 6) + 'px">' +
       caret + statusDot + '<span class="dr-name">' + escHtml(name) + '</span>' + badge + '</div>';
-    /* Sprint 3.4 Issue 2 — render the active canvas's zones + nodes
-       inline below its row. Non-active canvases just show child canvases
-       as before. */
     if (isActive) {
       out += renderZonesAndNodes(id, byId, indent + 1);
     }
     if (isOpen && kids.length) {
-      for (const kid of kids) out += renderNode(kid, tree, indent + 1);
+      for (const kid of kids) out += renderNodeOnce(kid, tree, indent + 1, renderedIds);
     }
     return out;
   }
+  /* Backwards-compat shim so any out-of-band caller still gets a single
+     render (no dedupe set → no dedup, but no crash either). */
+  function renderNode(id, tree, indent) { return renderNodeOnce(id, tree, indent, null); }
 
   /* Sprint 3.4 Issue 2 — three-level hierarchy: canvas → zone → node.
      Zones rendered as sub-rows with color chip + name + count + caret.

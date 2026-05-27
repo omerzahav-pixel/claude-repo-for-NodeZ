@@ -74,63 +74,34 @@ test.describe("Sprint 3.5 · Issue 1 — import doubling", () => {
     expect(counts).toEqual({ nodes: 2, edges: 1, zones: 1 });
   });
 
-  test("S3_5.I1.B Re-entry guard blocks a second import within 1500 ms", async ({ page }) => {
-    await open(page);
-    const fixtureJson = '{"canvases":{"vault":{"nodes":[{"id":9001,"label":"X","shape":"idea","status":"idea","x":0,"y":0,"created":"2024-01-01","modified":"2024-01-01"}],"edges":[],"zones":[]}},"canvasMeta":{"vault":{"name":"Vault"}},"current":"vault","nextId":10000}';
-    /* Fire two change events back-to-back. Only the first should write. */
-    await page.evaluate((json) => {
-      const f = new File([json], "x.json", { type: "application/json" });
-      const dt = new DataTransfer();
-      dt.items.add(f);
-      const inp = document.getElementById("imp") as HTMLInputElement;
-      (inp as any).files = dt.files;
-      inp.dispatchEvent(new Event("change", { bubbles: true }));
-      /* Fire again immediately — should be blocked. If imF were not
-         guarded, this would re-parse and re-write (doubling nodes). */
-      inp.dispatchEvent(new Event("change", { bubbles: true }));
-    }, fixtureJson);
-    await page.waitForTimeout(800);
-    const n = await page.evaluate(() => (window as any).__E2E.state().canvases.vault.nodes.length);
-    expect(n).toBe(1);
-  });
+  /* S3_5.I1.B removed in 3.6 — the 1500 ms re-entry guard was a fix for
+     the wrong problem (the dup was render-side; see sprint3_6_fixup
+     S3_6.I1.A). The guard is gone and rapid sequential imports must
+     now succeed (covered by sprint3_6_fixup S3_6.I1.B). */
 
-  test("S3_5.I1.C dedupeIdenticalCanvases removes byte-equal pairs", async ({ page }) => {
+  /* S3_5.I1.C and .I1.D removed in 3.6 — the dedupeIdenticalCanvases
+     function was demoted from auto-mutator to warning-only logger
+     (see warnOnDuplicateCanvases in app.js). The dup it was "cleaning
+     up" doesn't exist; the user's drawer-double was render-side. */
+  test("S3_5.I1.C warnOnDuplicateCanvases NEVER mutates S (warning-only)", async ({ page }) => {
     await open(page);
-    const removed = await page.evaluate(() => {
+    const out = await page.evaluate(() => {
       const S = (window as any).__E2E.state();
-      const today = "2024-01-01";
       const mk = () => ({
-        nodes: [{ id: 1, label: "N", shape: "idea", status: "idea", x: 0, y: 0, created: today, modified: today }],
+        nodes: [{ id: 1, label: "N", shape: "idea", status: "idea", x: 0, y: 0, created: "2024-01-01", modified: "2024-01-01" }],
         edges: [],
         zones: []
       });
       S.canvases["a"] = mk();
-      S.canvases["b"] = mk(); // byte-identical to a
+      S.canvases["b"] = mk();
       S.canvasMeta["a"] = { name: "Same", parentCanvas: "vault" };
-      S.canvasMeta["b"] = { name: "Same", parentCanvas: "vault" }; // identical meta
-      const before = Object.keys(S.canvases).filter(k => k === "a" || k === "b").length;
-      (window as any).dedupeIdenticalCanvases();
-      const after = Object.keys(S.canvases).filter(k => k === "a" || k === "b").length;
-      return { before, after };
+      S.canvasMeta["b"] = { name: "Same", parentCanvas: "vault" };
+      (window as any).warnOnDuplicateCanvases();
+      return { hasA: !!S.canvases["a"], hasB: !!S.canvases["b"] };
     });
-    expect(removed.before).toBe(2);
-    expect(removed.after).toBe(1);
-  });
-
-  test("S3_5.I1.D dedupe leaves divergent pairs alone (conservative)", async ({ page }) => {
-    await open(page);
-    const out = await page.evaluate(() => {
-      const S = (window as any).__E2E.state();
-      const today = "2024-01-01";
-      S.canvases["c1"] = { nodes: [{ id: 1, label: "X", shape: "idea", status: "idea", x: 0, y: 0, created: today, modified: today }], edges: [], zones: [] };
-      S.canvases["c2"] = { nodes: [{ id: 1, label: "Y", shape: "idea", status: "idea", x: 0, y: 0, created: today, modified: today }], edges: [], zones: [] }; // different label
-      S.canvasMeta["c1"] = { name: "Same name", parentCanvas: "vault" };
-      S.canvasMeta["c2"] = { name: "Same name", parentCanvas: "vault" };
-      (window as any).dedupeIdenticalCanvases();
-      return { c1: !!S.canvases["c1"], c2: !!S.canvases["c2"] };
-    });
-    expect(out.c1).toBe(true);
-    expect(out.c2).toBe(true);
+    /* Both stay — warning-only, no deletion. */
+    expect(out.hasA).toBe(true);
+    expect(out.hasB).toBe(true);
   });
 });
 

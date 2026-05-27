@@ -443,6 +443,7 @@ setTimeout(()=>{runWeakspotMigration()},2000);
 function openWorkspaceSettings(){
   const ws=currentWs||'workspace';
   const enabled=isWeakspotEnabled(ws);
+  /* Sprint 3.6 Issue 5 — Reset workspace as a destructive footer action. */
   const body=
     '<h3 style="margin:0 0 12px;font-family:var(--font-sans);font-size:16px">Workspace settings — '+esc(ws)+'</h3>'+
     '<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line-2,#2A2F3A);border-radius:8px;cursor:pointer">'+
@@ -451,17 +452,24 @@ function openWorkspaceSettings(){
         '<div style="font-weight:500;color:var(--ink,#F0EBE5)">Enable Weak-spot view for this workspace</div>'+
         '<div style="font-size:12px;color:var(--ink-3,#7C828E);margin-top:4px">Spaced-repetition ranking. Useful for study workspaces; noise for project ones.</div>'+
       '</div>'+
-    '</label>';
-  if(typeof window.uiModal==='function'){
-    window.uiModal(body,{title:'Settings',okLabel:'Done',onOk:saveSettings});
-  }else{
-    /* Fallback path: render directly into #modal. */
-    const m=document.getElementById('modal');const mb=document.getElementById('mcbody');
-    if(!m||!mb)return;
-    mb.innerHTML=body+'<div style="display:flex;justify-content:flex-end;margin-top:16px"><button id="__wsSettingsDone" style="padding:8px 16px;background:var(--hot,#FF7A45);color:#0F0F0F;border:none;border-radius:6px;cursor:pointer;font-weight:600">Done</button></div>';
-    m.classList.add('on');
-    document.getElementById('__wsSettingsDone').onclick=()=>{saveSettings();m.classList.remove('on')};
-  }
+    '</label>'+
+    /* Destructive zone — separated by a divider, red border, opt-in by tap. */
+    '<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--line-2,#2A2F3A)">'+
+      '<div style="font-size:11px;color:var(--ink-4,#5A6068);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">Danger zone</div>'+
+      '<button id="__wsReset" type="button" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px;background:transparent;border:1px solid rgba(248,113,113,0.4);border-radius:8px;cursor:pointer;text-align:start;color:var(--st-blocked,#F87171);font-family:var(--font-sans,Inter);font-size:13px">'+
+        '<span style="font-size:16px">⌫</span>'+
+        '<div style="flex:1">'+
+          '<div style="font-weight:600">Reset workspace…</div>'+
+          '<div style="font-size:11px;color:var(--ink-3,#7C828E);margin-top:2px">Remove every canvas, node, zone, and edge in this workspace. The workspace itself remains, empty.</div>'+
+        '</div>'+
+      '</button>'+
+    '</div>';
+  const m=document.getElementById('modal');const mb=document.getElementById('mcbody');
+  if(!m||!mb)return;
+  mb.innerHTML=body+'<div style="display:flex;justify-content:flex-end;margin-top:16px"><button id="__wsSettingsDone" style="padding:8px 16px;background:var(--hot,#FF7A45);color:#0F0F0F;border:none;border-radius:6px;cursor:pointer;font-weight:600">Done</button></div>';
+  m.classList.add('on');
+  document.getElementById('__wsSettingsDone').onclick=()=>{saveSettings();m.classList.remove('on')};
+  document.getElementById('__wsReset').onclick=()=>{m.classList.remove('on');resetWorkspaceWithConfirm()};
   function saveSettings(){
     const t=document.getElementById('__wsWeakspotToggle');
     if(t)setWeakspotEnabled(ws,t.checked);
@@ -470,6 +478,57 @@ function openWorkspaceSettings(){
   }
 }
 window.openWorkspaceSettings=openWorkspaceSettings;
+
+/* Sprint 3.6 Issue 5 — empty the entire workspace in one transaction.
+   Leaves exactly one empty vault canvas. Single undo restores
+   everything (sn() snapshots S BEFORE the wipe). The workspace itself
+   is NOT deleted — that's the separate "Delete workspace" path. */
+async function resetWorkspaceWithConfirm(){
+  const ws=currentWs||'workspace';
+  let nCanvases=0,nNodes=0,nZones=0,nEdges=0;
+  if(S&&S.canvases){
+    for(const cid of Object.keys(S.canvases)){
+      nCanvases++;
+      const c=S.canvases[cid];
+      nNodes+=(c.nodes||[]).length;
+      nZones+=(c.zones||[]).length;
+      nEdges+=(c.edges||[]).length;
+    }
+  }
+  const body=
+    '<div style="font-family:var(--font-sans,Inter);color:var(--ink,#F0EBE5)">'+
+      '<h3 style="margin:0 0 12px;font-size:16px">Reset workspace "'+esc(ws)+'"?</h3>'+
+      '<p style="margin:0 0 8px;color:var(--ink-2,#C8C5BE);font-size:13px">This will remove <b>all canvases ('+nCanvases+')</b>, <b>all nodes ('+nNodes+')</b>, <b>all zones ('+nZones+')</b>, and <b>all edges ('+nEdges+')</b> in this workspace.</p>'+
+      '<p style="margin:0 0 8px;color:var(--ink-2,#C8C5BE);font-size:13px">The workspace itself remains, with exactly one empty vault canvas. Subsequent import places its content cleanly.</p>'+
+      '<p style="margin:8px 0 0;color:var(--ink-3,#7C828E);font-size:12px">Undo restores everything.</p>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">'+
+        '<button id="__rstCancel" style="padding:8px 16px;background:transparent;color:var(--ink-2,#C8C5BE);border:1px solid var(--line-2,#2A2F3A);border-radius:6px;cursor:pointer">Cancel</button>'+
+        '<button id="__rstOk" style="padding:8px 16px;background:var(--st-blocked,#F87171);color:#0F0F0F;border:none;border-radius:6px;cursor:pointer;font-weight:600">Reset workspace</button>'+
+      '</div>'+
+    '</div>';
+  const m=document.getElementById('modal');const mb=document.getElementById('mcbody');
+  if(!m||!mb)return;
+  mb.innerHTML=body;
+  m.classList.add('on');
+  return new Promise(resolve=>{
+    document.getElementById('__rstCancel').onclick=()=>{m.classList.remove('on');resolve(false)};
+    document.getElementById('__rstOk').onclick=()=>{
+      m.classList.remove('on');
+      sn();
+      /* Wipe everything to a fresh single-vault state. reconcileCanvases
+         will fill in the default zone set so the vault doesn't look
+         broken. */
+      S={canvases:{vault:{nodes:[],edges:[],zones:[]}},current:'vault',canvasMeta:{vault:{name:'Vault',parentNodeId:null}},nextId:1,hebrewMode:S.hebrewMode||false};
+      reconcileCanvases();
+      sv();
+      render();
+      if(typeof renderTabs==='function')renderTabs();
+      if(window.Drawer&&window.Drawer.refresh)window.Drawer.refresh();
+      resolve(true);
+    };
+  });
+}
+window.resetWorkspaceWithConfirm=resetWorkspaceWithConfirm;
 window.isWeakspotEnabled=isWeakspotEnabled;
 window.setWeakspotEnabled=setWeakspotEnabled;
 /* Phase 5 P2 · Landing screen — shown on first load when ≥ 2 workspaces. */
@@ -1196,6 +1255,14 @@ function clr(){C().nodes=[];C().edges=[];C().zones=[];cp();sv();render()}
 /* Sprint 3.4 Issue 8 — clear canvas with optional cascade-delete of
    linked child canvases. Replaces clearCanvasConfirm in the new Tools
    panel flow (the old one stays for backward-compat). */
+/* Sprint 3.6 Issue 3 — walks BOTH parent-child relationships:
+     (a) portal-node `childCanvas` references inside the parent canvas
+         (the createRoadmap flow sets this)
+     (b) `canvasMeta[childId].parentCanvas === parentId` lookups
+         (the import flow often sets ONLY this, leaving (a) empty)
+   Without (b), canvases imported from JSON would be invisible to the
+   delete-cascade modal's child-count, AND the post-delete re-parent
+   loop would silently leave them orphaned. */
 function gatherDescendantCanvasIds(rootCanvasId){
   const out=new Set();
   const stack=[rootCanvasId];
@@ -1205,11 +1272,23 @@ function gatherDescendantCanvasIds(rootCanvasId){
     if(seen.has(cid))continue;
     seen.add(cid);
     const c=S.canvases[cid];
-    if(!c)continue;
-    for(const n of (c.nodes||[])){
-      if(n.childCanvas&&S.canvases[n.childCanvas]&&n.childCanvas!==rootCanvasId){
-        out.add(n.childCanvas);
-        stack.push(n.childCanvas);
+    if(c){
+      // Path (a): portal nodes inside this canvas.
+      for(const n of (c.nodes||[])){
+        if(n.childCanvas && S.canvases[n.childCanvas] && n.childCanvas!==rootCanvasId && !out.has(n.childCanvas)){
+          out.add(n.childCanvas);
+          stack.push(n.childCanvas);
+        }
+      }
+    }
+    // Path (b): canvasMeta.parentCanvas references.
+    if(S.canvasMeta){
+      for(const otherCid of Object.keys(S.canvasMeta)){
+        if(otherCid===rootCanvasId || out.has(otherCid)) continue;
+        if(S.canvasMeta[otherCid]?.parentCanvas === cid){
+          out.add(otherCid);
+          stack.push(otherCid);
+        }
       }
     }
   }
@@ -1944,22 +2023,12 @@ function zF(){const items=[...zs().map(z=>({x1:z.x,y1:z.y,x2:z.x+z.w,y2:z.y+z.h}
 function focusZone(zoneId){const z=zs().find(x=>x.id===zoneId);if(!z)return;const pad=60;view.k=Math.min(innerWidth/(z.w+pad*2),innerHeight/(z.h+pad*2),0.9);view.x=-(z.x+z.w/2);view.y=-(z.y+z.h/2);render()}
 window.focusZone=focusZone;
 function ex(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='idea-vault.json';a.click()}
-/* Sprint 3.5 Issue 1 — re-entry guard. The user reported workspaces
-   getting doubled after every import. Playwright cannot reproduce the
-   doubling, which strongly suggests iOS Safari is firing the #imp
-   change event twice within the same gesture (or that an iOS-specific
-   label-forwarding quirk delivers a second click event after the file
-   picker closes). 1500 ms is conservative — the user can't realistically
-   import twice that fast — and it never blocks a legitimate sequential
-   import session of two different files. */
-let __lastImportTs = 0;
+/* Sprint 3.6 Issue 1 — the 1500 ms re-entry guard from 3.5 was a fix
+   for the wrong problem. The duplication was render-side (drawer.js
+   walked vault's children twice), not data-side. Removing the guard
+   restores the natural "import two different files quickly" flow that
+   the brief asked for. */
 function imF(e){
-  const now = Date.now();
-  if (now - __lastImportTs < 1500) {
-    window.dbg&&window.dbg('IMPORT','re-entry blocked — < 1500ms since last import');
-    return;
-  }
-  __lastImportTs = now;
   window.dbg&&window.dbg('IMPORT','imF entered · files='+((e.target.files&&e.target.files.length)||0));
   const f=e.target.files[0];
   if(!f){window.dbg&&window.dbg('IMPORT','no file selected — abort');return}
@@ -2045,24 +2114,25 @@ function reconcileCanvases(){
     if(m.parentCanvas&&!S.canvases[m.parentCanvas]){m.parentCanvas='vault';fixedOrphans++}
   }
   if(fixedOrphans>0&&window.dbg)window.dbg('SYS','reconcile · auto-healed '+fixedOrphans+' orphan canvas(es) to vault parent');
-  /* Sprint 3.5 Issue 1 — dedupe identical canvas pairs.
-     Conservative: only deletes when two canvases under the same parent
-     have byte-equal node lists, byte-equal zone lists, and byte-equal
-     metadata names. Anything else (one node differs, one zone color
-     changed) is left alone and surfaced as a console warning. This
-     cleans up workspaces that were already-doubled by a previous import
-     event, without ever wiping legitimately-different canvases the user
-     may have meaningfully forked. */
-  dedupeIdenticalCanvases();
+  /* Sprint 3.6 Issue 1 — dedup migration demoted from auto-run to
+     warning-only. The actual root cause was the drawer's render path
+     walking vault's children twice (fixed in drawer.js renderNodeOnce);
+     there was never any data-level duplication to clean up. Keeping
+     the function as a diagnostic so that if any future data path DOES
+     somehow produce identical canvas pairs, we see a console.warn
+     from `warnOnDuplicateCanvases` rather than silently passing. */
+  warnOnDuplicateCanvases();
 }
 
-function dedupeIdenticalCanvases(){
-  if(!S||!S.canvases)return;
+/* Sprint 3.6 Issue 1 — warning-only logger. Replaces 3.5's
+   dedupeIdenticalCanvases which auto-deleted byte-equal pairs from a
+   bug that was actually render-side. Now the function ONLY logs to
+   the console — if it ever finds identical pairs in the wild, that's a
+   signal something else is broken and worth a manual look. Never
+   modifies S. */
+function warnOnDuplicateCanvases(){
+  if(!S||!S.canvases) return;
   const ids = Object.keys(S.canvases).filter(id => id !== 'vault');
-  /* Hash each canvas's signature: name + sorted-node-ids + sorted-edge-ids
-     + sorted-zone-ids + parentCanvas. If two canvases share the same
-     signature AND identical content under it, the LATER one (by id
-     comparison) is removed. */
   function sigOf(cid){
     const c = S.canvases[cid];
     const m = S.canvasMeta?.[cid] || {};
@@ -2072,13 +2142,6 @@ function dedupeIdenticalCanvases(){
     const zoneIds = (c.zones||[]).map(z => z.id).sort().join(',');
     return (m.name||cid) + '|' + (m.parentCanvas||'') + '|' + nodeIds + '|' + edgeIds + '|' + zoneIds;
   }
-  function contentEq(aId, bId){
-    try {
-      const a = S.canvases[aId], b = S.canvases[bId];
-      if(!a || !b) return false;
-      return JSON.stringify(a) === JSON.stringify(b);
-    } catch(e) { return false; }
-  }
   const bySig = new Map();
   for(const cid of ids){
     const sig = sigOf(cid);
@@ -2086,29 +2149,17 @@ function dedupeIdenticalCanvases(){
     if(!bySig.has(sig)) bySig.set(sig, []);
     bySig.get(sig).push(cid);
   }
-  let removed = 0;
-  const warned = [];
+  const dupGroups = [];
   for(const [sig, group] of bySig){
-    if(group.length < 2) continue;
-    group.sort();
-    const keep = group[0];
-    for(let i = 1; i < group.length; i++){
-      const dup = group[i];
-      if(contentEq(keep, dup)){
-        delete S.canvases[dup];
-        if(S.canvasMeta) delete S.canvasMeta[dup];
-        removed++;
-      } else {
-        warned.push({sig, keep, dup});
-      }
-    }
+    if(group.length > 1) dupGroups.push({sig, ids: group});
   }
-  if(removed > 0 && window.dbg) window.dbg('SYS', 'dedupe · removed '+removed+' identical canvas duplicate(s)');
-  if(warned.length && typeof console !== 'undefined'){
-    console.warn('[EdgeSpace] Found '+warned.length+' canvas pair(s) with matching signature but differing content — not deduped. Open Tools → Workspace settings to inspect.', warned);
+  if(dupGroups.length && typeof console !== 'undefined'){
+    console.warn('[EdgeSpace] Found '+dupGroups.length+' canvas group(s) with identical signatures. Likely a real bug — please report.', dupGroups);
   }
 }
-window.dedupeIdenticalCanvases = dedupeIdenticalCanvases;
+/* Back-compat alias so tests / older console snippets still work. */
+window.warnOnDuplicateCanvases = warnOnDuplicateCanvases;
+window.dedupeIdenticalCanvases = warnOnDuplicateCanvases;
 
 /* Sprint 3.5 Issue 5 — delete a canvas (with optional cascade). Same
    confirmation shape as clearCanvasWithCascade from 3.4 Issue 8. Single

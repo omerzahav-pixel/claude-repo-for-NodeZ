@@ -464,13 +464,32 @@ body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-i
    clipping the bottom-left "shift+drag = connect" help legend and the
    trailing edge of Kanban columns. Now the entire drawer is fully
    hidden when collapsed; the spine's hamburger is the only way to
-   reopen it. */
+   reopen it.
+
+   Sprint 3.6 Issue 6 — close animation symmetry. The previous
+   `visibility: hidden !important` short-circuited the width transition
+   on close (instantly invisible → no anim). Now we delay the visibility
+   hide via `transition: visibility 0ms linear var(--t-base)`, which
+   sets visibility:hidden only AFTER the width transition completes.
+   The expand path uses `visibility: visible` with 0 delay so the
+   content paints in immediately at width:0 and then animates outward.
+   Easing and duration match for symmetry. */
+#drawer {
+  transition:
+    width var(--t-base, 220ms) var(--e-out, ease-out),
+    padding var(--t-base, 220ms) var(--e-out, ease-out),
+    visibility 0ms linear 0ms;
+}
 #drawer.collapsed {
   width: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   overflow: hidden !important;
-  visibility: hidden !important;
+  visibility: hidden;
+  transition:
+    width var(--t-base, 220ms) var(--e-out, ease-out),
+    padding var(--t-base, 220ms) var(--e-out, ease-out),
+    visibility 0ms linear var(--t-base, 220ms);
 }
 #drawer.collapsed > * { display: none; }
 #drawer .dr-head {
@@ -752,6 +771,26 @@ body[dir="rtl"] #viewTabs { inset-inline-end: 64px; }
   overscroll-behavior: contain;
 }
 #viewStage.on { display: block; }
+
+/* Sprint 3.6 Issue 2 — viewStage was `inset: 0` (full viewport), which
+   in RTL put the rightmost Kanban column ("Idea") under the spine that
+   sits on the right edge. In LTR the leftmost column ("Done"… in
+   English order, "Idea" in RTL) was occluded by the spine on the left
+   edge. Clear the spine's 56-px column, plus the drawer's 224-px
+   column when it's expanded. */
+body.nav-v2-on #viewStage {
+  inset-inline-start: calc(56px + 224px);  /* spine + open drawer */
+}
+body.nav-v2-on.drawer-collapsed #viewStage {
+  inset-inline-start: 56px;                /* just the spine */
+}
+body[dir="rtl"].nav-v2-on #viewStage {
+  inset-inline-start: 0;
+  inset-inline-end: calc(56px + 224px);
+}
+body[dir="rtl"].nav-v2-on.drawer-collapsed #viewStage {
+  inset-inline-end: 56px;
+}
 body.non-canvas-view svg#cv,
 body.non-canvas-view #canvasOverlay,
 body.non-canvas-view #emptyState { visibility: hidden; pointer-events: none; }

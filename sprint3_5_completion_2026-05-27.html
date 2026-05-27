@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 3.5 — סגירת Phase 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --ink: #1a2238;
+    --ink-soft: #4a5468;
+    --accent: #c2410c;
+    --accent-soft: #fed7aa;
+    --green: #15803d;
+    --green-soft: #bbf7d0;
+    --amber: #b45309;
+    --amber-soft: #fde68a;
+    --blue: #1e40af;
+    --blue-soft: #dbeafe;
+    --purple: #6b21a8;
+    --purple-soft: #e9d5ff;
+    --red: #b91c1c;
+    --red-soft: #fecaca;
+    --rule: #d6cfc2;
+    --code-bg: #ede5d5;
+    --code-ink: #7c2d12;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.9;
+    direction: rtl; text-align: right;
+  }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+  }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+  .section-title {
+    font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px;
+    margin: 36px 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+
+  .insight {
+    background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%);
+    border: 2px solid var(--accent); border-radius: 8px;
+    padding: 22px 24px; margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(194,65,12,0.08);
+  }
+  .insight h2 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--accent);
+    font-size: 22px; margin-bottom: 10px;
+  }
+  .insight p { margin-bottom: 8px; }
+
+  .recommend, .confirmed {
+    background: var(--green-soft); border-right: 4px solid var(--green);
+    padding: 18px 22px; border-radius: 6px; margin: 20px 0;
+  }
+  .recommend h3, .confirmed h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--green);
+    font-size: 19px; margin-bottom: 10px;
+  }
+
+  .clarify {
+    background: var(--blue-soft); border-right: 4px solid var(--blue);
+    padding: 16px 20px; border-radius: 6px; margin: 20px 0;
+  }
+  .clarify h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--blue);
+    font-size: 18px; margin-bottom: 8px;
+  }
+
+  .warn {
+    background: var(--amber-soft); border-right: 4px solid var(--amber);
+    padding: 14px 18px; border-radius: 6px; margin: 16px 0;
+    font-size: 15px;
+  }
+  .warn strong { color: var(--amber); }
+
+  /* Test session — every row is "do this, see this" in plain Hebrew. */
+  .test {
+    background: var(--card); border-radius: 8px;
+    padding: 18px 22px; margin: 12px 0;
+    border-right: 4px solid var(--rule);
+  }
+  .test.do { border-right-color: var(--blue); }
+  .test.warn-test { border-right-color: var(--amber); }
+  .test-num {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    background: var(--accent); color: white;
+    padding: 3px 9px; border-radius: 4px;
+    margin-left: 8px;
+    direction: ltr;
+  }
+  .test-title {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 18px; font-weight: 700;
+    display: inline;
+  }
+  .test-do {
+    margin-top: 10px;
+    font-size: 15.5px;
+  }
+  .test-do strong { color: var(--accent); }
+  .test-see {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: var(--green-soft);
+    border-radius: 6px;
+    font-size: 15px;
+  }
+  .test-see strong { color: var(--green); }
+  .test-fail {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: var(--red-soft);
+    border-radius: 6px;
+    font-size: 14.5px;
+    color: var(--ink);
+  }
+  .test-fail strong { color: var(--red); }
+
+  .closing {
+    margin-top: 32px; padding: 20px 22px;
+    background: var(--card); border-radius: 6px;
+    border-right: 4px solid var(--accent);
+  }
+  .closing h3 {
+    font-family: 'Frank Ruhl Libre', serif; font-size: 18px;
+    margin-bottom: 8px; color: var(--accent);
+  }
+
+  .formula {
+    background: var(--code-bg); color: var(--code-ink);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    padding: 14px 18px; border-radius: 6px; margin: 12px 0;
+    direction: ltr; text-align: left; line-height: 1.5;
+    word-break: break-all;
+  }
+
+  .diagnostic {
+    background: var(--purple-soft); border-right: 4px solid var(--purple);
+    padding: 18px 22px; border-radius: 6px; margin: 20px 0;
+  }
+  .diagnostic h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--purple);
+    font-size: 18px; margin-bottom: 8px;
+  }
+  .diagnostic p { font-size: 14.5px; margin-top: 6px; }
+
+  ul { padding-right: 22px; margin: 6px 0; }
+  li { margin-bottom: 5px; font-size: 15px; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 3.5 · PHASE 3 BUG SQUASH</div>
+  <h1>חמש בעיות שדיווחת ב-iPad — תוקנו</h1>
+  <p class="subtitle">המסמך הזה כתוב כצ'ק-ליסט. כל בדיקה היא <em>"פתח X, לחץ Y, אתה אמור לראות Z"</em>. אין שמות פנימיים של flags או של API. אם בדיקה לא עוברת — תכתוב לי איזו ועם מה ראית.</p>
+
+  <div class="insight">
+    <h2>סיכום בשורה</h2>
+    <p>תיקנתי את כל חמש הבעיות. הקוד נדחף ל-<em>v2-rewrite</em>; <span class="formula" style="display:inline-block;margin:0;padding:2px 8px">https://nodez-2iz.pages.dev</span> יבנה תוך 1-2 דקות.</p>
+    <p>שתי בעיות (תפריט אפשרויות שלא נפתח, וגריסת ה-pan ב-Algo Execution) לא יכולתי לשחזר ב-Playwright — אז שמתי הגנות מסוג <em>"זה הסיכוי הכי גבוה"</em>. אם זה עדיין נתקע אצלך — אצטרך מידע נוסף מה-iPad כדי לחתוך.</p>
+  </div>
+
+  <h2 class="section-title">בדיקות לעשות על ה-iPad</h2>
+
+  <div class="warn">
+    <strong>לפני שמתחילים:</strong> רענן את הדף ב-iPad פעם אחת חזק (Pull to refresh ב-Safari). זה מוודא שטענו את הקוד החדש ולא גרסת cache.
+  </div>
+
+  <!-- TEST 1 — Tools panel -->
+  <div class="test do">
+    <span class="test-num">בדיקה 1</span>
+    <span class="test-title">הכפתור של הגלגל ⚙ (Tools / אפשרויות)</span>
+    <p class="test-do"><strong>איפה:</strong> בעמודה השמאלית-תחתונה (העמודה הצרה עם הריבועים הצבעוניים), הריבוע השני מלמטה, עם איקון של גלגל שיניים ⚙.</p>
+    <p class="test-do"><strong>מה לעשות:</strong> תקיש עליו פעם אחת.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> חלונית נפתחת מצד שמאל של הריבוע, עם כפתורים כמו "Export workspace", "Workspace settings", "Add zone", "Add node", "Clear canvas". אם זה נפתח — סבבה, סגור והמשך.</div>
+    <div class="test-fail"><strong>אם לא נפתח:</strong> תכתוב לי, ותציין: האם הריבוע עצמו השתנה כשלחצת (חזותית)? האם זה היה בעברית או באנגלית? כמה workspaces יש לך בעמודה?</div>
+  </div>
+
+  <!-- TEST 2 — Collapsed drawer -->
+  <div class="test do">
+    <span class="test-num">בדיקה 2</span>
+    <span class="test-title">סגירת העמודה של הקנבסים</span>
+    <p class="test-do"><strong>איפה:</strong> בעמודה הצרה השמאלית, הריבוע התחתון הראשון (שלוש קווים אופקיים ☰).</p>
+    <p class="test-do"><strong>מה לעשות:</strong> תקיש עליו פעם אחת — העמודה הרחבה (עם רשימת הקנבסים) צריכה להיעלם.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> העמודה הרחבה נעלמת לחלוטין. <em>אסור שיישאר פס אנכי או חץ</em> ליד העמודה הצרה. הקנבס שלך מתרחב שמאלה עד לקצה של העמודה הצרה. שום דבר בקצה הקנבס לא חתוך.</div>
+    <p class="test-do" style="margin-top:14px"><strong>בדיקה משלימה:</strong> פתח Kanban (תקיש על "Kanban" בסרגל העליון של מצבי תצוגה).</p>
+    <div class="test-see"><strong>צריך לראות:</strong> כל חמש העמודות (Idea / Pending / In progress / Blocked / Done) נראות בלי גלילה אופקית.</div>
+  </div>
+
+  <!-- TEST 3 — Import (no doubling) -->
+  <div class="test do">
+    <span class="test-num">בדיקה 3</span>
+    <span class="test-title">ייבוא workspace בלי כפילויות</span>
+    <p class="test-do"><strong>מה לעשות, חלק א':</strong> רענן את הדף חזק. <em>במידה שהיו לך קנבסים כפולים</em> (כמו שני probability), אחרי הריענון הם אמורים להעלם — יש לי קוד חדש שמנקה אוטומטית זוגות זהים בייט-לבייט.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> בעמודת הקנבסים יש רק עותק אחד של כל קנבס. הקנבסים עם תוכן שונה (גם אם בעלי אותו שם) לא נמחקים — רק זוגות זהים לחלוטין.</div>
+    <p class="test-do" style="margin-top:14px"><strong>מה לעשות, חלק ב':</strong> ייצא את ה-workspace הנוכחי (Tools → Export workspace). פתח workspace חדש (הריבוע + בתחתית העמודה השמאלית). ייבא את הקובץ שייצאת (הריבוע עם החץ ⤓).</p>
+    <div class="test-see"><strong>צריך לראות:</strong> ה-workspace החדש מכיל בדיוק את אותם קנבסים שייצאת, עותק אחד כל אחד. <em>אסור</em> שיהיו כפילויות.</div>
+    <div class="test-fail"><strong>אם עדיין יש כפילויות:</strong> תכתוב לי כמה עותקים ראית, ושלח אם אפשר את קובץ ה-JSON שייבאת — הבעיה אולי בקובץ עצמו ולא בקוד.</div>
+  </div>
+
+  <!-- TEST 4 — Delete canvas -->
+  <div class="test do">
+    <span class="test-num">בדיקה 4</span>
+    <span class="test-title">מחיקת קנבס מתוך העמודה</span>
+    <p class="test-do"><strong>מה לעשות:</strong> בעמודה של הקנבסים, החזק אצבע על קנבס שאתה רוצה למחוק (לחיצה ארוכה, כחצי שניה).</p>
+    <div class="test-see"><strong>צריך לראות:</strong> תפריט קטן עם שלוש שורות: "Set as default for this workspace", ו-<em>"Delete canvas…"</em> באדום בתחתית.</div>
+    <p class="test-do" style="margin-top:14px"><strong>תקיש Delete canvas.</strong></p>
+    <div class="test-see"><strong>צריך לראות:</strong> חלונית אישור עם ספירה של מספר ה-nodes ו-zones שיימחקו. אם לקנבס הזה יש "ילדים" (קנבסים שמקושרים מתוכו) — תהיה גם תיבת סימון "Also delete linked child canvases". תקיש Delete canvas. הקנבס נעלם.</div>
+    <p class="test-do" style="margin-top:14px"><strong>בדיקה משלימה:</strong> תנסה להחזיק אצבע על "vault" (הקנבס הראשי).</p>
+    <div class="test-see"><strong>צריך לראות:</strong> שורת ה-"Delete canvas" <em>לא מופיעה</em> — vault הוא השורש של ה-workspace ולא ניתן למחיקה.</div>
+  </div>
+
+  <!-- TEST 5 — Pan responsiveness -->
+  <div class="test warn-test">
+    <span class="test-num">בדיקה 5</span>
+    <span class="test-title">הזזת קנבס כבד (Algo Execution)</span>
+    <p class="test-do"><strong>מה לעשות:</strong> פתח את Algo Execution. נסה להזיז את הקנבס עם אצבע אחת.</p>
+    <div class="test-see"><strong>תרחיש א' — אם זז:</strong> מצוין. הבעיה הייתה כנראה ה-"מצב שאיתחל באמצע" של מעקב האצבעות — תיקנתי את זה.</div>
+    <p class="test-do" style="margin-top:14px"><strong>תרחיש ב' — אם עדיין לא זז או זז בקושי:</strong> הוסף לקצה ה-URL את <span style="font-family:'JetBrains Mono',monospace;background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:3px;direction:ltr;display:inline-block">?debug=perf</span> (ופתח את ה-URL הזה ב-iPad). למשל:</p>
+    <div class="formula">https://nodez-2iz.pages.dev/?debug=perf&amp;flags=nav-v2,palette,views-v2,gestures-v2,silhouettes,edges-v2,zones-v2,rtl-v2,toolbar-migrated</div>
+    <div class="test-see"><strong>צריך לראות:</strong> חלונית קטנה בפינה השמאלית-עליונה (בגלל RTL בעברית) או הימנית-עליונה, עם שורות כמו "fps", "drop", "commit", "budget". <em>תצלם screenshot של החלונית הזאת אחרי שניסית להזיז כמה שניות.</em></div>
+    <p class="test-do" style="margin-top:14px">שלח לי את הצילום. השורה "budget" מציגה אחוז של פריימים שהיו איטיים מ-16ms; אם זה מעל 33% (אדום) — הקנבס פשוט צפוף מדי לרינדור הנוכחי, וזה בדיוק מה שPhase 4 (Canvas Tile Cache) נועד לפתור. נוכל לפתוח את Phase 4 על סמך המספרים שתצלם.</p>
+  </div>
+
+  <h2 class="section-title">מה תוקן בקוד — תקציר טכני</h2>
+
+  <div class="confirmed">
+    <h3>✓ ייבוא כפול (Issue 1)</h3>
+    <p>הוספתי בלם של 1.5 שניות בין ייבוא לייבוא, כדי שאם iPad Safari יורה את אירוע הקובץ פעמיים בטעות — רק הראשון יעבור. בנוסף הוספתי ניקוי אוטומטי של זוגות קנבסים זהים. הניקוי <em>שמרני</em>: הוא לא מוחק קנבסים שיש להם תוכן שונה גם אם השם זהה — מסמן אותם רק ב-console כאזהרה.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ תפריט הגלגל לא נפתח (Issue 2)</h3>
+    <p>הוספתי <em>touch-action: manipulation</em> לכל הריבועים בעמודה השמאלית. זה הפתרון הסטנדרטי לבעיית "iPad לא מגיב לכפתור" — מבטל את העיכוב של 300 מילישניות ש-iOS מוסיף לפעמים, ומונע ממיקרו-תנועה של 1 פיקסל באצבע להתפרש כגרירה במקום הקשה. בנוסף הוספתי "תקופת חסד" של 200 מילישניות בפותח התפריט שלא יסגר בטעות מאירוע כפול.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ העמודה לא נסגרת לגמרי (Issue 3)</h3>
+    <p>היה רוחב של 40 פיקסלים עם חץ. עכשיו רוחב 0, אין חץ, אין שום פס אופקי שמסתיר את הקנבס. ה-help legend השמאלי-תחתון וכל 5 עמודות ה-Kanban אמורים להופיע בלי קיצוץ.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ מחיקת קנבס (Issue 5)</h3>
+    <p>אופציה חדשה ב-context menu של כל קנבס בעמודה (לחיצה ארוכה ב-iPad / right-click ב-PC). אם לקנבס יש "ילדים" — אותו cascade dialog כמו ב-Sprint 3.4 Issue 8. Undo בודד מחזיר הכל. vault מוגן ולא ניתן למחיקה.</p>
+  </div>
+
+  <div class="diagnostic">
+    <h3>אבחון — pan לא מגיב (Issue 4)</h3>
+    <p>לא יכולתי לשחזר את הבאג ב-Playwright. שני סיבות אפשריות:</p>
+    <ul>
+      <li><strong>(א) מעקב אצבעות נתקע</strong> — סקרתי את הקוד ומצאתי פער: אם הרמת שתי אצבעות ו-iOS "אכל" את אירוע ה-touchend, הרישום של האצבעות נשאר, וההקשה הבאה נחשבת לפינץ' במקום פאן. תיקנתי: כל הקשה אחרי שקט של יותר משנייה אחת מאפסת לחלוטין את מצב המעקב.</li>
+      <li><strong>(ב) פשוט יותר מדי תוכן על הקנבס</strong> — Algo Execution צפוף, וזה אומר שה-render לכל פריים לוקח יותר מ-16 מילישניות. אין לי דרך לתקן את זה מבלי לבנות את Phase 4 (Canvas Tile Cache). הוספתי שורה ב-perf HUD שמראה את האחוז של פריימים איטיים — בדיקה 5 מסבירה איך להפעיל ולצלם.</li>
+    </ul>
+    <p>אם בדיקה 5 תרחיש א' עובד אצלך — (א) היה הסיבה ופתרנו. אם תרחיש ב' — נצטרך את ה-screenshot כדי לכמת את הצורך ב-Phase 4.</p>
+  </div>
+
+  <h2 class="section-title">בדיקות נוספות (לא חובה אבל כדאי)</h2>
+
+  <div class="test do">
+    <span class="test-num">בונוס 1</span>
+    <span class="test-title">החלקת רוחב Drawer + פתיחה חוזרת</span>
+    <p class="test-do">תקיש על ☰ בעמודה השמאלית. העמודה הרחבה נעלמת. תקיש שוב. היא חוזרת.</p>
+  </div>
+
+  <div class="test do">
+    <span class="test-num">בונוס 2</span>
+    <span class="test-title">חיפוש (⌕) פותח את הפלטה</span>
+    <p class="test-do">בעמודה השמאלית, הריבוע השלישי מלמטה (איקון של זכוכית מגדלת ⌕). תקיש. פלטת חיפוש אמורה להופיע במרכז המסך.</p>
+  </div>
+
+  <div class="test do">
+    <span class="test-num">בונוס 3</span>
+    <span class="test-title">Undo (↶) זמין כשיש מה לבטל</span>
+    <p class="test-do">צור node חדש (לחיצה ארוכה על מקום ריק בקנבס). אז תקיש על איקון ה-↶ בעמודה. ה-node שיצרת אמור להעלם.</p>
+  </div>
+
+  <div class="closing">
+    <h3>Sprint 3.5 complete, Phase 3 closed pending iPad verification</h3>
+    <p>תכתוב לי איזה בדיקות עברו ואיזה נכשלו. אם הכל עובר — Phase 3 נסגר רשמית, ואני יכול לכתוב את ה-brief של Sprint 4 (Phase 4 — Canvas Tile Cache). אם בדיקה 5 דרשה את ה-perf HUD — שלח את ה-screenshot והבונוס שתגיד לי שאחוז ה-budget שראית יקבע אם Phase 4 דחוף או אפשר לעבור לדברים אחרים קודם.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">Deploy: <span style="font-family:'JetBrains Mono',monospace;direction:ltr;background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:3px;display:inline-block">https://nodez-2iz.pages.dev</span> · Commit: <span style="font-family:'JetBrains Mono',monospace;direction:ltr">6ccbb08</span></p>
+  </div>
+
+</body>
+</html>
