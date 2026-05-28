@@ -22,25 +22,34 @@
 (function () {
   'use strict';
 
-  // The canonical list. Add new flags here as they ship.
+  /* The canonical list.
+     Sprint 4 Issue 5 — retired 8 flags by flipping defaults to true.
+     These 8 lived 4+ weeks in production with no rollback events; per
+     Pass 7 §05 the new behaviour becomes hard-on. The flag NAMES are
+     kept so URLs that mention them don't error, AND so the rollback
+     path `?flag=-gestures-v2` (URL negation) still works for emergency
+     downgrade. Actual code-branch removal (the bundle-size reduction
+     half of retirement) is a separate cleanup pass — flipping defaults
+     is the behavioural half. */
   const DEFAULTS = Object.freeze({
-    // Phase 1 (Pass 5 — stability)
-    'gestures-v2':   false,   // §04 · gesture state machine
-    'raf-throttle':  false,   // §05 · compositor-aligned throttle (pairs w/ gestures-v2)
-    'lifecycle-v2':  false,   // §06 · IDB single-flight + SW pre-paint + visibility tickle
-    'perf-hud':      false,   // devtools · FPS HUD (also auto-on via ?debug=perf)
-    // Phase 2 (Pass 2/3 — visual foundation)
-    'webfont':       false,   // §02 · Geist + Geist Mono + Instrument Serif + Heebo
-    'silhouettes':   false,   // §03 · 10 distinct node silhouettes + freshness halo
-    'edges-v2':      false,   // §06 · 8 edge types + routing + auto-legend
-    'zones-v2':      false,   // §08 · 6%-fill + dashed border + DOM sticky chip
-    'rtl-v2':        false,   // RTL addendum · logical props + auto-script-break editor
-    // Phase 3 (Pass 4 — navigation)
-    'nav-v2':            false, // §01 · workspace spine + canvas drawer
-    'palette':           false, // §02 · ⌘K command palette
-    'views-v2':          false, // §03 · 5 view modes (Canvas/List/Kanban/Timeline/Weak-spot)
-    // Sprint 3.3 (transition flag — Issue 7)
-    'toolbar-migrated':  false  // hide #tb top toolbar in favour of the spine Tools panel
+    // Phase 1 (retired Sprint 4)
+    'gestures-v2':       true,   // §04 · gesture state machine
+    'raf-throttle':      true,   // §05 · compositor-aligned throttle
+    'lifecycle-v2':      true,   // §06 · IDB single-flight + SW pre-paint
+    'perf-hud':          false,  // devtools — stays opt-in
+    // Phase 2 (retired Sprint 4)
+    'webfont':           true,   // §02 · Geist + Heebo webfont stack
+    'silhouettes':       true,   // §03 · 10 silhouettes + freshness halo
+    'edges-v2':          true,   // §06 · 8 edge types + routing + legend
+    'zones-v2':          true,   // §08 · 6% fill + dashed border + DOM chip
+    'rtl-v2':            true,   // RTL contract · logical props + script-break editor
+    // Phase 3 (recent — stays behind flag for ≥ 1 more decision-gate cycle)
+    'nav-v2':            false,  // §01 · workspace spine + canvas drawer
+    'palette':           false,  // §02 · ⌘K command palette
+    'views-v2':          false,  // §03 · 5 view modes
+    'toolbar-migrated':  false,  // Sprint 3.3 · hide #tb top toolbar
+    // Phase 4 (new — behind flag for at least one decision-gate cycle)
+    'canvas-tiles':      false   // Pass 5 §03 · rasterised tile layer
   });
 
   const STORAGE_KEY = 'edgespace-flags';

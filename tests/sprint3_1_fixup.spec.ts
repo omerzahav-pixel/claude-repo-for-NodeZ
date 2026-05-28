@@ -111,7 +111,9 @@ test.describe("Sprint 3.1 · Issue 1 — double-tap is a no-op", () => {
 // ──────────────────────────────────────────────────────────────────────────
 test.describe("Sprint 3.1 · Issue 2 — fat edge hit-target", () => {
   test("S3_1.I2.A Every visible edge has a sibling hit-path with stroke 20 and pointer-events:stroke (v1)", async ({ page }) => {
-    await open(page);
+    /* Sprint 4 §05 — edges-v2 is now default-on. Force OFF so this
+       test specifically exercises the v1 .edge / .edge-hit path. */
+    await open(page, { "edges-v2": false });
     await seedTwoLinkedNodes(page);
     const probe = await page.evaluate(() => {
       const visibles = Array.from(document.querySelectorAll('path.edge[data-edge="7901"]'));
@@ -153,7 +155,9 @@ test.describe("Sprint 3.1 · Issue 2 — fat edge hit-target", () => {
   });
 
   test("S3_1.I2.C EdgeControls.select() adds .e2-sel ONLY to the visible path, never the hit-path", async ({ page }) => {
-    await open(page);
+    /* Sprint 4 §05 — edges-v2 is now default-on. Force OFF to exercise
+       the v1 .edge path that this test selectors target. */
+    await open(page, { "edges-v2": false });
     await seedTwoLinkedNodes(page);
     await page.evaluate(() => (window as any).EdgeControls.select(7901));
     await page.waitForTimeout(100);

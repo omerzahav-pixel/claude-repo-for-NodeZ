@@ -38,7 +38,12 @@
    * The label slot is EMPTY in SVG; the DOM chip layer renders it.
    */
   function renderZoneSvg(z) {
-    const fill   = hexToRgba(z.color, 0.06);
+    /* Sprint 4 · Phase 4 — when --canvas-tiles is ON, the zone FILL is
+       painted on the canvas tile layer (see tile-cache.js). Suppress
+       here to avoid double-painting (which would render at ~12% opacity
+       instead of 6%). The stroke always stays on the SVG layer. */
+    const tilesOn = window.Flags && window.Flags.on('canvas-tiles');
+    const fill   = tilesOn ? 'none' : hexToRgba(z.color, 0.06);
     const stroke = hexToRgba(z.color, 0.18);
     const lk = z.locked !== false;
     const handle = lk ? '' : `<rect class="zh" x="${z.x+z.w-14}" y="${z.y+z.h-14}" width="14" height="14" rx="3"/>`;

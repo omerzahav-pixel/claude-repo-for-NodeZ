@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 3.6 — Phase 3 נסגר</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec;
+    --ink: #1a2238;
+    --ink-soft: #4a5468;
+    --accent: #c2410c;
+    --accent-soft: #fed7aa;
+    --green: #15803d;
+    --green-soft: #bbf7d0;
+    --amber: #b45309;
+    --amber-soft: #fde68a;
+    --blue: #1e40af;
+    --blue-soft: #dbeafe;
+    --purple: #6b21a8;
+    --purple-soft: #e9d5ff;
+    --red: #b91c1c;
+    --red-soft: #fecaca;
+    --rule: #d6cfc2;
+    --code-bg: #ede5d5;
+    --code-ink: #7c2d12;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.9;
+    direction: rtl; text-align: right;
+  }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+  }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+  .section-title {
+    font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px;
+    margin: 36px 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+
+  .insight {
+    background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%);
+    border: 2px solid var(--accent); border-radius: 8px;
+    padding: 22px 24px; margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(194,65,12,0.08);
+  }
+  .insight h2 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--accent);
+    font-size: 22px; margin-bottom: 10px;
+  }
+  .insight p { margin-bottom: 8px; }
+
+  .confirmed {
+    background: var(--green-soft); border-right: 4px solid var(--green);
+    padding: 18px 22px; border-radius: 6px; margin: 20px 0;
+  }
+  .confirmed h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--green);
+    font-size: 19px; margin-bottom: 10px;
+  }
+  .insight-block {
+    background: var(--purple-soft); border-right: 4px solid var(--purple);
+    padding: 18px 22px; border-radius: 6px; margin: 20px 0;
+  }
+  .insight-block h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--purple);
+    font-size: 18px; margin-bottom: 8px;
+  }
+
+  .warn {
+    background: var(--amber-soft); border-right: 4px solid var(--amber);
+    padding: 14px 18px; border-radius: 6px; margin: 16px 0;
+    font-size: 15px;
+  }
+  .warn strong { color: var(--amber); }
+
+  .test {
+    background: var(--card); border-radius: 8px;
+    padding: 18px 22px; margin: 12px 0;
+    border-right: 4px solid var(--rule);
+  }
+  .test.do { border-right-color: var(--blue); }
+  .test.warn-test { border-right-color: var(--amber); }
+  .test-num {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    background: var(--accent); color: white;
+    padding: 3px 9px; border-radius: 4px;
+    margin-left: 8px;
+    direction: ltr;
+  }
+  .test-title {
+    font-family: 'Frank Ruhl Libre', serif;
+    font-size: 18px; font-weight: 700;
+    display: inline;
+  }
+  .test-do {
+    margin-top: 10px;
+    font-size: 15.5px;
+  }
+  .test-do strong { color: var(--accent); }
+  .test-see {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: var(--green-soft);
+    border-radius: 6px;
+    font-size: 15px;
+  }
+  .test-see strong { color: var(--green); }
+  .test-fail {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: var(--red-soft);
+    border-radius: 6px;
+    font-size: 14.5px;
+    color: var(--ink);
+  }
+  .test-fail strong { color: var(--red); }
+
+  .closing {
+    margin-top: 32px; padding: 20px 22px;
+    background: var(--card); border-radius: 6px;
+    border-right: 4px solid var(--accent);
+  }
+  .closing h3 {
+    font-family: 'Frank Ruhl Libre', serif; font-size: 18px;
+    margin-bottom: 8px; color: var(--accent);
+  }
+
+  .formula {
+    background: var(--code-bg); color: var(--code-ink);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    padding: 14px 18px; border-radius: 6px; margin: 12px 0;
+    direction: ltr; text-align: left; line-height: 1.5;
+    word-break: break-all;
+  }
+  .kbd-inline {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    background: var(--code-bg); color: var(--code-ink);
+    padding: 2px 7px; border-radius: 4px;
+    direction: ltr; display: inline-block;
+  }
+
+  ul { padding-right: 22px; margin: 6px 0; }
+  li { margin-bottom: 5px; font-size: 15px; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 3.6 · PHASE 3 CLOSEOUT</div>
+  <h1>שש בעיות תוקנו — Phase 3 בסגירה</h1>
+  <p class="subtitle">הסיבה האמיתית של הכפילות הייתה ב-<em>render</em> ולא בנתונים. תיקנתי. אחרי שאתה תוודא ב-iPad — Phase 3 נסגר ואני יוצא ל-Phase 4.</p>
+
+  <div class="insight">
+    <h2>הקליטה המרכזית — הבעיה של הכפילות הייתה רק במצג</h2>
+    <p>הניסוי שלך עם "מחקתי אחד מהשניים, שניהם נעלמו" היה ההוכחה הסופית. הנתונים ב-IndexedDB היו תמיד <em>פעם אחת</em>. ה-drawer צייר אותם פעמיים. הקוד הספציפי: שורה בקובץ <span class="kbd-inline">drawer.js</span> שטיילה על ילדי vault פעמיים — פעם אחת ברקורסיה ופעם נוספת בלולאה מפורשת אחריה.</p>
+    <p>הסרתי את הלולאה הכפולה והוספתי שמירת רשימה של מה שכבר צויר במהלך הצביעה הזאת. כפילות לא יכולה לחזור גם אם בעתיד מישהו יוסיף לולאה שלישית בטעות.</p>
+    <p>כל ההגנות שעטפנו ב-Sprint 3.5 (delay של 1.5 שניות, מנגנון ניקוי אוטומטי) הוסרו. הן היו תיקון לבעיה הלא נכונה.</p>
+  </div>
+
+  <h2 class="section-title">בדיקות לעשות על ה-iPad</h2>
+
+  <div class="warn">
+    <strong>לפני שמתחילים:</strong> רענון חזק של הדף (Pull to refresh). אם זה לא מעדכן, החזק את כפתור הרענון של Safari ובחר "Reload Without Cache".
+  </div>
+
+  <!-- TEST 1 — Import doubling -->
+  <div class="test do">
+    <span class="test-num">בדיקה 1</span>
+    <span class="test-title">ייבוא בלי כפילות — הניסוי שלך</span>
+    <p class="test-do"><strong>מה לעשות, חלק א':</strong> בעמודה הצרה השמאלית, החזק אצבע על קנבס שיש לו רק עותק אחד בעמודה הרחבה (לא חשוב איזה). בתפריט שייפתח תקיש "Delete canvas".</p>
+    <div class="test-see"><strong>צריך לראות:</strong> רק <em>הקנבס שמחקת</em> נעלם. אם יש לך עוד קנבסים — הם נשארים. <em>אסור</em> ששני קנבסים ייעלמו ביחד.</div>
+    <p class="test-do" style="margin-top:14px"><strong>מה לעשות, חלק ב' — ייבוא:</strong> ייצא את ה-workspace הנוכחי (⚙ → Export workspace). פתח workspace חדש לגמרי (כפתור + בתחתית העמודה השמאלית). ייבא את הקובץ.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> ה-workspace החדש מכיל בדיוק את הקנבסים שייצאת. <em>עותק אחד</em> כל אחד. אין שום כפילות בעמודה הרחבה.</div>
+    <div class="test-fail"><strong>אם עדיין יש כפילות:</strong> תכתוב כמה עותקים יש לכל קנבס. תצלם screenshot של העמודה הרחבה.</div>
+  </div>
+
+  <!-- TEST 2 — Kanban Idea column -->
+  <div class="test do">
+    <span class="test-num">בדיקה 2</span>
+    <span class="test-title">Kanban — חמש עמודות נראות, כולל Idea</span>
+    <p class="test-do"><strong>מה לעשות:</strong> פתח את Kanban (בסרגל מצבי התצוגה למעלה). אל תסגור את העמודה הרחבה השמאלית — תשאיר אותה פתוחה.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> כל חמש העמודות נראות במלואן: <em>Idea, Pending, In progress, Blocked, Done</em>. אף אחת מהן לא מוסתרת מאחורי העמודה הצרה השמאלית.</div>
+    <p class="test-do" style="margin-top:14px"><strong>בדיקה משלימה (עברית):</strong> תקיש על א/A בעמודה הצרה כדי להפעיל מצב עברית. תפתח שוב Kanban.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> סדר העמודות הפוך — <em>Done משמאל ו-Idea מימין</em>. וגם פה — Idea (שעכשיו בצד הימני) לא מוסתר מאחורי שום דבר.</div>
+  </div>
+
+  <!-- TEST 3 — Delete canvas with children → modal -->
+  <div class="test do">
+    <span class="test-num">בדיקה 3</span>
+    <span class="test-title">מחיקת קנבס עם "ילדים" — צריכה לשאול</span>
+    <p class="test-do"><strong>מה לעשות:</strong> תמצא בעמודה הרחבה קנבס שיש לו תת-קנבסים (קנבסים שמקושרים אליו, כמו roadmap). החזק אצבע עליו. תקיש "Delete canvas".</p>
+    <div class="test-see"><strong>צריך לראות:</strong> חלונית עם:
+      <ul>
+        <li>ספירה של ה-nodes ו-zones בקנבס הזה</li>
+        <li><em>שורה שמציינת "X child canvases would become reachable from the workspace root"</em></li>
+        <li>תיבת סימון "Also delete those child canvases and everything under them" — <em>לא מסומנת ברירת מחדל</em></li>
+        <li>כפתורי Cancel ו-Delete canvas</li>
+      </ul>
+    </div>
+    <p class="test-do" style="margin-top:14px"><strong>חלק ב' — בלי לסמן:</strong> תקיש Delete canvas <em>בלי</em> לסמן את התיבה.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> הקנבס הזה נמחק. <em>הילדים שלו לא נמחקו</em> — הם הופיעו עכשיו בעמודה הרחבה כקנבסים עצמאיים (בלי הורה).</div>
+    <p class="test-do" style="margin-top:14px"><strong>חלק ג' — undo:</strong> לחיצה על ↶.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> הקנבס שמחקת חוזר עם כל המבנה ההורה-ילד שלו, כאילו לא קרה כלום.</div>
+  </div>
+
+  <!-- TEST 4 — Perf HUD now reads real numbers -->
+  <div class="test warn-test">
+    <span class="test-num">בדיקה 4</span>
+    <span class="test-title">Perf HUD — מספרים אמיתיים על Algo Execution</span>
+    <p class="test-do"><strong>מה לעשות:</strong> פתח את ה-URL הבא ב-iPad (אפשר להעתיק):</p>
+    <div class="formula">https://nodez-2iz.pages.dev/?debug=perf&amp;flags=nav-v2,palette,views-v2,gestures-v2,silhouettes,edges-v2,zones-v2,rtl-v2,toolbar-migrated,raf-throttle,lifecycle-v2,webfont</div>
+    <p class="test-do"><strong>פתח את Algo Execution.</strong> תנסה להזיז את הקנבס עם אצבע אחת במשך 3-4 שניות בקצב מהיר.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> בחלונית ה-perf (פינה ימנית-עליונה בעברית, שמאלית-עליונה באנגלית):
+      <ul>
+        <li><span class="kbd-inline">fps</span> — מספר נמוך יותר מ-60 (אם מרגיש איטי, אולי 15-30)</li>
+        <li><span class="kbd-inline">worst</span> — צבע אדום או כתום עם מספר ms גבוה (לדוגמה 60ms)</li>
+        <li><span class="kbd-inline">budget</span> — אחוז גדול מ-0%, סביר להניח באדום (מעל 33%) או כתום (10-33%)</li>
+      </ul>
+    </div>
+    <p class="test-do" style="margin-top:14px"><strong>תצלם screenshot של החלונית הזאת.</strong> זה ה-baseline ל-Phase 4. בלי המספרים האלה אני לא יכול לקבוע כמה משמעותית התקדמות Phase 4 תיתן.</p>
+    <p class="test-do" style="margin-top:14px"><strong>השוואה:</strong> אם נשארת ב-vault פתוחה ולא תזיז כלום במשך 2-3 שניות, ה-HUD יראה <span class="kbd-inline">worst — (idle)</span> ו-<span class="kbd-inline">budget — (idle)</span>. זה נורמלי — המדדים נמדדים רק כשאתה ממש מזיז.</p>
+    <div class="test-fail"><strong>אם budget עדיין 0%:</strong> תכתוב לי איזה דפדפן (Safari? Chrome ב-iPad?), האם אתה בעברית או באנגלית, ואם החלונית בכלל מופיעה.</div>
+  </div>
+
+  <!-- TEST 5 — Reset workspace -->
+  <div class="test do">
+    <span class="test-num">בדיקה 5</span>
+    <span class="test-title">Reset workspace — מאפס את ה-workspace</span>
+    <p class="test-do"><strong>מה לעשות:</strong> פתח workspace קטן שאתה לא מתכוון להשתמש בו (או צור אחד חדש לבדיקה).</p>
+    <p class="test-do"><strong>בעמודה השמאלית הצרה:</strong> תקיש על ⚙ → "Workspace settings". בחלונית שתיפתח, בתחתית, יש אזור "Danger zone" עם כפתור <em>"Reset workspace…"</em> באדום.</p>
+    <p class="test-do"><strong>תקיש על Reset workspace…</strong></p>
+    <div class="test-see"><strong>צריך לראות:</strong> חלונית עם הספירה של מה ייעלם (canvases, nodes, zones, edges). כפתור Cancel ו-Reset workspace.</div>
+    <p class="test-do" style="margin-top:14px"><strong>תקיש Reset workspace.</strong></p>
+    <div class="test-see"><strong>צריך לראות:</strong> ה-workspace ריק לחלוטין — רק vault, וגם הוא ריק. כל הקנבסים, ה-nodes, וה-zones נעלמו.</div>
+    <p class="test-do" style="margin-top:14px"><strong>תקיש על ↶ (Undo).</strong></p>
+    <div class="test-see"><strong>צריך לראות:</strong> הכל חזר — כל הקנבסים, כל ה-nodes, כל ה-zones.</div>
+  </div>
+
+  <!-- TEST 6 — Drawer animation symmetry -->
+  <div class="test do">
+    <span class="test-num">בדיקה 6</span>
+    <span class="test-title">אנימציה סגירה של העמודה הרחבה</span>
+    <p class="test-do"><strong>מה לעשות:</strong> בעמודה הצרה השמאלית, תקיש על ☰. העמודה הרחבה תיסגר.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> אנימציה של סגירה — העמודה <em>מצטמצמת בצורה חלקה</em> במשך כ-0.2 שניות. <em>לא קופצת ברגע למצב סגור</em>. כשתפתח שוב, אותה אנימציה בכיוון ההפוך.</div>
+  </div>
+
+  <h2 class="section-title">מה תוקן בקוד — תקציר</h2>
+
+  <div class="confirmed">
+    <h3>✓ הכפילות (Issue 1)</h3>
+    <p>הסרתי לולאה כפולה ב-<span class="kbd-inline">drawer.js</span> שצוירה את ילדי vault פעמיים. הוספתי שמירת רשימה של מה שצוייר כדי שלעולם לא יקרה שוב. הסרתי את ה-delay של 1.5 שניות בייבוא (היה תיקון לבעיה הלא נכונה).</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ Kanban מאחורי העמודה הצרה (Issue 2)</h3>
+    <p>שטח התצוגה של מצבי-תצוגה (Kanban, List, Timeline, Weak-spot) היה מכסה את כל המסך כולל המקום שהעמודה הצרה תופסת. עכשיו הוא מתחיל אחרי העמודה הצרה (וגם אחרי העמודה הרחבה אם היא פתוחה). RTL מתהפך כצפוי.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ חלונית cascade על מחיקת קנבס עם ילדים (Issue 3)</h3>
+    <p>הפונקציה שמוצאת ילדים של קנבס הסתכלה רק על "portal nodes" בתוך הקנבס. קנבסים שיובאו מ-JSON מגדירים את הקשר אחרת — דרך metadata. הוספתי שילוב של שני המסלולים. עכשיו cascade תקין גם על קנבסים שיובאו.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ Perf HUD — מודד באמת (Issue 4)</h3>
+    <p>ה-HUD היה תלוי ב-callback מ-CanvasTransform שלא נורה במסלול הישן של הרינדור. כתבתי מחדש — הוא עכשיו מודד מתוך rAF tick שלו, רק כשאתה ממש פעיל (panning / pinching). הוסיף שורות worst frame ו-fps active. ה-idle baseline ממשיך לעבוד.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ Reset workspace (Issue 5)</h3>
+    <p>כפתור חדש ב-Workspace settings, באזור "Danger zone" עם מסגרת אדומה. שואל לפני המחיקה. Undo מחזיר הכל בפעולה אחת.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ אנימציית סגירה של העמודה הרחבה (Issue 6)</h3>
+    <p>היה <span class="kbd-inline">visibility: hidden !important</span> שקפץ מיידית וקיצר את האנימציה. עכשיו ה-visibility מתעדכן רק <em>אחרי</em> שהאנימציה של ה-width הסתיימה (delay של 220ms). אנימציות הפתיחה והסגירה זהות.</p>
+  </div>
+
+  <h2 class="section-title">אחרי שתאשר — Phase 4 נפתח</h2>
+
+  <div class="insight-block">
+    <h3>Phase 4 — Canvas Tile Cache</h3>
+    <p>הבעיה: כשיש הרבה תכולה על קנבס (Algo Execution), כל פריים דורש render מחדש של כל ה-nodes וה-edges. זה איטי.</p>
+    <p>הפתרון: לשמור את הקנבס כ-tiles (אריחים) — כל אריח הוא רינדור מוכן של החלק שלו. כש-pan'ים, פשוט מזיזים את האריחים (זול ב-GPU). רק האריח שמכיל node שזז צריך rerender.</p>
+    <p>היעד: על Algo Execution להגיע ל-budget < 10% (ירוק) על pan עם אצבע אחת.</p>
+    <p>הקובץ <span class="kbd-inline">PERF-BASELINE.md</span> מחכה למספרים שלך מבדיקה 4 כדי להגדיר את היעד המדויק.</p>
+  </div>
+
+  <div class="closing">
+    <h3>Sprint 3.6 complete, Phase 3 closed pending iPad verification</h3>
+    <p>תעבור על 6 הבדיקות. תכתוב לי איזה עברו ואיזה לא. אם הכל עובר (ובדיקה 4 נתנה screenshot של ה-budget) — Phase 3 נסגר רשמית ואני יכול לפתוח את ה-brief של Sprint 4 (Phase 4 — Canvas Tile Cache). אם משהו לא עובר — נתקן.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">Deploy: <span style="font-family:'JetBrains Mono',monospace;direction:ltr;background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:3px;display:inline-block">https://nodez-2iz.pages.dev</span> · Commit: <span style="font-family:'JetBrains Mono',monospace;direction:ltr">6072c93</span> · 284/284 desktop · 284/284 iPad emulation</p>
+  </div>
+
+</body>
+</html>

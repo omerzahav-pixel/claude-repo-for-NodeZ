@@ -148,6 +148,14 @@
 <div id="pn"></div><div id="ctx"></div><div id="ep"></div><div id="modal"><div class="mc" id="mcbody"></div></div>
 <div id="sb"><div class="sbhead" onclick="sbHeadClick(event)"><span class="sbtog" onclick="event.stopPropagation();cycleSb()" title="Cycle sidebar: Nodes · Edges · Zones">☰</span><span id="sbName">Nodes</span><span style="flex:1"></span><span class="sbtog" onclick="event.stopPropagation();collapseAllZones()" title="Collapse / expand all">⇕</span><span class="sbtog" onclick="event.stopPropagation();document.getElementById('sb').classList.toggle('mini')" title="Minimize to bottom">▾</span></div><div class="sbsearch"><input id="sbq" placeholder="Filter list…" oninput="renderSB()"/></div><div class="sbbody" id="sbbody"></div><div class="resize" onpointerdown="sbResize(event)"></div></div>
 <div id="tabs"></div>
+<!-- Sprint 4 · Phase 4 (Pass 5 §03) · three-layer substrate.
+     #canvas-root groups the three layers. All three children are
+     position:fixed so the wrapper itself is layout-transparent — it
+     exists for semantic + DevTools-Inspector clarity. The tile cache
+     layer (#tiles) is below the SVG; when --canvas-tiles is OFF, the
+     tile-cache.js module never paints into it and it stays invisible. -->
+<div id="canvas-root">
+<canvas id="tiles"></canvas>
 <svg id="cv"></svg>
 <!-- Phase 5 P2 · empty-state overlay. Visible when the current canvas
      has zero nodes and zero zones (a truly blank canvas looks broken
@@ -162,6 +170,8 @@
      fall through to the SVG below; individual overlay children can re-enable
      events when they need them (scrollable note bodies, link clicks…). -->
 <div id="canvasOverlay"></div>
+</div><!-- /#canvas-root -->
+
 <!-- Phase 5 P2 · Landing screen. Shown on first load when ≥ 2 workspaces
      exist. Lists workspace cards with color stripes; click one to switch.
      Dismissed by clicking a card, pressing Escape, or clicking outside. -->
@@ -222,5 +232,9 @@
 <!-- Sprint 3.1 Issue 3 · touch-friendly edge-draw handles. Loads last so it
      can wrap window.render after EdgeControls already wrapped it. -->
 <script src="./js/canvas/edge-draw.js"></script>
+<!-- Sprint 4 · Phase 4 (Pass 5 §03) · canvas tile cache. Loads last so its
+     render-wrap composes AFTER all other render-wraps (palette recents,
+     drawer, edge-controls, edge-draw). Gated by --canvas-tiles flag. -->
+<script src="./js/canvas/tile-cache.js"></script>
 </body>
 </html>

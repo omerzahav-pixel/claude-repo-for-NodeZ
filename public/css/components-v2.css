@@ -294,6 +294,45 @@ body.holding .nslice,
 #spine .sb:active { transform: scale(0.97); }
 /* Same touch-action for workspace chips, which also sit in the spine. */
 #spine .ws-chip { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* =============================================================================
+ * Sprint 4 · Phase 4 (Pass 5 §03) · canvas tile layer.
+ *
+ * #tiles is a 2D-context HTMLCanvasElement that rasterises the dot-grid +
+ * zone fills at the current zoom tier. Sized to the viewport at
+ * devicePixelRatio so the raster is crisp on Retina. Pan/pinch within a
+ * tier translate this element via CSS transform — no redraw.
+ *
+ * Sits BELOW the SVG (`#cv` z-index 0 was the default; here we say
+ * `#tiles` z = 0 and shift `#cv` up via the body class set by tile-cache).
+ * When --canvas-tiles is OFF, tile-cache.js never paints into #tiles and
+ * the canvas stays transparent, so SVG paints on top of empty pixels.
+ * ============================================================================= */
+#canvas-root {
+  /* Layout-transparent semantic wrapper. Children are position:fixed. */
+  position: static;
+  display: contents;
+}
+#tiles {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  height: 100dvh;
+  z-index: 0;
+  pointer-events: none;
+  /* Same transform origin as #canvasOverlay so the same view math
+     produces the same on-screen position. */
+  transform-origin: 0 0;
+  -webkit-transform-origin: 0 0;
+  will-change: transform;
+  /* Sub-pixel rendering hint for the dot-grid */
+  image-rendering: auto;
+}
+/* When tiles is active, lift #cv above it. The existing #cv z-index:0 in
+   src/app.css means tiles + cv would fight; this body class ensures
+   tiles paints under cv. */
+body.canvas-tiles-on svg#cv { z-index: 1; }
+body.canvas-tiles-on #canvasOverlay { z-index: 2; }
 /* Sprint 3.3 Issue 7 — Tools (gear) chip distinguished from the drawer
    hamburger by a faint hot tint, since it opens a meaningfully different
    surface (a tools menu vs a layout toggle). */
@@ -457,7 +496,17 @@ body[dir="rtl"] #spine { inset-inline-start: auto; inset-inline-end: 0; border-i
   overflow-y: auto;
   -webkit-user-select: none; user-select: none;
   transition: width var(--t-base) var(--e-out);
+  /* Sprint 4 Issue 4 — custom scrollbar so the desktop default Chrome
+     chrome doesn't break the visual system. Tokens come from
+     css/tokens.css; ink-3 is the same muted ink used for secondary
+     drawer text so the thumb fades into the panel ink ramp. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-3) transparent;
 }
+#drawer::-webkit-scrollbar { width: 6px; height: 6px; }
+#drawer::-webkit-scrollbar-track { background: transparent; }
+#drawer::-webkit-scrollbar-thumb { background: var(--ink-3); border-radius: 3px; }
+#drawer::-webkit-scrollbar-thumb:hover { background: var(--ink-2); }
 /* Sprint 3.5 Issue 3 — collapsed drawer must be ZERO pixels visible.
    The previous 40-px vertical strip with a chevron was: (a) a redundant
    second entry point alongside the hamburger chip on the spine, (b)

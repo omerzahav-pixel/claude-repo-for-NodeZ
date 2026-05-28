@@ -39,12 +39,15 @@ test.describe("Phase 1 · feature flag plumbing", () => {
     expect(typeof all["perf-hud"]).toBe("boolean");
   });
 
-  test("1.0.2 All Phase 1 flags default to OFF", async ({ page }) => {
+  test("1.0.2 Phase 1 flags retired (Sprint 4 §05): default ON; perf-hud stays opt-in", async ({ page }) => {
+    /* Sprint 4 §05 — gestures-v2, raf-throttle, lifecycle-v2 lived 4+
+       weeks with no rollback events and are now default-true. perf-hud
+       stays default-false (devtools-only). */
     await openWithFlags(page, {});
     const all = await page.evaluate(() => (window as any).Flags?.all());
-    expect(all["gestures-v2"]).toBe(false);
-    expect(all["raf-throttle"]).toBe(false);
-    expect(all["lifecycle-v2"]).toBe(false);
+    expect(all["gestures-v2"]).toBe(true);
+    expect(all["raf-throttle"]).toBe(true);
+    expect(all["lifecycle-v2"]).toBe(true);
     expect(all["perf-hud"]).toBe(false);
   });
 
@@ -55,8 +58,12 @@ test.describe("Phase 1 · feature flag plumbing", () => {
     expect(on).toBe(true);
   });
 
-  test("1.0.4 Old pipeline runs unchanged with all flags OFF (no GestureV2)", async ({ page }) => {
-    await openWithFlags(page, {});
+  test("1.0.4 Old pipeline still available — force gestures-v2 OFF via flag negation (Sprint 4 §05 rollback path)", async ({ page }) => {
+    /* Sprint 4 §05 — gestures-v2 is now default-true. The rollback path
+       is URL negation: `?flag=-gestures-v2`. With that, GestureV2 must
+       NOT install, so the legacy pointer handlers in app.js own the
+       gestures unchanged. */
+    await openWithFlags(page, { "gestures-v2": false });
     const g = await page.evaluate(() => (window as any).GestureV2);
     expect(g).toBeUndefined();
   });
@@ -203,8 +210,10 @@ test.describe("Phase 1 · lifecycle-v2", () => {
     expect(sameDb).toBe(true);
   });
 
-  test("1.3.3 IdbV2 absent when --lifecycle-v2 OFF", async ({ page }) => {
-    await openWithFlags(page, {});
+  test("1.3.3 IdbV2 absent when --lifecycle-v2 forced OFF (Sprint 4 §05 — flag is now default-true)", async ({ page }) => {
+    /* Sprint 4 §05 — lifecycle-v2 is now default-true. Force off
+       explicitly so this test still asserts the OFF behaviour. */
+    await openWithFlags(page, { "lifecycle-v2": false });
     const has = await page.evaluate(() => !!(window as any).IdbV2);
     expect(has).toBe(false);
   });
