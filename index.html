@@ -218,6 +218,11 @@
      available on the very first render() (the cull decision runs inside the
      render loop). Pure compute, no DOM deps. Gated by --cull-v1. -->
 <script src="./js/canvas/cull-v1.js"></script>
+<!-- Sprint 4.2 · fx control. --no-fx (always) / --fx-motion (during gesture)
+     suppress the freshness-halo animation + canvas filters that iOS re-rasters
+     every pan frame. Loads after gesture.js so GestureV2.getState() is available
+     to the Path-A motion watcher. Gated; default OFF. -->
+<script src="./js/canvas/fx.js"></script>
 <script src="./js/editor/script-boundary.js"></script>
 <script src="./app.js"></script>
 <!-- Phase 3 (Pass 4) · navigation chrome. Loads AFTER app.js so the

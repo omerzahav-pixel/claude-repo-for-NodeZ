@@ -18,6 +18,31 @@
 }
 
 /* =============================================================================
+ * Sprint 4.2 · fx suppression — the real Phase-4 perf lever.
+ *
+ * The HUD proved the bottleneck is PAINT, not transform: commit ~2.4ms but
+ * worst ~200ms during pan. The cost is the per-node freshness halo (a stroked
+ * circle whose `es-halo-pulse` is an always-on CSS animation → the iOS layer
+ * re-rasters every frame) plus the selection drop-shadows / edge glow. SVG
+ * filters and animated strokes are NOT GPU-composited on iOS Safari.
+ *
+ * Two routes funnel here, both default OFF:
+ *   · body.no-fx        — --no-fx: kill fx always (Issue 2 diagnostic).
+ *   · body.fx-suppressed — --fx-motion: kill fx only WHILE the canvas is in
+ *                          motion (Issue 3 Path A); the static view keeps full
+ *                          fidelity, so the user only loses the halo while
+ *                          actively panning — when they can't perceive it anyway.
+ *
+ * We remove the halo geometry outright (display:none → no paint, no animation)
+ * and neutralise every CSS/SVG filter inside the two canvas layers. Shapes,
+ * fills, paths and colours are untouched. Recalc happens once per class toggle
+ * (gesture start / settle), never per frame. */
+body.no-fx .es-halo,
+body.fx-suppressed .es-halo { display: none !important; }
+body.no-fx svg#cv *, body.no-fx #canvasOverlay *,
+body.fx-suppressed svg#cv *, body.fx-suppressed #canvasOverlay * { filter: none !important; }
+
+/* =============================================================================
  * Phase 2 · edge legend (Pass 3 § 06).
  *
  * Auto-docked bottom-right when canvas has ≥ 3 distinct edge types in use.

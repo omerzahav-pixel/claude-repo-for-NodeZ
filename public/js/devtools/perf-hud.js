@@ -62,7 +62,9 @@
       '<div id="ph-visible">visible —</div>' +
       '<div id="ph-culled">culled —</div>' +
       '<div id="ph-commit" style="margin-top:4px">commit —</div>' +
-      '<div id="ph-state">state —</div>' +
+      '<div id="ph-paint">paint —</div>' +
+      '<div id="ph-fx">fx —</div>' +
+      '<div id="ph-state" style="margin-top:4px">state —</div>' +
       '<div id="ph-mem" style="margin-top:4px;color:#7C828E"></div>';
     document.body.appendChild(root);
 
@@ -75,6 +77,8 @@
     const renderedEl = root.querySelector('#ph-rendered');
     const visibleEl  = root.querySelector('#ph-visible');
     const culledEl   = root.querySelector('#ph-culled');
+    const paintEl    = root.querySelector('#ph-paint');
+    const fxEl       = root.querySelector('#ph-fx');
 
     /* Sprint 4.1 Issue 1 · ask render() to publish element counts on
        window.__renderStats. Set only while the HUD is installed, so the normal
@@ -140,12 +144,14 @@
           activeFrames.shift();
         }
 
+        let worstFrame = -1; // Sprint 4.2 · exposed to the paint = worst − commit line
         if (activeFrames.length > 5) {
           /* fps over the active window */
           fpsEl.textContent = 'fps    ' + activeFps.toFixed(1).padStart(5);
           /* worst frame */
           let worst = 0;
           for (const f of activeFrames) if (f > worst) worst = f;
+          worstFrame = worst;
           let wColor = '#4FD18B';
           if (worst > 50) wColor = '#F87171';
           else if (worst > 25) wColor = '#F2C462';
@@ -189,12 +195,43 @@
           culledEl.textContent   = 'culled   —';
         }
 
+        let commitAvg = null;
         if (commitSamples.length) {
           const sum = commitSamples.reduce((a, b) => a + b, 0);
-          const avg = sum / commitSamples.length;
-          commitEl.textContent = 'commit ' + avg.toFixed(2).padStart(5) + 'ms';
+          commitAvg = sum / commitSamples.length;
+          commitEl.textContent = 'commit ' + commitAvg.toFixed(2).padStart(5) + 'ms';
         } else {
           commitEl.textContent = 'commit — (legacy path)';
+        }
+
+        /* Sprint 4.2 Issue 1 · paint = worst − commit. The transform write is
+           cheap (~2ms); the rest of the worst frame is rasterisation. On a dense
+           iPad canvas that remainder is the ~200ms that the tile cache and
+           culling never touched — it's the freshness-halo animation + filters.
+           Naming the gap makes the diagnosis impossible to miss on the HUD. */
+        if (worstFrame >= 0 && commitAvg != null) {
+          const paint = Math.max(0, worstFrame - commitAvg);
+          let pColor = '#4FD18B';
+          if (paint > 50) pColor = '#F87171';
+          else if (paint > 16) pColor = '#F2C462';
+          paintEl.innerHTML = 'paint  <span style="color:' + pColor + '">' +
+            paint.toFixed(0).padStart(4) + 'ms</span> worst−commit';
+        } else if (worstFrame >= 0) {
+          paintEl.textContent = 'paint  ~' + worstFrame.toFixed(0) + 'ms (no commit)';
+        } else {
+          paintEl.textContent = 'paint  — (idle)';
+        }
+
+        /* fx state — reflects --no-fx (Issue 2) / --fx-motion (Issue 3). ON in
+           red = the expensive effects are live every frame; that's the cost. */
+        const _noFx = window.Flags && window.Flags.on('no-fx');
+        const _fxMo = window.Flags && window.Flags.on('fx-motion');
+        if (_noFx) {
+          fxEl.innerHTML = 'fx     <span style="color:#4FD18B">OFF</span> (--no-fx)';
+        } else if (_fxMo) {
+          fxEl.innerHTML = 'fx     <span style="color:#F2C462">ON</span> · drops in motion';
+        } else {
+          fxEl.innerHTML = 'fx     <span style="color:#F87171">ON</span>';
         }
 
         const gs = window.GestureV2 ? window.GestureV2.getState() : '—';

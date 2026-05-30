@@ -50,7 +50,9 @@
     'toolbar-migrated':  false,  // Sprint 3.3 · hide #tb top toolbar
     // Phase 4 (new — behind flag for at least one decision-gate cycle)
     'canvas-tiles':      false,  // Pass 5 §03 · rasterised tile layer
-    'cull-v1':           false   // Sprint 4.1 · viewport culling (mount/unmount)
+    'cull-v1':           false,  // Sprint 4.1 · viewport culling (mount/unmount)
+    'no-fx':             false,  // Sprint 4.2 · kill freshness halo + all canvas filters (paint diagnostic)
+    'fx-motion':         false   // Sprint 4.2 · drop fx only while the canvas is in motion (Path A fix)
   });
 
   const STORAGE_KEY = 'edgespace-flags';

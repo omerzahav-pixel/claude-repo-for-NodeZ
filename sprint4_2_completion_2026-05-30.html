@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 4.2 — Paint, not Transform · דוח השלמה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .clarify { background: var(--blue-soft); border-right: 4px solid var(--blue); padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+  .clarify h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--blue); font-size: 18px; margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .critical-block { background: var(--red-soft); border-right: 4px solid var(--red); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .critical-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--red); font-size: 19px; margin-bottom: 10px; }
+  .recommend, .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .recommend h3, .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 18px 22px; margin: 14px 0; border-top: 4px solid var(--rule); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 6px; }
+  .finding.ok { border-right: 4px solid var(--green); border-top: none; }
+  .finding.suspect { border-right: 4px solid var(--amber); border-top: none; }
+  .finding.bug { border-right: 4px solid var(--red); border-top: none; }
+  .finding.info { border-right: 4px solid var(--blue); border-top: none; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 15px; }
+  .recap-row .tag { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .next-step { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 8px 0; display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; border-right: 3px solid var(--blue); }
+  .next-step .num { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--blue); color: white; font-weight: 700; padding: 5px 0; border-radius: 50%; text-align: center; width: 28px; height: 28px; }
+  .next-step .body { font-size: 14.5px; }
+  table.comparison { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; font-size: 14px; margin: 14px 0; }
+  table.comparison th { background: var(--accent-soft); padding: 10px 12px; text-align: right; font-weight: 700; font-size: 13px; }
+  table.comparison td { padding: 10px 12px; border-top: 1px dashed var(--rule); vertical-align: middle; }
+  table.comparison tr.match td:first-child { border-right: 4px solid var(--green); }
+  table.comparison tr.close td:first-child { border-right: 4px solid var(--amber); }
+  table.comparison tr.gap td:first-child { border-right: 4px solid var(--red); }
+  .num { font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 3px 7px; border-radius: 4px; direction: ltr; display: inline-block; }
+  .num.v2 { background: var(--blue-soft); color: var(--blue); }
+  .num.v1 { background: var(--purple-soft); color: var(--purple); }
+  .num.bad { background: var(--red-soft); color: var(--red); }
+  .num.good { background: var(--green-soft); color: var(--green); }
+  .tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; direction: ltr; }
+  .tag.match { background: var(--green-soft); color: var(--green); }
+  .tag.close { background: var(--amber-soft); color: var(--amber); }
+  .tag.gap { background: var(--red-soft); color: var(--red); }
+  .formula { background: var(--code-bg); color: var(--code-ink); font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 14px 18px; border-radius: 6px; margin: 8px 0; direction: ltr; text-align: left; line-height: 1.5; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 5px; font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 4.2 · PAINT NOT TRANSFORM · דוח השלמה</div>
+  <h1>הצוואר האמיתי: <span class="en">Paint</span>, לא <span class="en">Transform</span></h1>
+  <p class="subtitle">למה Sprint 4 ו-4.1 לא הזיזו כלום, ומה ה-HUD שלך חשף. 30 במאי 2026.</p>
+
+  <div class="insight">
+    <h2>הקליטה המרכזית — התשובה הייתה על ה-HUD כל הזמן</h2>
+    <p>בצילומים שלך מ-Algo Execution, תוך כדי pan: <span class="en">commit</span> (כתיבת ה-transform) = <em>2.4ms</em>, אבל <span class="en">worst</span> (ה-frame האמיתי) = <em>203ms</em>. ה-transform — מה ש-Pass 5 תקצב ל-~1.8ms — זול ומדויק. ה-200ms הנותרים הם <em>paint</em>: הדפדפן מרסטר מחדש את כל הצורות בכל frame.</p>
+    <p>זה לא transform ולא מספר אלמנטים — זה <em>צביעה</em>. ולכן גם ה-tile cache (Sprint 4) וגם ה-culling (Sprint 4.1) לא יכלו לעזור: שניהם תוקפים שכבות אחרות.</p>
+  </div>
+
+  <h2 class="section-title">1. הראיה מהמסכים שלך</h2>
+
+  <table class="comparison">
+    <thead>
+      <tr><th>מטריק</th><th>זום רגיל</th><th>זום-אאוט</th><th>פירוש</th></tr>
+    </thead>
+    <tbody>
+      <tr class="match">
+        <td><strong>commit</strong> (transform)</td>
+        <td><span class="num good">2.42ms</span></td>
+        <td><span class="num good">2.23ms</span></td>
+        <td>זול ומדויק — לא הבעיה</td>
+      </tr>
+      <tr class="gap">
+        <td><strong>worst</strong> (frame מלא)</td>
+        <td><span class="num bad">203ms</span></td>
+        <td><span class="num bad">258ms</span></td>
+        <td>פי-100 מה-budget</td>
+      </tr>
+      <tr class="gap">
+        <td><strong>paint</strong> = worst − commit</td>
+        <td><span class="num bad">~200ms</span></td>
+        <td><span class="num bad">~256ms</span></td>
+        <td><em>זאת כל הבעיה</em></td>
+      </tr>
+      <tr class="close">
+        <td><strong>fps</strong></td>
+        <td><span class="num v1">5.7</span></td>
+        <td><span class="num v1">8.9</span></td>
+        <td>היעד: ≥50</td>
+      </tr>
+      <tr class="close">
+        <td><strong>rendered / visible</strong></td>
+        <td><span class="num v2">88 ≈ 83</span></td>
+        <td><span class="num v2">88 = 88</span></td>
+        <td>culling עובד — אין מה לקפל</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="insight-block">
+    <h3>שלוש עובדות שסוגרות את התיק</h3>
+    <p><strong>1. commit 2.4ms אבל worst 203ms.</strong> כתיבת ה-transform זולה. ה-~200ms הנותרים הם רסטור של 88 צורות + 46 קשתות בכל frame.</p>
+    <p style="margin-top:8px;"><strong>2. <span class="en">culled ON</span> אבל rendered ≈ visible.</strong> ה-culling מ-4.1 עובד מצוין — פשוט אין מה לקפל כשרואים את כל הקנבס. <em>Culling הוא המנוף הלא-נכון לפעולה הכי שכיחה</em> ("תראה לי הכול"). הוא יעזור בקנבסים ענקיים כשנכנסים לפינה — לא כאן.</p>
+    <p style="margin-top:8px;"><strong>3. <span class="en">0o</span> — אפס overlays.</strong> ה-overlays כבר מקופלים (4.1 בזום הזה). הם לא העלות. העלות היא צביעת ה-SVG, שקיימת בכל זום.</p>
+  </div>
+
+  <h2 class="section-title">2. שורש הבעיה — והוא תואם בדיוק את הזיכרון שלך</h2>
+
+  <div class="clarify">
+    <h3>"לפני כל הספרינטים זה לא קרה. משהו עשה את האפליקציה כבדה."</h3>
+    <p>נכון. <em>Phase 2 הכניס את העלות.</em> מצאתי את האשם בקוד:</p>
+  </div>
+
+  <div class="finding bug">
+    <h4>1. הילת הרעננות (freshness halo) — אנימציה אינסופית על כל צומת</h4>
+    <p style="margin-top:6px;font-size:14.5px;">כל צומת מקבל <span class="en">&lt;circle class="es-halo"&gt;</span>, ולצמתים טריים (≤6 שעות) יש <span class="en">animation: es-halo-pulse 3s infinite</span> — אנימציה <em>שרצה כל הזמן</em>, גם כשעומדים. ב-iOS Safari, אלמנט שמונפש מאלץ רסטור של השכבה בכל frame. 88 הילות = רסטור מתמיד. זה למה <em>כל</em> האפליקציה מרגישה כבדה, לא רק ה-pan.</p>
+  </div>
+
+  <div class="finding suspect">
+    <h4>2. drop-shadow על בחירה + glow על קשת נבחרת</h4>
+    <p style="margin-top:6px;font-size:14.5px;"><span class="en">.nslice.sel</span> נושא שני <span class="en">filter: drop-shadow()</span>, וקשת נבחרת נושאת glow. אלה filters — ש-iOS לא מקדם ל-GPU — אבל רק על אלמנט אחד-שניים, אז משניים לעומת ההילות.</p>
+  </div>
+
+  <div class="warn">
+    <strong>למה זה לא transform:</strong> <span class="en">filter</span> ו-<span class="en">animation</span> ב-SVG <em>לא מקודמים ל-GPU ב-iOS Safari</em>. גם תחת CSS transform טהור, כל אלמנט מסונן/מונפש מאלץ raster ב-CPU בכל frame שהוא על המסך. ה-transform זול; הצביעה שהוא מפעיל — לא.
+  </div>
+
+  <h2 class="section-title">3. מה נבנה</h2>
+
+  <div class="finding ok">
+    <h4>Issue 1 — שתי שורות חדשות ב-HUD: <span class="en">paint</span> ו-<span class="en">fx</span></h4>
+    <p style="margin-top:6px;font-size:14.5px;"><span class="en">paint</span> = worst − commit (עלות הרסטור, צבועה אדום כשגדולה). <span class="en">fx</span> = ON/OFF (משקף את <span class="en">--no-fx</span> / <span class="en">--fx-motion</span>). עכשיו הפער paint-מול-commit גלוי בלי console.</p>
+  </div>
+
+  <div class="finding ok">
+    <h4>Issue 2 — <span class="en">--no-fx</span>: כיבוי כל ה-fx (אבחון בהסרה)</h4>
+    <p style="margin-top:6px;font-size:14.5px;">מסיר את ההילות לגמרי (<span class="en">display:none</span> → אפס צביעה, אפס אנימציה) ומנטרל כל filter בשכבות הקנבס. הצורות, המילויים, הקווים והצבעים נשארים. אם paint קורס עם <span class="en">--no-fx</span> — אז ה-fx הם העלות.</p>
+  </div>
+
+  <div class="finding ok">
+    <h4>Issue 3 Path A — <span class="en">--fx-motion</span>: מוריד fx רק בתנועה (התיקון)</h4>
+    <p style="margin-top:6px;font-size:14.5px;">בזמן תנועה (pan/pinch/inertia/drag) מוסיף <span class="en">body.fx-suppressed</span> — ההילות נעלמות, ה-pan הופך ל-composite טהור. במנוחה הכול חוזר — <em>מלוא הפאר</em>. אתה מאבד את ההילה רק כשאתה זז, כשאתה ממילא לא מבחין בה. מנגנון: poll קריא-בלבד של <span class="en">GestureV2.getState()</span> ב-rAF — לא נגעתי ב-state machine הרגיש של Phase 1.</p>
+  </div>
+
+  <div class="clarify">
+    <h3>Path B (snapshot) — בכיס, לא נבנה</h3>
+    <p>אם <span class="en">--fx-motion</span> מגיע ל-30fps אבל לא 50 — כי גם ה-<em>גאומטריה</em> של הצורות יקרה — נשכבת מעליו Path B: לצלם את ה-SVG ל-bitmap אחד בתחילת התנועה, להזיז רק אותו, ולהחזיר את ה-live בנחיתה (מה ש-Figma/tldraw עושים). לא בונים את שניהם בעיוורון — <em>המספרים שלך מ-Issue 2 מחליטים</em>.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>10 בדיקות חדשות (<span class="en">sprint4_2_fixup.spec.ts</span>) עוברות על <span class="en">desktop-chrome</span> ו-<span class="en">ipad-chrome</span>: דגלים, הילה <span class="en">display:none</span> תחת no-fx, watcher התנועה מדליק/מכבה <span class="en">fx-suppressed</span>, ושורות ה-HUD. <span id="regress">החבילה המלאה עברה: <em>632 בדיקות (316 לכל מנוע) — אפס כשלים</em>.</span> דגלים כבויים = התנהגות זהה ל-4.1.</p>
+  </div>
+
+  <h2 class="section-title">4. בדיקת ה-iPad — האבחון והתיקון</h2>
+
+  <div class="next-step">
+    <span class="num">1</span>
+    <div class="body"><strong>baseline.</strong> פתח Algo Execution: <span class="en">?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1</span>. עשה pan, קרא <span class="en">paint</span> / <span class="en">worst</span> / <span class="en">fps</span>. (אמור להראות paint ~200ms.)</div>
+  </div>
+  <div class="next-step">
+    <span class="num">2</span>
+    <div class="body"><strong>אבחון — <span class="en">--no-fx</span>.</strong> הוסף <span class="en">,no-fx</span> ל-URL. עשה pan. אם <span class="en">paint</span> קורס מ-~200ms ל-<em>&lt;20ms</em> וה-fps קופץ — ההילות/filters היו העלות (כמצופה). אם בקושי זז — העלות היא גאומטריית הצורות, ונשכבת Path B.</div>
+  </div>
+  <div class="next-step">
+    <span class="num">3</span>
+    <div class="body"><strong>התיקון — <span class="en">--fx-motion</span>.</strong> במקום no-fx, הוסף <span class="en">,fx-motion</span>. עכשיו במנוחה ההילות יפות, בתנועה הן נעלמות. עשה pan. היעד: <span class="en">paint</span> &lt; 16ms, <span class="en">worst</span> &lt; 25ms, <span class="en">fps</span> ≥ 50 — <em>כולל בזום-אאוט מלא</em> (המקרה ש-culling לא יכול לעזור בו).</div>
+  </div>
+  <div class="next-step">
+    <span class="num">4</span>
+    <div class="body"><strong>דווח 3×3 מספרים</strong> (<span class="en">paint/worst/fps</span> ל-baseline, no-fx, fx-motion). ושאלה אחת: <em>במנוחה</em> (בלי לזוז) — האפליקציה עדיין מרגישה כבדה? (זה בודק את עלות ה-pulse כשעומדים — ראה Issue 4).</div>
+  </div>
+
+  <h2 class="section-title">5. Issue 4 — עלות ההילה במנוחה (החלטה שלך)</h2>
+
+  <div class="insight-block">
+    <h3>גם אחרי שהתנועה תוקנה, 88 הילות מונפשות עשויות להכביד על המנוחה</h3>
+    <p><span class="en">--fx-motion</span> מתקן את התנועה, אבל במנוחה ה-<span class="en">es-halo-pulse</span> עדיין רץ אינסופית על כל צומת טרי. אם זה מה שעושה את האפליקציה כבדה כשעומדים (צעד 4) — הנה האפשרויות. <em>לא מיישם בלי שתחליט:</em></p>
+    <ul style="margin-top:8px;">
+      <li><strong>(א)</strong> לאפות את ההילה ל-sprite פעם אחת לכל דרגת-רעננות, לעשות בה שימוש חוזר — אפס filter פר-צומת. זהה ויזואלית.</li>
+      <li><strong>(ב)</strong> להחליף ב-<span class="en">box-shadow</span> זול (ידידותי-GPU) במקום SVG.</li>
+      <li><strong>(ג)</strong> להסיר את ההילה מהקנבס לגמרי; להציג רעננות רק ב-List/Timeline (תקדים ה-amber-rim, אילוץ #7).</li>
+      <li><strong>(ד)</strong> לצייר הילה רק לצמתים מעל סף-רעננות (רוב הצמתים "קרים" ולא צריכים הילה).</li>
+    </ul>
+    <p style="margin-top:10px;">המלצתי, בכפוף למספרים שלך: <em>(ד) ואז (א)</em> — לשמור על האות, להרוג את העלות-פר-כל-צומת.</p>
+  </div>
+
+  <h2 class="section-title">סיכום</h2>
+  <div class="recap-row"><span class="tag">✓</span><span>ה-HUD מראה <span class="en">paint = worst − commit</span> — הצוואר האמיתי גלוי.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span><span class="en">--no-fx</span> מכבה הילות + filters (אבחון); <span class="en">--fx-motion</span> מוריד אותם רק בתנועה (תיקון).</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>השורש: אנימציית ה-<span class="en">es-halo-pulse</span> האינסופית של Phase 2 — רגרסיה ויזואלית, לא transform.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>tile cache + culling לא נקרעים — עוזרים למקרים אחרים. דגלים כבויים = 4.1 מדויק.</span></div>
+  <div class="recap-row"><span class="tag" style="color:var(--amber);background:var(--amber-soft)">○</span><span>פתוח: 3×3 מספרי ה-iPad + האם המנוחה כבדה (Issue 4) + החלטה על ההילה.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 4.2 complete, Phase 4 perf pending iPad verification</h3>
+    <p>הכול מאחורי דגלים כבויים. בניתי את ה-instrument (<span class="en">paint</span>), את האבחון (<span class="en">--no-fx</span>), ואת התיקון הסביר (<span class="en">--fx-motion</span> · Path A). לא טוען ניצחון בלי ה-iPad: שער ההחלטה הוא <span class="en">paint</span> &lt; 16ms ו-pan ב-≥50fps על Algo Execution. תריץ את 4 הצעדים, דווח את המספרים, ונחליט בין "Path A מספיק" ל-"צריך Path B" ל-Issue 4. לא מתחיל Sprint 5 / Bets.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">Phase 4 היה שלוש תגליות מקוננות: Sprint 4 הניח רקע, 4.1 הניח מספר-אלמנטים, 4.2 — ה-HUD הוכיח paint. הלקח: כש-<span class="en">worst − commit</span> גדול, זה צביעה. לך על הצביעה.</p>
+  </div>
+
+</body>
+</html>
