@@ -1038,6 +1038,14 @@ function render(){
   // #canvasOverlay after SVG innerHTML is applied.
   let oh='';
   const isHe=document.body.classList.contains('he');
+  /* Sprint 4.3 · simple-node mode. ON when --simple-nodes is set (always), OR
+     when --freeze-pan is set and the canvas is in motion (window.__inMotion,
+     toggled by freeze-pan.js off the gesture state). In that mode each node
+     paints as a single state-coloured circle + title — cheap to rasterise — so
+     a pan frame no longer repaints 88 vector silhouettes + halos. Rich nodes
+     return the instant motion settles. CanvasTransform calls render() every pan
+     frame (transform.js), so making that per-frame paint cheap IS the fix. */
+  const simpleMode = !!(window.Flags && (window.Flags.on('simple-nodes') || (window.Flags.on('freeze-pan') && window.__inMotion)));
   // Focus mode: if a node is selected, dim everything not related (same zone or edge-connected)
   const focusMode=!!sel&&!drag;
   let related=null;
@@ -1104,6 +1112,12 @@ function render(){
        v1 branches below (DOM .nslice contract unchanged) — we only swap the
        inline-SVG shape markup. When OFF, the existing per-shape branches
        (project / library / principle / …) own everything. */
+    if(simpleMode){
+      /* Sprint 4.3 · simple node — filled circle in the state colour; the title
+         is added below via svgLabel. No silhouette, no halo, no rich body. */
+      sh=`<circle cx="${n.x}" cy="${n.y}" r="26" fill="${c}" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>`;
+      if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="32"/>`;
+    } else {
     const _silV2 = window.Flags && window.Flags.on('silhouettes') && typeof window.RenderSilhouette === 'function';
     if (_silV2 && n.shape !== 'formula' && n.shape !== 'note') {
       const _sil = window.RenderSilhouette(n, view, {
@@ -1172,6 +1186,7 @@ function render(){
       richContent=`<div class="nov note-body" data-nid="${n.id}" style="left:${-nw+10}px;top:${-nh+10}px;width:${nw*2-20}px;height:${nh*2-20}px;direction:${noteRtl?'rtl':'ltr'};text-align:${noteRtl?'right':'left'}">${titleHtml}<div data-mathbody="1">${mdBody}</div></div>`;
     }
     else{sh=`<circle cx="${n.x}" cy="${n.y}" r="${s*.75}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="${s*.75+4}"/>`}
+    }
     const lbl=(n.label||'').length>26?n.label.slice(0,24)+'…':(n.label||'');
     const portal=n.childCanvas?`<text x="${n.x+s-6}" y="${n.y-s*.45}" font-size="14" fill="var(--accent)">↗</text>`:'';
     const linkGlyph=n.url?`<text x="${n.x}" y="${n.y+4}" font-size="13" text-anchor="middle" fill="rgba(26,24,21,.85)" font-weight="700">🔗</text>`:'';
@@ -1185,8 +1200,8 @@ function render(){
        tiny text blobs. */
     const semanticCompact=view.k<0.45&&['formula','note'].includes(n.shape)&&!isCompactFormula;
     if(semanticCompact)richContent='';
-    const showLabel=view.k>0.28&&(!['formula','note'].includes(n.shape)||isCompactFormula||semanticCompact);
-    const isBigShape=(n.shape==='formula'&&!n.compact)||n.shape==='note';
+    const showLabel=simpleMode?view.k>0.28:(view.k>0.28&&(!['formula','note'].includes(n.shape)||isCompactFormula||semanticCompact));
+    const isBigShape=!simpleMode&&((n.shape==='formula'&&!n.compact)||n.shape==='note');
     const hitRect=isBigShape?`<rect class="th" x="${n.x-(n._w||100)}" y="${n.y-(n._h||60)}" width="${(n._w||100)*2}" height="${(n._h||60)*2}" rx="6" fill="transparent"/>`:`<circle class="th" cx="${n.x}" cy="${n.y}" r="${hitR}"/>`;
     // Outer SVG: just an invisible hit target wrapped in <g.node data-id> so
     // the existing closest('.node') event delegation keeps routing drags.

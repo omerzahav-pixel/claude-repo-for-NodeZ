@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 4.3 — Freeze-frame Pan · דוח השלמה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .clarify { background: var(--blue-soft); border-right: 4px solid var(--blue); padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+  .clarify h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--blue); font-size: 18px; margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .critical-block { background: var(--red-soft); border-right: 4px solid var(--red); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .critical-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--red); font-size: 19px; margin-bottom: 10px; }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 16px 20px; margin: 12px 0; border-right: 4px solid var(--green); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 17px; margin-bottom: 4px; }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 8px 0; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .num { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--blue); color: white; font-weight: 700; padding: 5px 0; border-radius: 50%; text-align: center; width: 28px; height: 28px; }
+  .step .body { font-size: 14.5px; }
+  table.comparison { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; font-size: 14px; margin: 14px 0; }
+  table.comparison th { background: var(--accent-soft); padding: 10px 12px; text-align: right; font-weight: 700; font-size: 13px; }
+  table.comparison td { padding: 10px 12px; border-top: 1px dashed var(--rule); vertical-align: middle; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 15px; }
+  .recap-row .tag { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+  .shot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; margin: 14px 0; }
+  .shot-grid img { width: 100%; border: 1px solid var(--rule); border-radius: 6px; }
+  .shot-grid .lbl { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  @media (max-width: 640px) { .shot-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 4.3 · FREEZE-FRAME PAN · סגירת PHASE 4</div>
+  <h1>הצוואר נפתר: צמתים פשוטים בתנועה, עשירים במנוחה</h1>
+  <p class="subtitle">סוף מרדף ה-perf של Phase 4. בדוק על הקישורים למטה.</p>
+  <div class="buildbar">build 4.3.0 · 2026-05-31 — ודא שזה מה שכתוב ב-HUD שלך</div>
+
+  <div class="insight">
+    <h2>מה קרה — ולמה זה התיקון האחרון</h2>
+    <p>שלוש בדיקות, תשובה אחת: ה-<span class="en">tile cache</span>, ה-<span class="en">culling</span>, וכיבוי ה-filters — כולם null. ה-HUD הוכיח: <span class="en">commit</span> 2.7ms (זול), <span class="en">paint</span> 200ms (הבעיה). iOS מצייר מחדש את כל 88 הצורות בכל frame של תנועה.</p>
+    <p>התיקון: <em>בזמן שאתה מזיז את הקנבס, כל צומת הופך לעיגול פשוט בצבע המצב שלו</em> — זול לצייר. ברגע שאתה עוצר, הצורות העשירות חוזרות. אתה רואה את הפאר רק כשאתה קורא, לא כשאתה גורר.</p>
+  </div>
+
+  <h2 class="section-title">1. מה תוקן</h2>
+
+  <div class="finding">
+    <h4>גרסה גלויה (Issue 0)</h4>
+    <p style="font-size:14.5px;">בראש ה-HUD כתוב עכשיו <span class="en">build 4.3.0</span>. כל קישור בדוח מציין גרסה — כך תדע מיד אם אתה על הבניין הנכון.</p>
+  </div>
+
+  <div class="finding">
+    <h4>האנימציה המתמדת הוסרה (Issue 1)</h4>
+    <p style="font-size:14.5px;">ההילה שפעמה ללא הפסקה על כל צומת — בוטלה. אין יותר שום אנימציה שרצה ברקע. הרעננות עדיין נראית (הילה בהירה יותר = טרי יותר), אבל <em>סטטית</em>, בלי תנועה.</p>
+  </div>
+
+  <div class="finding">
+    <h4>מצב צמתים פשוטים (Issue 2)</h4>
+    <p style="font-size:14.5px;">עיגול מלא בצבע המצב + הכותרת, בלי צללית ובלי הילה — בדיוק כמו שתיארת שאתה מעדיף. זמין כמתג נפרד, שתוכל להשוות.</p>
+  </div>
+
+  <div class="shot-grid">
+    <div>
+      <div class="lbl">עשיר (היום, במנוחה)</div>
+      <img src="docs/sprint43/nodes-rich.png" alt="rich nodes">
+    </div>
+    <div>
+      <div class="lbl" style="color:var(--green)">פשוט (--simple-nodes / בזמן תנועה)</div>
+      <img src="docs/sprint43/nodes-simple.png" alt="simple nodes">
+    </div>
+  </div>
+
+  <h2 class="section-title">2. הבדיקה שלך — ארבעה קישורים</h2>
+  <p>פתח כל קישור בנפרד על ה-iPad. בכל אחד: <em>ודא שכתוב <span class="en">build 4.3.0</span> בראש ה-HUD, עשה pan עם אצבע אחת במשך 10–15 שניות, ותסתכל על השורה <span class="en">fps</span>.</em> אם היא מעל 50 — עבר.</p>
+
+  <div class="linkcard">
+    <div class="lc-title">א. רגיל (עשיר, בלי שינוי) — ה-baseline</div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,-freeze-pan,-simple-nodes">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,-freeze-pan,-simple-nodes</a>
+  </div>
+  <div class="linkcard">
+    <div class="lc-title">ב. עשיר במנוחה + פשוט בתנועה — <em>התיקון המומלץ</em></div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,freeze-pan,-simple-nodes">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,freeze-pan,-simple-nodes</a>
+  </div>
+  <div class="linkcard">
+    <div class="lc-title">ג. פשוט תמיד (עיגולים תמיד)</div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,simple-nodes,-freeze-pan">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,simple-nodes,-freeze-pan</a>
+  </div>
+  <div class="linkcard">
+    <div class="lc-title">ד. פשוט + תיקון תנועה (שניהם יחד)</div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,simple-nodes,freeze-pan">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,simple-nodes,freeze-pan</a>
+  </div>
+
+  <p style="margin-top:16px;">תמלא את הטבלה ותחזיר לי:</p>
+  <table class="comparison">
+    <thead><tr><th>קישור</th><th>fps תוך כדי pan</th><th>worst</th><th>paint</th></tr></thead>
+    <tbody>
+      <tr><td><strong>א.</strong> baseline</td><td>______</td><td>______</td><td>______</td></tr>
+      <tr><td><strong>ב.</strong> freeze (מומלץ)</td><td>______</td><td>______</td><td>______</td></tr>
+      <tr><td><strong>ג.</strong> פשוט תמיד</td><td>______</td><td>______</td><td>______</td></tr>
+      <tr><td><strong>ד.</strong> שניהם</td><td>______</td><td>______</td><td>______</td></tr>
+    </tbody>
+  </table>
+
+  <div class="step">
+    <span class="num">+</span>
+    <div class="body">ושאלה אחת: עכשיו כשהאנימציה הוסרה — <em>במנוחה</em> (בלי לזוז), האפליקציה מרגישה קלה יותר מקודם?</div>
+  </div>
+
+  <h2 class="section-title">3. הצד הטכני — מה <span class="en">freeze-pan</span> עושה באמת</h2>
+
+  <div class="critical-block">
+    <h3>הודאה כנה: לא בניתי את ה-bitmap המדויק שה-brief ביקש</h3>
+    <p>ה-brief תיאר "צילום" מדויק של המסך ל-bitmap והזזה שלו. <em>זה לא אפשרי כאן:</em> iOS Safari לא יודע לרסטר את שכבת ה-HTML (ה-<span class="en">.nslice</span> overlay / <span class="en">foreignObject</span>) ל-canvas, והפרויקט אוסר ספריות חיצוניות (כמו <span class="en">html2canvas</span>). אז "צילום DOM" אמיתי חסום פה.</p>
+    <p style="margin-top:8px;">מה שכן עשיתי, ומשיג את אותה מטרה: גיליתי ש-<span class="en">render()</span> כבר רץ בכל frame של pan (דרך <span class="en">CanvasTransform</span>). אז במקום לצלם, <em>הפכתי את ה-render הזה לזול</em> — בזמן תנועה כל צומת מצויר כעיגול פשוט במקום צללית וקטורית. 88 עיגולים מציירים בשבריר מהזמן של 88 צלליות. במנוחה — הצורות העשירות חוזרות מיד.</p>
+  </div>
+
+  <div class="clarify">
+    <h3>מה תרגיש</h3>
+    <p>בתנועה: עיגולים בצבע המצב (כמו בתמונה הימנית למעלה). ברגע שתעצור: הצורות העשירות חוזרות. במהירות גרירה אי אפשר להבחין בהבדל ממילא. אם מצב ב' (freeze) מגיע ל-50fps — Phase 4 נסגר. אם הוא משתפר אבל לא מספיק, מצב ג' (פשוט תמיד) נותן עוד מרווח, ואז נחליט.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>7 בדיקות חדשות (<span class="en">sprint4_3_fixup.spec.ts</span>) עוברות על <span class="en">desktop-chrome</span> ו-<span class="en">ipad-chrome</span>: דגלים, חותמת הגרסה, אין אנימציה, עיגול פשוט מול צללית, ו-freeze-pan שמחליף פשוט↔עשיר עם התנועה. <span id="regress">החבילה המלאה עברה: <em>646 בדיקות (323 לכל מנוע) — אפס כשלים</em>.</span> דגלים כבויים = התנהגות זהה ל-4.2.</p>
+  </div>
+
+  <div class="warn">
+    <strong>חשוב:</strong> כל זה <em>על ה-iPad בלבד</em>. ה-desktop אף פעם לא שחזר את הבעיה (הוא מחזיק 40–60fps), כי כל הבאג חי בהתנהגות של iOS Safari. ה-Playwright הירוק בודק את החיווט, לא את ה-50fps — זה אתה.
+  </div>
+
+  <h2 class="section-title">4. מכאן — איזה כיוון נתחיל?</h2>
+
+  <div class="insight-block">
+    <h3>זהו הספרינט האחרון של ה-perf והוויזואל</h3>
+    <p>צדקת — הגיע הזמן להתקדם מהליטוש של אנימציות וצורות אל הליבה. ההילה, צורות הצמתים והקשתות קפואות כמו שהן. אחרי שתאמת ש-pan שמיש על Algo Execution, Phase 4 נסגר ואנחנו עוברים לפיצ'רים. <em>איזה כיוון מדבר אליך?</em></p>
+    <ul style="margin-top:8px;">
+      <li><strong>Bet 5 · חזרה מרווחת</strong> — להפוך את המפה לכלי תרגול/זיכרון (spaced repetition).</li>
+      <li><strong>Bet 2 · קול</strong> — להוסיף ולערוך צמתים בדיבור.</li>
+      <li><strong>Bet 1 · Claude על הקנבס</strong> — עוזר AI שמבין את המפה ועוזר לבנות אותה.</li>
+      <li><strong>Bet 4 · סידור אוטומטי</strong> — לסדר צמתים יפה בלחיצה.</li>
+      <li><strong>בקשות פיצ'רים שנרשמו</strong> — יצירת קנבס-אב (FR-1), שינוי שם ל-vault (FR-5), או שיפור הייבוא/workspace.</li>
+    </ul>
+    <p style="margin-top:10px;">תגיד לי מספר אחד (או תאר במילים שלך), ונצא לדרך.</p>
+  </div>
+
+  <div class="recap-row"><span class="tag">✓</span><span>גרסה גלויה <span class="en">build 4.3.0</span> ב-HUD + קישורים מלאים.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>אנימציית ההילה המתמדת הוסרה — אין יותר תנועה ברקע.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span><span class="en">--simple-nodes</span> (עיגול + צבע מצב) ו-<span class="en">--freeze-pan</span> (פשוט בתנועה, עשיר במנוחה).</span></div>
+  <div class="recap-row"><span class="tag" style="color:var(--amber);background:var(--amber-soft)">○</span><span>פתוח: 4 מספרי ה-fps מה-iPad + בחירת כיוון הפיצ'רים הבא.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 4.3 complete — Phase 4 closeout pending iPad verification</h3>
+    <p>הכול מאחורי דגלים כבויים כברירת מחדל. פתח את הקישורים, עשה pan, תחזיר את ה-fps. אם מצב ב' או ג' שמיש — <em>Phase 4 נסגר ואנחנו עוברים לפיצ'רים</em>. בחר כיוון מהרשימה למעלה. לא מתחיל אף אחד מהם לפני שתאמת ותבחר.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">הערה: הצילומים הם desktop (להמחשה איך נראים המצבים). המספרים שלך מה-iPad הם שקובעים.</p>
+  </div>
+
+</body>
+</html>

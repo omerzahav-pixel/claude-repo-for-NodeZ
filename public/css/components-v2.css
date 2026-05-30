@@ -7,15 +7,13 @@
  * ============================================================================= */
 .es-sel-ring { color: var(--hot); pointer-events: none; }
 .es-halo { pointer-events: none; }
-@keyframes es-halo-pulse {
-  0%   { stroke-opacity: 0.55; }
-  50%  { stroke-opacity: 0.20; }
-  100% { stroke-opacity: 0.55; }
-}
-.es-halo-pulse { animation: es-halo-pulse 3s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .es-halo-pulse { animation: none; }
-}
+/* Sprint 4.3 Issue 1 — the freshness PULSE animation is removed. The user
+   explicitly does not want a perpetually-running animation, and ~88 nodes
+   pulsing keeps the iOS compositor awake (battery + repaint) even at rest.
+   Freshness now reads as a STATIC halo: halo.js sets stroke-opacity by age
+   (fresh ≈ 0.55, fading with age). The .es-halo-pulse class halo.js still
+   emits is now inert — no @keyframes, no motion anywhere on the canvas. */
+.es-halo-pulse { animation: none; }
 
 /* =============================================================================
  * Sprint 4.2 · fx suppression — the real Phase-4 perf lever.

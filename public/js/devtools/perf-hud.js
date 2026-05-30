@@ -55,6 +55,7 @@
     ].join(';');
     root.innerHTML =
       '<div style="color:#FF7A45;font-weight:600;margin-bottom:4px">perf</div>' +
+      '<div id="ph-build" style="color:#9AA0AC;font-size:10px;margin-bottom:4px">build —</div>' +
       '<div id="ph-fps">fps —</div>' +
       '<div id="ph-worst">worst —</div>' +
       '<div id="ph-budget">budget —</div>' +
@@ -79,6 +80,12 @@
     const culledEl   = root.querySelector('#ph-culled');
     const paintEl    = root.querySelector('#ph-paint');
     const fxEl       = root.querySelector('#ph-fx');
+
+    /* Sprint 4.3 Issue 0 · surface the build stamp so the user can confirm the
+       iPad is on the build under test before reading any other number. */
+    const _buildMeta = document.querySelector('meta[name="edgespace-build"]');
+    const buildEl = root.querySelector('#ph-build');
+    if (buildEl) buildEl.textContent = 'build ' + (_buildMeta ? _buildMeta.getAttribute('content') : '—');
 
     /* Sprint 4.1 Issue 1 · ask render() to publish element counts on
        window.__renderStats. Set only while the HUD is installed, so the normal
