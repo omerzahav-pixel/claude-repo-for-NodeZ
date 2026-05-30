@@ -214,6 +214,10 @@
 <script src="./js/canvas/edge-v2.js"></script>
 <script src="./js/canvas/edge-controls.js"></script>
 <script src="./js/canvas/zones-v2.js"></script>
+<!-- Sprint 4.1 · viewport culling. Loads BEFORE app.js so window.CullV1 is
+     available on the very first render() (the cull decision runs inside the
+     render loop). Pure compute, no DOM deps. Gated by --cull-v1. -->
+<script src="./js/canvas/cull-v1.js"></script>
 <script src="./js/editor/script-boundary.js"></script>
 <script src="./app.js"></script>
 <!-- Phase 3 (Pass 4) · navigation chrome. Loads AFTER app.js so the

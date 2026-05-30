@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 4 — Phase 4 (Canvas Tile Cache)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468;
+    --accent: #c2410c; --accent-soft: #fed7aa;
+    --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a;
+    --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff;
+    --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.9;
+    direction: rtl; text-align: right;
+  }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+  }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+  .section-title {
+    font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px;
+    margin: 36px 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight {
+    background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%);
+    border: 2px solid var(--accent); border-radius: 8px;
+    padding: 22px 24px; margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(194,65,12,0.08);
+  }
+  .insight h2 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--accent);
+    font-size: 22px; margin-bottom: 10px;
+  }
+  .insight p { margin-bottom: 8px; }
+  .test {
+    background: var(--card); border-radius: 8px;
+    padding: 18px 22px; margin: 12px 0;
+    border-right: 4px solid var(--blue);
+  }
+  .test.critical { border-right-color: var(--accent); }
+  .test-num {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    background: var(--accent); color: white;
+    padding: 3px 9px; border-radius: 4px;
+    margin-left: 8px; direction: ltr;
+  }
+  .test-title { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; font-weight: 700; display: inline; }
+  .test-do { margin-top: 10px; font-size: 15.5px; }
+  .test-do strong { color: var(--accent); }
+  .test-see {
+    margin-top: 8px; padding: 10px 14px;
+    background: var(--green-soft); border-radius: 6px; font-size: 15px;
+  }
+  .test-see strong { color: var(--green); }
+  .test-fail {
+    margin-top: 8px; padding: 10px 14px;
+    background: var(--red-soft); border-radius: 6px;
+    font-size: 14.5px; color: var(--ink);
+  }
+  .test-fail strong { color: var(--red); }
+  .formula {
+    background: var(--code-bg); color: var(--code-ink);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    padding: 14px 18px; border-radius: 6px; margin: 12px 0;
+    direction: ltr; text-align: left; line-height: 1.5;
+    word-break: break-all;
+  }
+  .kbd-inline {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    background: var(--code-bg); color: var(--code-ink);
+    padding: 2px 7px; border-radius: 4px;
+    direction: ltr; display: inline-block;
+  }
+  .confirmed {
+    background: var(--green-soft); border-right: 4px solid var(--green);
+    padding: 16px 20px; border-radius: 6px; margin: 18px 0;
+  }
+  .confirmed h3 {
+    font-family: 'Frank Ruhl Libre', serif; color: var(--green);
+    font-size: 18px; margin-bottom: 8px;
+  }
+  .warn {
+    background: var(--amber-soft); border-right: 4px solid var(--amber);
+    padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 15px;
+  }
+  .warn strong { color: var(--amber); }
+  .closing {
+    margin-top: 32px; padding: 20px 22px;
+    background: var(--card); border-radius: 6px;
+    border-right: 4px solid var(--accent);
+  }
+  .closing h3 {
+    font-family: 'Frank Ruhl Libre', serif; font-size: 18px;
+    margin-bottom: 8px; color: var(--accent);
+  }
+  table.baseline {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border-radius: 8px; overflow: hidden; font-size: 14px; margin: 14px 0;
+  }
+  table.baseline th {
+    background: var(--accent-soft); padding: 10px 12px;
+    text-align: right; font-weight: 700; font-size: 13px;
+  }
+  table.baseline td { padding: 10px 12px; border-top: 1px dashed var(--rule); }
+  table.baseline tr.fail td:first-child { border-right: 4px solid var(--red); }
+  table.baseline tr.target td:first-child { border-right: 4px solid var(--green); }
+  .num-bad  { color: var(--red);   font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+  .num-good { color: var(--green); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 4 · PHASE 4 · CANVAS TILE CACHE</div>
+  <h1>Phase 4 ב-flag — בודקים את ה-perf לפני שמדליקים לכולם</h1>
+  <p class="subtitle">בניתי את שכבת ה-canvas tile cache. היא כבויה ברירת מחדל. אני צריך שתפתח עם הפלאג ב-iPad ותגיד לי אם ה-budget באמת ירד מ-97% ל-מתחת ל-10%.</p>
+
+  <div class="insight">
+    <h2>הנקודה המרכזית</h2>
+    <p>Phase 4 בנוי. <em>--canvas-tiles</em> פותח שכבת canvas מתחת ל-SVG, שמציירת dot-grid + מילויי zones פעם אחת לכל זום-tier. אחרי שזה רענד, pan ו-zoom רק מזיזים את האלמנט עם CSS transform — שום ציור מחדש. זה הפתרון לצפיפות שלך ב-Algo Execution (217ms worst frame, 97% budget over 16ms).</p>
+    <p>ה-flag <em>כבוי</em> ברירת מחדל. אתה צריך לפתוח URL מיוחד פעם אחת ב-iPad, להריץ את המבחן, ולהגיד לי אם המספרים השתפרו.</p>
+    <p>בנוסף — 8 פלאגים מ-Phase 1+2 (שכבר 4+ שבועות בייצור בלי תקלות) פורשו: עכשיו ברירת מחדל פתוחים. אם משהו נשבר בגלל זה — <span class="kbd-inline">?flag=-gestures-v2</span> וכו' עדיין מחזיר את ההגדרה הישנה.</p>
+  </div>
+
+  <h2 class="section-title">הבדיקה הראשית — Phase 4 perf</h2>
+
+  <div class="test critical">
+    <span class="test-num">בדיקה 1</span>
+    <span class="test-title">פתח את ה-URL הזה ב-iPad פעם אחת</span>
+    <p class="test-do"><strong>URL — העתק את כולו:</strong></p>
+    <div class="formula">https://nodez-2iz.pages.dev/?debug=perf&amp;flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles</div>
+    <p class="test-do">הפלאגים שכבר פורשו (gestures-v2, raf-throttle, lifecycle-v2, webfont, silhouettes, edges-v2, zones-v2, rtl-v2) <em>כבר דולקים אוטומטית</em> מהפתיחה הזאת. ה-URL הזה מוסיף את ה-Phase 3 + canvas-tiles + perf HUD.</p>
+    <p class="test-do" style="margin-top:14px"><strong>אחרי שטענת:</strong> אתה אמור לראות:</p>
+    <div class="test-see">
+      <strong>1.</strong> רקע עדין של נקודות מנוקדות (dot grid) — קל-קל, לא צועק. זה הסימן הראשון ש-canvas-tiles עובד.<br>
+      <strong>2.</strong> מילויי ה-zones (הריבועים המוצללים) נראים כמו תמיד — אבל הם עכשיו מצוירים על שכבת ה-canvas, לא על ה-SVG.<br>
+      <strong>3.</strong> חלונית perf HUD בפינה (ימנית-עליונה ב-RTL, שמאלית-עליונה ב-LTR).
+    </div>
+    <div class="test-fail"><strong>אם אין dot grid או אם הקנבס נראה שונה לגמרי:</strong> תכתוב לי. ייתכן שהפלאג לא נטען, או שיש בעיית CSS שלא תפסתי ב-Playwright.</div>
+  </div>
+
+  <div class="test critical">
+    <span class="test-num">בדיקה 2</span>
+    <span class="test-title">פתח את Algo Execution והזז את הקנבס</span>
+    <p class="test-do"><strong>מה לעשות:</strong> בעמודה של ה-canvases פתח את Algo Execution. נסה להזיז את הקנבס עם אצבע אחת במשך 3-4 שניות בקצב מהיר. ה-budget אמור להיות עכשיו <em>הרבה יותר נמוך מ-97%</em>.</p>
+    <div class="test-see"><strong>צריך לראות בחלונית perf:</strong>
+      <ul style="padding-right: 22px; margin-top: 6px;">
+        <li><span class="kbd-inline">fps</span> — מספר משמעותי יותר גבוה מ-15 (יעד: 50+)</li>
+        <li><span class="kbd-inline">worst</span> — בצבע ירוק או כתום, מספר נמוך יותר מ-25ms (יעד: < 25ms)</li>
+        <li><span class="kbd-inline">budget</span> — באחוז ירוק (יעד: < 10%) או כתום (10-33%); <em>לא</em> אדום אם הכל עובד נכון</li>
+      </ul>
+    </div>
+    <p class="test-do" style="margin-top:14px"><strong>צלם screenshot של החלונית אחרי 3-4 שניות של pan.</strong> זה ה-after מספר שלי לעומת ה-217ms / 97% baseline מ-Sprint 3.5.</p>
+    <div class="test-fail"><strong>אם המספרים עדיין רעים:</strong> תצלם בכל מקרה. ייתכן שצריך לכוון את ה-tier logic או את גודל ה-overdraw — אני יכול לעשות את זה ב-4.1 קצר.</div>
+  </div>
+
+  <h2 class="section-title">המספרים — Before / After</h2>
+
+  <table class="baseline">
+    <thead>
+      <tr>
+        <th>מסך</th>
+        <th>Worst (לפני)</th>
+        <th>Budget (לפני)</th>
+        <th>Worst (יעד)</th>
+        <th>Budget (יעד)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="fail">
+        <td><strong>iPad · Algo Execution</strong></td>
+        <td><span class="num-bad">217 ms</span></td>
+        <td><span class="num-bad">97%</span></td>
+        <td><span class="num-good">&lt; 25 ms</span></td>
+        <td><span class="num-good">&lt; 10%</span></td>
+      </tr>
+      <tr class="fail">
+        <td>iPad · Vault</td>
+        <td><span class="num-bad">38 ms</span></td>
+        <td><span class="num-bad">63%</span></td>
+        <td><span class="num-good">&lt; 20 ms</span></td>
+        <td><span class="num-good">&lt; 5%</span></td>
+      </tr>
+      <tr class="target">
+        <td>Desktop · Algo Execution</td>
+        <td><span class="num-bad">50 ms</span></td>
+        <td><span class="num-bad">35-40%</span></td>
+        <td><span class="num-good">&lt; 18 ms</span></td>
+        <td><span class="num-good">&lt; 10%</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 16px; font-size: 14.5px;">הצילומים שתשלח מבדיקה 2 ימלאו את העמודות "אחרי". אם הם מתחת ליעדים — Phase 4 נסגר ב-W8 decision-gate. אם לא — Sprint 4.1 קצר לכיוון.</p>
+
+  <h2 class="section-title">בדיקות נוספות (לא קריטיות אבל כדאי)</h2>
+
+  <div class="test">
+    <span class="test-num">בדיקה 3</span>
+    <span class="test-title">בלי הפלאג — הכל עובד כמו לפני</span>
+    <p class="test-do"><strong>מה לעשות:</strong> פתח את הדף הרגיל ללא <span class="kbd-inline">canvas-tiles</span>:</p>
+    <div class="formula">https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated</div>
+    <div class="test-see"><strong>צריך לראות:</strong> אין dot grid (כי canvas-tiles כבוי). הקנבס נראה בדיוק כמו ב-Sprint 3.6. ה-zones מצוירים עם המילוי שלהם כמו תמיד. הכל פועל. אם משהו שונה — זה רגרסיה שאני צריך לסדר.</div>
+  </div>
+
+  <div class="test">
+    <span class="test-num">בדיקה 4</span>
+    <span class="test-title">תפעיל הלוך-חזור את הפלאג</span>
+    <p class="test-do"><strong>מה לעשות:</strong> פתח עם ה-URL מבדיקה 1. אז בקונסול:</p>
+    <div class="formula">Flags.set('canvas-tiles', false); location.reload();</div>
+    <div class="test-see"><strong>צריך לראות:</strong> הdot grid נעלם, הקנבס מתנהג כמו לפני, ה-zones חוזרים לקבל מילוי דרך ה-SVG. שום קריסה. שום זום מוזר.</div>
+    <p class="test-do" style="margin-top:14px">חוזר עם <span class="kbd-inline">Flags.set('canvas-tiles', true); location.reload();</span> — הכל חוזר.</p>
+  </div>
+
+  <div class="test">
+    <span class="test-num">בדיקה 5</span>
+    <span class="test-title">Scrollbar מעוצב ב-drawer (PC בלבד)</span>
+    <p class="test-do"><strong>מה לעשות:</strong> ב-PC, בעמודה הרחבה של ה-canvases — אם יש לך מספיק קנבסים שהיא נדרשת לגלילה, גלול אנכית.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> scrollbar דק (6px), בצבע אפור כהה, לא ה-default המכוער של Chrome. ב-iPad זה לא רלוונטי — iOS מסתיר scrollbars אוטומטית.</div>
+  </div>
+
+  <div class="test">
+    <span class="test-num">בדיקה 6</span>
+    <span class="test-title">מעבר בין tabs — recovery</span>
+    <p class="test-do"><strong>מה לעשות:</strong> פתח עם canvas-tiles ON. עבור ל-tab אחר ב-Safari (או לאפליקציה אחרת). חזור אחרי 5-10 שניות.</p>
+    <div class="test-see"><strong>צריך לראות:</strong> ה-dot grid והמילויים של ה-zones מופיעים מיד, כמו לפני המעבר. <em>אין מסך לבן או חסר תוכן</em>. זה ה-recovery path של Issue 3.</div>
+  </div>
+
+  <h2 class="section-title">מה השתנה בקוד</h2>
+
+  <div class="confirmed">
+    <h3>✓ Phase 4 substrate (Issues 1+2+3)</h3>
+    <p>קובץ חדש <span class="kbd-inline">js/canvas/tile-cache.js</span> — שכבת canvas שמרנדרת dot grid + zone fills. CSS transform synced עם ה-overlay. Re-bake רק על tier crossing (round(log2(scale)) שינוי) או drift מעל 25% משטח ה-bake. Recovery על visibilitychange + contextlost. הקובץ כבוי ברירת מחדל; ה-flag מדליק אותו.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ Drawer scrollbar styling (Issue 4)</h3>
+    <p>scrollbar-width: thin + WebKit pseudo-selectors. משתמש ב-tokens הקיימים (--ink-3 / --ink-2). iOS מתעלם, PC רואה את ההבדל.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ 8 flags פורשו (Issue 5)</h3>
+    <p>gestures-v2, raf-throttle, lifecycle-v2, webfont, silhouettes, edges-v2, zones-v2, rtl-v2 — כולם ברירת מחדל פתוחים עכשיו. השמות שלהם נשארים כדי שניתן לכבות אותם בחזרה דרך <span class="kbd-inline">?flag=-name</span> במקרה של בעיה. הקוד עצמו לא נוקה — זה משימה נפרדת ל-cleanup-pass עתידי.</p>
+  </div>
+
+  <h2 class="section-title">סטטוס Decision Gate ל-Phase 4</h2>
+
+  <div class="warn">
+    <strong>הסטטוס תלוי בצילומים שלך מבדיקה 2.</strong> אם budget &lt; 10% — Phase 4 נסגר רשמית, ה-flag עובר לברירת מחדל פתוח ב-Sprint 5, ועוברים לעבודה על Bets (לפי Pass 7 §08 — תעדוף מחדש אחרי 8 שבועות עם EdgeSpace טוב יותר). אם budget בין 10-33% — שיפור משמעותי אבל לא מספיק; Sprint 4.1 קצר לכוונן את ה-tier logic. אם budget מעל 33% — חזרה ללוח השרטוט.
+  </div>
+
+  <div class="closing">
+    <h3>Sprint 4 complete, Phase 4 closed pending iPad verification</h3>
+    <p>תפעיל את ה-URL מבדיקה 1, צלם את ה-perf HUD אחרי 3-4 שניות של pan ב-Algo Execution, ושלח לי את הצילום. גם תאמת שבדיקה 3 (פלאג כבוי = הכל עובד כמו לפני) מתנהגת כצפוי — חשוב לי לוודא שלא שברתי את ה-rollback.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">Deploy: <span style="font-family:'JetBrains Mono',monospace;direction:ltr;background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:3px;display:inline-block">https://nodez-2iz.pages.dev</span> · Commit: <span style="font-family:'JetBrains Mono',monospace;direction:ltr">e184efa</span> · 294/294 desktop · 294/294 iPad emulation</p>
+  </div>
+
+</body>
+</html>

@@ -58,7 +58,10 @@
       '<div id="ph-fps">fps —</div>' +
       '<div id="ph-worst">worst —</div>' +
       '<div id="ph-budget">budget —</div>' +
-      '<div id="ph-commit">commit —</div>' +
+      '<div id="ph-rendered" style="margin-top:4px;color:#F2C462">rendered —</div>' +
+      '<div id="ph-visible">visible —</div>' +
+      '<div id="ph-culled">culled —</div>' +
+      '<div id="ph-commit" style="margin-top:4px">commit —</div>' +
       '<div id="ph-state">state —</div>' +
       '<div id="ph-mem" style="margin-top:4px;color:#7C828E"></div>';
     document.body.appendChild(root);
@@ -69,6 +72,14 @@
     const commitEl = root.querySelector('#ph-commit');
     const stateEl  = root.querySelector('#ph-state');
     const memEl    = root.querySelector('#ph-mem');
+    const renderedEl = root.querySelector('#ph-rendered');
+    const visibleEl  = root.querySelector('#ph-visible');
+    const culledEl   = root.querySelector('#ph-culled');
+
+    /* Sprint 4.1 Issue 1 · ask render() to publish element counts on
+       window.__renderStats. Set only while the HUD is installed, so the normal
+       HUD-off render path computes nothing. */
+    window.__RENDER_STATS_ON = true;
 
     const FRAME_BUDGET_MS = 16.7;
     /* Active-frame ring buffer. Each entry is the frame interval (ms)
@@ -156,6 +167,26 @@
           fpsEl.textContent    = 'fps    ' + idleFps.toFixed(1).padStart(5);
           worstEl.textContent  = 'worst  — (idle)';
           budgetEl.textContent = 'budget — (idle)';
+        }
+
+        /* Sprint 4.1 Issue 1 · rendered / visible / culled. render() publishes
+           these on window.__renderStats; we just format. The rendered≫visible
+           gap (when culling is OFF) is the smoking gun the brief wants on the
+           HUD the user already reads — no console. n = nodes, e = edges,
+           o = overlays. */
+        const rs = window.__renderStats;
+        if (rs) {
+          renderedEl.textContent = 'rendered ' + rs.rendered.nodes + 'n · ' +
+            rs.rendered.edges + 'e · ' + rs.rendered.overlays + 'o';
+          visibleEl.textContent  = 'visible  ' + rs.visible.nodes + 'n · ' +
+            rs.visible.edges + 'e · ' + rs.visible.overlays + 'o';
+          const culledIsOn = typeof rs.culled === 'string' && rs.culled.indexOf('ON') === 0;
+          culledEl.innerHTML = 'culled   <span style="color:' +
+            (culledIsOn ? '#4FD18B' : '#7C828E') + '">' + rs.culled + '</span>';
+        } else {
+          renderedEl.textContent = 'rendered — (no render yet)';
+          visibleEl.textContent  = 'visible  —';
+          culledEl.textContent   = 'culled   —';
         }
 
         if (commitSamples.length) {

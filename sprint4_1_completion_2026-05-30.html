@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 4.1 — Viewport Culling · דוח השלמה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 28px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .clarify { background: var(--blue-soft); border-right: 4px solid var(--blue); padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+  .clarify h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--blue); font-size: 18px; margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .critical-block { background: var(--red-soft); border-right: 4px solid var(--red); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .critical-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--red); font-size: 19px; margin-bottom: 10px; }
+  .recommend, .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .recommend h3, .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 18px 22px; margin: 14px 0; border-top: 4px solid var(--rule); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 6px; }
+  .finding.ok { border-right: 4px solid var(--green); border-top: none; }
+  .finding.suspect { border-right: 4px solid var(--amber); border-top: none; }
+  .finding.bug { border-right: 4px solid var(--red); border-top: none; }
+  .finding.info { border-right: 4px solid var(--blue); border-top: none; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 15px; }
+  .recap-row .tag { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .next-step { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 8px 0; display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; border-right: 3px solid var(--blue); }
+  .next-step .num { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--blue); color: white; font-weight: 700; padding: 5px 0; border-radius: 50%; text-align: center; width: 28px; height: 28px; }
+  .next-step .body { font-size: 14.5px; }
+  table.comparison { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; font-size: 14px; margin: 14px 0; }
+  table.comparison th { background: var(--accent-soft); padding: 10px 12px; text-align: right; font-weight: 700; font-size: 13px; }
+  table.comparison td { padding: 10px 12px; border-top: 1px dashed var(--rule); vertical-align: middle; }
+  table.comparison tr.match td:first-child { border-right: 4px solid var(--green); }
+  table.comparison tr.close td:first-child { border-right: 4px solid var(--amber); }
+  table.comparison tr.gap td:first-child { border-right: 4px solid var(--red); }
+  .num { font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 3px 7px; border-radius: 4px; direction: ltr; display: inline-block; }
+  .num.v2 { background: var(--blue-soft); color: var(--blue); }
+  .num.v1 { background: var(--purple-soft); color: var(--purple); }
+  .tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; direction: ltr; }
+  .tag.match { background: var(--green-soft); color: var(--green); }
+  .tag.close { background: var(--amber-soft); color: var(--amber); }
+  .tag.gap { background: var(--red-soft); color: var(--red); }
+  .formula { background: var(--code-bg); color: var(--code-ink); font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 14px 18px; border-radius: 6px; margin: 8px 0; direction: ltr; text-align: left; line-height: 1.5; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 5px; font-size: 14.5px; }
+  /* screenshots */
+  .shot { display:block; margin: 10px 0 4px; border: 1px solid var(--rule); border-radius: 6px; background:#0b0c10; }
+  .shot-cap { font-size: 12.5px; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; direction: ltr; text-align: left; margin-bottom: 18px; }
+  .shot-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: start; margin: 14px 0; }
+  .shot-grid img { width: 100%; border: 1px solid var(--rule); border-radius: 6px; }
+  .shot-grid .lbl { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  @media (max-width: 640px) { .shot-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 4.1 · VIEWPORT CULLING · דוח השלמה</div>
+  <h1>קיפול חוץ-מסך (<span class="en">--cull-v1</span>) — הריצה האמיתית של Phase 4</h1>
+  <p class="subtitle">מה נבנה, מה ה-<span class="en">HUD</span> החדש חושף, ולמה ה-tile cache לא הזיז את המחט. 30 במאי 2026.</p>
+
+  <div class="insight">
+    <h2>הקליטה המרכזית — בלי לייפות</h2>
+    <p>ה-tile cache מ-Sprint 4 <em>לא שינה כלום</em> ב-perf על ה-iPad. ה-worst נשאר ~212ms, ה-FPS נשאר ~5.5. זה לא כישלון של הקוד — זאת האבחנה עצמה: אם העברת את ה-dot-grid ואת מילוי האזורים החוצה מה-SVG, וכלום לא זז — אז הם מעולם לא היו הצוואר.</p>
+    <p>הצוואר הוא <em>מספר האלמנטים שמצוירים בכל frame</em>. בניתי שורת <span class="en">rendered</span> מול שורת <span class="en">visible</span> ב-HUD כדי שזה יהיה גלוי בלי console — וזה כבר חשף משהו שה-brief לא ידע (סעיף 2).</p>
+  </div>
+
+  <h2 class="section-title">1. ההודאה הכנה על Sprint 4</h2>
+
+  <div class="critical-block">
+    <h3>ה-tile cache פתר את השכבה הלא-נכונה</h3>
+    <p>הדוח של Sprint 4 טען "Phase 4 נבנה, ממתין לאימות". הוא אכן נבנה — אבל הוא טיפל ב-dot-grid וב-zone fills, ואלה לא מה שתוקע את ה-pan. אני אומר את זה ישירות: <em>ה-tile cache לא תרם דבר ל-FPS</em>.</p>
+    <p style="margin-top:8px;">הוא נשאר בקוד — לא קורעים אותו החוצה — כי הוא הארכיטקטורה הנכונה למצע (substrate) ומתחבר יפה לקיפול. אבל הוא לא הפתרון לבעיית ה-pan על קנבס צפוף. הפתרון הוא Sprint 4.1.</p>
+  </div>
+
+  <h2 class="section-title">2. מה ה-HUD החדש חושף (Issue 1)</h2>
+
+  <p>הוספתי שלוש שורות ל-perf HUD: <span class="en">rendered</span> (כמה אלמנטים באמת מורכבים ב-DOM כרגע — העלות האמיתית), <span class="en">visible</span> (כמה נמצאים בתוך מלבן הצפייה), ו-<span class="en">culled</span> (<span class="en">OFF</span> / <span class="en">ON (margin: 1.0vw)</span>). צילמתי שלושה מצבים על קנבס סינתטי בן 104 צמתים + 116 קשתות, פרוס רחב, ב-100% זום (כך שרוב הצמתים מחוץ למסך):</p>
+
+  <div class="shot-grid">
+    <div>
+      <div class="lbl" style="color:var(--red)">א. baseline משוער (ללא rbush)</div>
+      <img src="docs/sprint41/hud-baseline-norbush.png" alt="HUD baseline no rbush">
+      <div class="shot-cap">rendered 104n · 116e · 104o<br>visible 6n · 11e · 6o</div>
+    </div>
+    <div>
+      <div class="lbl" style="color:var(--amber)">ב. desktop אמיתי (rbush פעיל)</div>
+      <img src="docs/sprint41/hud-cull-off.png" alt="HUD cull off">
+      <div class="shot-cap">rendered 6n · 116e · 6o<br>visible 6n · 11e · 6o</div>
+    </div>
+    <div>
+      <div class="lbl" style="color:var(--green)">ג. cull-v1 ON</div>
+      <img src="docs/sprint41/hud-cull-on.png" alt="HUD cull on">
+      <div class="shot-cap">rendered 20n · 32e · 20o<br>visible 6n · 11e · 6o</div>
+    </div>
+  </div>
+
+  <div class="insight-block">
+    <h3>הגילוי שה-brief לא ידע: צמתים כבר מקופלים, קשתות לא</h3>
+    <p>ה-brief הניח שכל הצמתים מצוירים תמיד. על ה-desktop זה <em>לא נכון</em>: כבר קיים קיפול-צמתים ישן (<span class="en">rbush</span>, מ-Phase 1.6) שנדלק ב-100+ צמתים. לכן בעמודה ב' רואים <span class="en">rendered 6</span> צמתים, לא 104 — הצמתים (וה-overlays שלהם) כבר היו מקופלים.</p>
+    <p style="margin-top:8px;">מה ש-rbush <em>מעולם לא קיפל</em>: קשתות. 116 קשתות מורכבות מול 11 נראות — שם הפער האמיתי על ה-desktop. בנוסף, rbush בונה את העץ <em>מחדש בכל frame</em> (טעינת 104 פריטים כל 16ms) — עלות בפני עצמה בזמן pan.</p>
+  </div>
+
+  <table class="comparison">
+    <thead>
+      <tr><th>מצב</th><th>rendered</th><th>visible</th><th>סה"כ מורכב</th><th>אבחנה</th></tr>
+    </thead>
+    <tbody>
+      <tr class="gap">
+        <td><strong>א.</strong> ההנחה של ה-brief (ללא rbush)</td>
+        <td><span class="num v1">104n·116e·104o</span></td>
+        <td><span class="num v2">6n·11e·6o</span></td>
+        <td><span class="tag gap">324</span></td>
+        <td>הכול מצויר — הפער המלא</td>
+      </tr>
+      <tr class="close">
+        <td><strong>ב.</strong> desktop אמיתי (rbush)</td>
+        <td><span class="num v1">6n·116e·6o</span></td>
+        <td><span class="num v2">6n·11e·6o</span></td>
+        <td><span class="tag close">128</span></td>
+        <td>צמתים מקופלים, קשתות לא</td>
+      </tr>
+      <tr class="match">
+        <td><strong>ג.</strong> <span class="en">cull-v1</span> ON</td>
+        <td><span class="num v2">20n·32e·20o</span></td>
+        <td><span class="num v2">6n·11e·6o</span></td>
+        <td><span class="tag match">72</span></td>
+        <td>צמתים + קשתות + overlay LoD</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="clarify">
+    <h3>למה זה חשוב ל-iPad שלך</h3>
+    <p>ה-HUD יגיד לך באיזה מצב ה-iPad נמצא, בלי לנחש: אם בשורת <span class="en">rendered</span> אתה רואה <em>~104 צמתים</em> כש-cull כבוי → ה-rbush לא רץ אצלך (וה-brief צדק, כלום לא קופל). אם אתה רואה <em>~12</em> → ה-rbush כן קיפל, והעלות שנשארה היא קשתות + בנייה-מחדש כל frame + שכבות ה-overlay בזום-אאוט. בכל מקרה, <span class="en">cull-v1</span> מטפל בכל שלושת אלה.</p>
+  </div>
+
+  <h2 class="section-title">3. מה ש-<span class="en">--cull-v1</span> עושה (Issue 3)</h2>
+
+  <div class="finding ok">
+    <h4>מקפל את שתי השכבות הכבדות, לא רק צמתים</h4>
+    <p style="margin-top:6px;font-size:14.5px;">צמתים, <em>קשתות</em>, ו-overlays — רק מי שבתוך ויו-פורט + מרג'ין נכנס בכלל ל-<span class="en">innerHTML</span>. קיפול אמיתי (unmount), לא <span class="en">display:none</span> (ש-iOS עדיין משלם עליו שכבה ו-paint). הקשתות ירדו 116→32 — מה ש-rbush אף פעם לא נתן.</p>
+  </div>
+
+  <div class="finding ok">
+    <h4>מרג'ין נדיב = ויו-פורט שלם מכל צד (אנטי-popping)</h4>
+    <p style="margin-top:6px;font-size:14.5px;">לכן הוא מרכיב 20 צמתים במקום ה-6 ש-rbush הרכיב — קצת יותר, אבל בלי בנייה-מחדש כל frame. הסריקה מוגבלת ל-פעם אחת ל-~100ms בזמן pan פעיל, ופעם אחת בנחיתה. <em>אף פעם לא בתוך</em> <span class="en">touchmove</span>. flick מהיר של עד מסך שלם בין סריקות לא חושף אזור ריק.</p>
+  </div>
+
+  <div class="finding ok">
+    <h4>מתחת ל-0.5× זום: התקפה ישירה על "100 שכבות" של iOS</h4>
+    <p style="margin-top:6px;font-size:14.5px;">כל <span class="en">.nslice</span> overlay הוא שכבת compositor אחת ב-iOS. בקנבס צפוף בזום-אאוט יש ~100 כאלה במסך — הפיצוץ ש-Safari לא יכול לאצור. מתחת ל-0.5×, <span class="en">cull-v1</span> לא טוען overlays בכלל; הצורות עוברות לשכבת ה-<span class="en">#cv</span> ה-SVG <em>היחידה</em> (כ-<span class="en">.node-lod</span>). 100 שכבות → שכבה אחת.</p>
+  </div>
+
+  <div class="finding info">
+    <h4>חריגים קשיחים שתמיד נשארים מורכבים</h4>
+    <p style="margin-top:6px;font-size:14.5px;">צומת נבחר + הידיות שלו, צומת בגרירה, נקודת-הקצה של קשת בציור, ויעד ניווט "מרכז על צומת" מהמגירה (מורכב <em>לפני</em> אנימציית המצלמה, כך שהוא כבר שם בנחיתה — אין frame ריק). קבוצת multi-select נכנסת דרך ה-<span class="en">selSet</span>.</p>
+  </div>
+
+  <div class="warn">
+    <strong>הרכבה ובטיחות:</strong> flag-gated, <span class="en">default OFF</span>. כשהוא כבוי — ההתנהגות זהה לחלוטין ל-Sprint 4 (מסלול rbush הישן רץ כרגיל). מתחבר ל-tile cache (האזורים עדיין נצבעים על ה-canvas). הלגנדה של הקשתות מחושבת מחדש מהקבוצה הנראית בלבד. חל על תצוגת Canvas בלבד — List/Kanban/Timeline/Weak-spot לא מושפעים.
+  </div>
+
+  <h2 class="section-title">4. בדיקות</h2>
+
+  <div class="confirmed">
+    <h3>✓ 12 בדיקות חדשות + רגרסיה מלאה</h3>
+    <p><span class="en">sprint4_1_fixup.spec.ts</span> — 12 בדיקות עוברות על <span class="en">desktop-chrome</span> וגם <span class="en">ipad-chrome</span>: מתמטיקת הקיפול (צומת חוץ-מסך יוצא, חריג-keep נשאר, קשת חוצת-מסך עם שני קצוות בחוץ נשארת), mount/unmount ב-DOM, overlay LoD מתחת ל-0.5×, ומסלול ה-rollback (flag כבוי → הכול מורכב).</p>
+    <p style="margin-top:8px;" id="regress">החבילה המלאה עברה: <em>612 בדיקות (306 לכל מנוע) — אפס כשלים</em>. כולל ה-12 החדשות + כל הרגרסיה הקיימת (Sprint 4 וכל מה שלפניו). מסלול ה-<span class="en">rollback</span> מאומת — flag כבוי = התנהגות זהה.</p>
+  </div>
+
+  <div class="warn">
+    <strong>מה ש-Playwright לא יכול:</strong> להרגיש 50 FPS. הוא מאמת את מתמטיקת הקיפול ואת ה-mount/unmount, אבל לא את החלקות. <em>האימות האמיתי הוא ה-iPad שלך</em> — ירידת ה-rendered + תחושת ה-pan.
+  </div>
+
+  <h2 class="section-title">5. בדיקת ה-iPad — האימות האמיתי</h2>
+
+  <div class="next-step">
+    <span class="num">1</span>
+    <div class="body"><strong>קרא את ה-baseline.</strong> פתח את Algo Execution עם <span class="en">?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles</span> (בלי cull-v1). עשה pan וקרא ב-HUD: <span class="en">rendered</span>, <span class="en">visible</span>, <span class="en">worst</span>. רשום אותם.</div>
+  </div>
+  <div class="next-step">
+    <span class="num">2</span>
+    <div class="body"><strong>הדלק את הקיפול.</strong> הוסף <span class="en">,cull-v1</span> לסוף ה-URL. עשה pan וקרא שוב. הציפייה: <span class="en">rendered</span> יורד (במיוחד הקשתות), <span class="en">worst</span> יורד, <span class="en">fps</span> עולה. היעד: worst &lt; 25ms, FPS ≥ 50.</div>
+  </div>
+  <div class="next-step">
+    <span class="num">3</span>
+    <div class="body"><strong>בדיקת Issue 2 (בלי console).</strong> צבוט החוצה מתחת ל-0.5× (ה-overlays נעלמים, נשארים קווי-מתאר). עשה pan. דווח: <em>חלק</em> (→ ה-overlays היו העלות) או <em>עדיין תקוע</em> (→ שכבת ה-SVG/compositor היא העלות, ואז Issue 4).</div>
+  </div>
+  <div class="next-step">
+    <span class="num">4</span>
+    <div class="body"><strong>דווח ארבעה מספרים</strong> (<span class="en">rendered, visible, worst, fps</span>) ל-OFF ול-ON, ואת תוצאת Issue 2. כדי לכבות שוב: הוסף <span class="en">?flag=-cull-v1</span> (ה-flags נשמרים ב-localStorage).</div>
+  </div>
+
+  <div class="clarify">
+    <h3>Issue 4 — מותנה, לא בוצע</h3>
+    <p>אם בדיקת Issue 2 מראה שה-pan <em>עדיין תקוע</em> בזום-אאוט מלא — אז שכבת ה-SVG לא מקודמת ל-GPU, וצריך לוודא <span class="en">will-change:transform</span> על שלושת המכולות (לא פר-צומת). זה מותנה בתוצאה שלך; לא נגעתי בו עד שתדווח.</p>
+  </div>
+
+  <h2 class="section-title">סיכום</h2>
+  <div class="recap-row"><span class="tag">✓</span><span>HUD מראה <span class="en">rendered / visible / culled</span> — הפער גלוי בלי console.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span><span class="en">--cull-v1</span> מקפל צמתים + קשתות + overlays, throttled ~100ms, מרג'ין ויו-פורט מלא.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>מתחת ל-0.5× — הצורות עוברות לשכבת SVG אחת (התקפה על פיצוץ-השכבות).</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>גיליתי: צמתים כבר מקופלים ב-desktop ע"י rbush; קשתות מעולם לא.</span></div>
+  <div class="recap-row"><span class="tag">✓</span><span>ה-tile cache נשאר — לא נקרע. flag כבוי = התנהגות Sprint 4 מדויקת.</span></div>
+  <div class="recap-row"><span class="tag" style="color:var(--amber);background:var(--amber-soft)">○</span><span>פתוח: קריאת ה-HUD על ה-iPad (4 מספרים) + תוצאת Issue 2.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 4.1 complete, Phase 4 perf pending iPad verification</h3>
+    <p>הכל מאחורי <span class="en">--cull-v1</span> (כבוי כברירת מחדל). המנגנון במקום ונמדד. אני לא טוען ניצחון perf בלי ה-iPad — שער ההחלטה של Phase 4 הוא: האם Algo Execution עושה pan ב-≥50 FPS עם <span class="en">cull-v1</span> ON. תריץ את ארבעת הצעדים, דווח את המספרים, ונחליט מכאן. לא מתחיל Sprint 5 / Bets.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">הערה: הצילומים כאן הם desktop (אילוסטרציה של המנגנון). המספרים שלך מה-iPad הם שקובעים.</p>
+  </div>
+
+</body>
+</html>

@@ -49,7 +49,8 @@
     'views-v2':          false,  // §03 · 5 view modes
     'toolbar-migrated':  false,  // Sprint 3.3 · hide #tb top toolbar
     // Phase 4 (new — behind flag for at least one decision-gate cycle)
-    'canvas-tiles':      false   // Pass 5 §03 · rasterised tile layer
+    'canvas-tiles':      false,  // Pass 5 §03 · rasterised tile layer
+    'cull-v1':           false   // Sprint 4.1 · viewport culling (mount/unmount)
   });
 
   const STORAGE_KEY = 'edgespace-flags';

@@ -292,6 +292,16 @@ body.he .zl{font-family:'Assistant',var(--sans);text-transform:none;letter-spaci
 .node .ring{stroke:var(--accent);stroke-width:2.5;fill:none}
 .node.dim{opacity:.18}.node .th{fill:transparent}
 .node.tgt .ring{stroke:var(--accent);stroke-width:3;fill:none;stroke-dasharray:4,3}
+/* Sprint 4.1 · --cull-v1 below-0.5× level-of-detail shapes, drawn straight into
+   #cv (one shared SVG layer) instead of per-node overlay slices to kill the iOS
+   layer explosion when zoomed out. Mirror the .node glyph styling; pointer-
+   events:none so taps fall through to the invisible g.node hit target. Distinct
+   class from the drawer's unrelated .node-glyph. */
+.node-lod{pointer-events:none}
+.node-lod text{fill:var(--text);font:500 12px var(--sans);text-anchor:middle;pointer-events:none}
+.node-lod .ring{stroke:var(--accent);stroke-width:2.5;fill:none}
+.node-lod.dim{opacity:.18}
+body.he .node-lod text{direction:rtl}
 .edge{fill:none;stroke-width:1.8;pointer-events:stroke;cursor:pointer}.edge:hover{stroke-width:3}.edge.dim{opacity:.1}
 #ep{position:fixed;z-index:55;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.4);opacity:0;visibility:hidden;transform:scale(.96);transform-origin:top left;transition:opacity 140ms ease-in,transform 140ms ease-in,visibility 0ms linear 140ms;display:block}
 #ep.on{opacity:1;visibility:visible;transform:scale(1);transition:opacity 240ms ease-out,transform 240ms ease-out,visibility 0ms linear 0ms}

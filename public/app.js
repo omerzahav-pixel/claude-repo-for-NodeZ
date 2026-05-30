@@ -760,7 +760,14 @@ function statusDotSvg(st,sh){const c=SC[st]||SC.idea;if(sh==='project'){const pt
   if(sh==='question')return `<svg class="dot" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="${c}"/><text x="5" y="7.5" text-anchor="middle" font-size="7" fill="#000">?</text></svg>`;
   if(sh==='experiment')return `<svg class="dot" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="${c}"/></svg>`;
   return `<svg class="dot" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="${c}"/></svg>`}
-function focusNode(id){const n=ns().find(x=>x.id===id);if(!n)return;const tx=-n.x,ty=-n.y;const steps=12;let i=0;const sx=view.x,sy=view.y;const anim=()=>{i++;const t=i/steps;view.x=sx+(tx-sx)*t;view.y=sy+(ty-sy)*t;render();if(i<steps)requestAnimationFrame(anim)};anim();sel=n;op(n)}
+function focusNode(id){const n=ns().find(x=>x.id===id);if(!n)return;
+  /* Sprint 4.1 · keep the navigation target mounted for the whole camera
+     animation (hard cull exception) so it's already present on arrival — no
+     blank frame when --cull-v1 is ON. invalidate() forces a fresh cull scan on
+     the first animated frame. Cleared when the animation lands (sel=n then
+     keeps it mounted). */
+  window.__cullFocusTarget=id;if(window.CullV1)window.CullV1.invalidate();
+  const tx=-n.x,ty=-n.y;const steps=12;let i=0;const sx=view.x,sy=view.y;const anim=()=>{i++;const t=i/steps;view.x=sx+(tx-sx)*t;view.y=sy+(ty-sy)*t;render();if(i<steps)requestAnimationFrame(anim);else window.__cullFocusTarget=null};anim();sel=n;op(n)}
 function cycleSb(){const sb=document.getElementById('sb');sb.classList.remove('mini');sb.classList.toggle('co')}
 function sbHeadClick(e){const sb=document.getElementById('sb');if(sb.classList.contains('mini')){sb.classList.remove('mini')}}
 function sbResize(e){e.preventDefault();const sb=document.getElementById('sb');const sx=e.clientX,ow=sb.offsetWidth;const mm=ev=>{sb.style.width=Math.max(200,Math.min(500,ow+ev.clientX-sx))+'px'};const mu=()=>{document.removeEventListener('pointermove',mm);document.removeEventListener('pointerup',mu)};document.addEventListener('pointermove',mm);document.addEventListener('pointerup',mu)}
@@ -982,8 +989,30 @@ function render(){
   // when both endpoints are off-screen in the node list. The 200px margin
   // (in screen px, converted to world px by /view.k) ensures nodes that
   // are partially visible or about to scroll into view stay in the DOM.
-  let visIds=null;
-  if(window.RBush&&ns().length>=100){
+  let visIds=null,edgeVisIds=null,cullOn=false;
+  const OVERLAY_MIN_K=0.5; // Sprint 4.1 · overlay level-of-detail threshold
+  /* Sprint 4.1 · viewport culling (--cull-v1). When ON, CullV1 decides the
+     mounted set for BOTH heavy layers (SVG outlines/edges + DOM overlays):
+     only nodes/edges within viewport+margin enter the innerHTML string at all
+     (true unmount, not display:none). The scan is throttled to ~100ms during
+     active gestures; the hard-exception `keep` set is always mounted. When OFF,
+     the legacy rbush node-only cull (≥100 nodes) below runs unchanged — full
+     rollback path. */
+  if(window.Flags&&window.Flags.on('cull-v1')&&window.CullV1){
+    cullOn=true;
+    const keep=new Set();
+    if(sel)keep.add(sel.id);
+    for(const id of selSet)keep.add(id);
+    if(edgeHover)keep.add(edgeHover.id);
+    if(drag){
+      if(drag.n)keep.add(drag.n.id);                        // dragged / resizing node
+      if(drag.k==='edge'&&drag.from)keep.add(drag.from.id);  // in-progress edge-draw endpoint
+    }
+    if(window.__cullFocusTarget!=null)keep.add(window.__cullFocusTarget); // drawer center-on-node target
+    const _active=!!drag||!!window._inertiaActive;
+    const _cr=window.CullV1.compute(ns(),es(),view,W,H,keep,_active);
+    visIds=_cr.nodeSet;edgeVisIds=_cr.edgeSet;
+  } else if(window.RBush&&ns().length>=100){
     const margin=200/view.k;
     const vx1=-W/2/view.k-view.x-margin,vy1=-H/2/view.k-view.y-margin;
     const vx2=vx1+W/view.k+margin*2,vy2=vy1+H/view.k+margin*2;
@@ -1037,14 +1066,20 @@ function render(){
      When --edges-v2 is ON, EdgeV2.renderAll() owns the whole edge loop:
      8 type channels + magnetic anchors + cubic-spline routing + per-pair
      fan-out + auto-legend. Skip the v1 loop entirely in that case. */
+  /* Sprint 4.1 · cull edges to the visible set when --cull-v1 is ON. The node
+     index handed to EdgeV2 stays full (ns()) so a kept edge whose endpoints are
+     off-screen still routes correctly — only the edge LIST is filtered. Legend
+     recomputes from the visible edges (a culled edge type must not count toward
+     the legend threshold). */
+  const _edgesVis = edgeVisIds ? es().filter(e=>edgeVisIds.has(e.id)) : es();
   if (window.Flags && window.Flags.on('edges-v2') && window.EdgeV2) {
     const _nodeIndex = new Map(ns().map(n => [n.id, n]));
-    h += window.EdgeV2.renderAll(es(), _nodeIndex, view, {
+    h += window.EdgeV2.renderAll(_edgesVis, _nodeIndex, view, {
       sel, focusMode, dimE
     });
-    try { window.EdgeV2.refreshLegend(es()); } catch (e) {}
+    try { window.EdgeV2.refreshLegend(_edgesVis); } catch (e) {}
   } else
-  for(const e of es()){const a=ns().find(n=>n.id===e.from),b=ns().find(n=>n.id===e.to);if(!a||!b)continue;const et=ET[e.type]||ET.feeds;
+  for(const e of _edgesVis){const a=ns().find(n=>n.id===e.from),b=ns().find(n=>n.id===e.to);if(!a||!b)continue;const et=ET[e.type]||ET.feeds;
     const rA=46,rB=46;const dx0=b.x-a.x,dy0=b.y-a.y,d0=Math.hypot(dx0,dy0)||1;
     const ax=a.x+dx0/d0*rA,ay=a.y+dy0/d0*rA,bx=b.x-dx0/d0*rB,by=b.y-dy0/d0*rB;
     const dx=bx-ax,dy=by-ay;const horiz=Math.abs(dx)>Math.abs(dy);const off=Math.min(Math.abs(horiz?dx:dy)*0.75,240);
@@ -1165,10 +1200,23 @@ function render(){
     const selCls=se?' sel':'';
     const svgLabel=showLabel?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:'';
     const glyphs=(['resource','library'].includes(n.shape)?linkGlyph:'')+portal+conf+svgLabel;
-    oh+=`<div class="nslice${dimCls}${tgtCls}${selCls}" data-nid="${n.id}" style="left:${n.x}px;top:${n.y}px">`
-      +`<svg class="nshape" width="1" height="1" style="overflow:visible">`
-      +`<g transform="translate(${-n.x},${-n.y})">${ring}${sh}${glyphs}</g>`
-      +`</svg>${richContent}</div>`;
+    /* Sprint 4.1 · overlay level-of-detail. The visible shapes normally live in
+       the DOM overlay — one .nslice per node, i.e. one iOS compositor layer per
+       node. On a dense canvas at <0.5× zoom ~100 of those sit on-screen at once:
+       the layer explosion iOS Safari can't batch. When --cull-v1 is ON and we're
+       below 0.5×, draw the shape straight into the single #cv SVG layer (world
+       coords, no per-node layer) and emit NO overlay slice. richContent is
+       already '' here via semanticCompact, so nothing legible is lost; the
+       invisible g.node hit target above still routes taps. At ≥0.5× the overlay
+       path is byte-for-byte unchanged. */
+    if(cullOn&&view.k<OVERLAY_MIN_K){
+      h+=`<g class="node-lod${dimCls}" data-id="${n.id}">${ring}${sh}${glyphs}</g>`;
+    } else {
+      oh+=`<div class="nslice${dimCls}${tgtCls}${selCls}" data-nid="${n.id}" style="left:${n.x}px;top:${n.y}px">`
+        +`<svg class="nshape" width="1" height="1" style="overflow:visible">`
+        +`<g transform="translate(${-n.x},${-n.y})">${ring}${sh}${glyphs}</g>`
+        +`</svg>${richContent}</div>`;
+    }
   }
   cv.innerHTML=h;
   // D3 · Phase 1.6 — sync the HTML overlay with the SVG's viewBox transform,
@@ -1219,6 +1267,31 @@ function render(){
      positions need recomputing each frame from the world coords. */
   if (window.Flags && window.Flags.on('zones-v2') && window.ZonesV2) {
     try { window.ZonesV2.reposition(zs(), view); } catch (e) {}
+  }
+  /* Sprint 4.1 Issue 1 · feed the perf HUD's rendered / visible / culled lines.
+     Computed only when the HUD asked for it (window.__RENDER_STATS_ON, set on
+     HUD install) so the normal path pays nothing. "rendered" = elements truly
+     in the DOM right now (the actual cost). "visible" = elements whose bbox
+     intersects the UN-inflated screen rect (what the user can see). The gap
+     between them is the bug the brief wants legible without a console. */
+  if(window.__RENDER_STATS_ON){
+    try{
+      const _rN=cv.querySelectorAll('g.node').length;
+      const _rE=cv.querySelectorAll('path.e2,path.edge').length;
+      const _rO=ov?ov.querySelectorAll('.nslice').length:0;
+      const _vx1=-W/2/view.k-view.x,_vy1=-H/2/view.k-view.y,_vx2=_vx1+W/view.k,_vy2=_vy1+H/view.k;
+      const _byId=new Map();for(const n of ns())_byId.set(n.id,n);
+      const _vN=new Set();
+      for(const n of ns()){const hw=(n._w||n.userW||80),hh=(n._h||n.userH||80);if(n.x+hw>=_vx1&&n.x-hw<=_vx2&&n.y+hh>=_vy1&&n.y-hh<=_vy2)_vN.add(n.id)}
+      let _vE=0;
+      for(const e of es()){const a=_byId.get(e.from),b=_byId.get(e.to);if(!a||!b)continue;let _in=_vN.has(e.from)||_vN.has(e.to);if(!_in){const mnx=Math.min(a.x,b.x),mxx=Math.max(a.x,b.x),mny=Math.min(a.y,b.y),mxy=Math.max(a.y,b.y);_in=mxx>=_vx1&&mnx<=_vx2&&mxy>=_vy1&&mny<=_vy2}if(_in)_vE++}
+      const _vO=view.k>=OVERLAY_MIN_K?_vN.size:0;
+      window.__renderStats={
+        rendered:{nodes:_rN,edges:_rE,overlays:_rO},
+        visible:{nodes:_vN.size,edges:_vE,overlays:_vO},
+        culled:cullOn?('ON (margin: '+(window.CullV1?window.CullV1.MARGIN_VIEWPORTS.toFixed(1):'1.0')+'vw)'):'OFF'
+      };
+    }catch(e){}
   }
 }
 function bF(){const fl=document.getElementById('fl');if(!fl)return;const mode=S.filterMode||'zone';const otherMode=mode==='zone'?'status':'zone';const switchLabel=S.hebrewMode?(mode==='zone'?'אזורים ⇄ מצב':'מצב ⇄ אזורים'):(mode==='zone'?'Zones ⇄ Status':'Status ⇄ Zones');
