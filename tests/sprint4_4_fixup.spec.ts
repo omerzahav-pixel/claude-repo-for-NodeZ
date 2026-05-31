@@ -65,15 +65,7 @@ test.describe("Sprint 4.4 · flags + version 4.4.0", () => {
     expect(r.build).toContain(r.meta!);
   });
 
-  test("S44.C StaticPan module installs", async ({ page }) => {
-    await open(page, { "static-pan": true });
-    const api = await page.evaluate(() => {
-      const S = (window as any).StaticPan;
-      return S ? { active: S.active(), on: typeof S.on } : null;
-    });
-    expect(api).not.toBeNull();
-    expect(api!.active).toBe(true);
-  });
+  // (S44.C removed — StaticPan module retired in Sprint 4.5.)
 });
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -95,56 +87,6 @@ test.describe("Sprint 4.4 · Issue 3 — HUD layout/other lines", () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-test.describe("Sprint 4.4 · Issue 2 — --static-pan skips the per-frame rebuild", () => {
-  test("S44.E in motion, render() CSS-transforms instead of rebuilding (sentinel survives)", async ({ page }) => {
-    await open(page, { "static-pan": true });
-    await seedNode(page);
-    const r = await page.evaluate(async () => {
-      const wait = () => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
-      // Tag an existing SVG child; if render() rebuilds innerHTML the tag is wiped.
-      const g = document.querySelector("#cv g.node");
-      if (g) g.setAttribute("data-sentinel", "keep");
-
-      document.body.classList.add("dragging");     // a polled motion signal
-      await wait(); await wait();                   // watcher sets __staticPan + V0
-      const v = (window as any).__E2E.view(); v.x += 300; // pan
-      (window as any).render();                     // should take the static-pan branch
-
-      const staticOn = !!(window as any).__staticPan;
-      const cvT = (document.getElementById("cv") as HTMLElement).style.transform;
-      const sentinelSurvived = !!document.querySelector('#cv g.node[data-sentinel="keep"]');
-
-      document.body.classList.remove("dragging");
-      await wait(); await wait();                   // settle → one real render
-      const afterT = (document.getElementById("cv") as HTMLElement).style.transform;
-
-      return { staticOn, cvT, sentinelSurvived, afterT };
-    });
-    expect(r.staticOn).toBe(true);
-    expect(r.cvT).toContain("translate3d");   // moved via CSS transform
-    expect(r.sentinelSurvived).toBe(true);     // rebuild was SKIPPED
-    expect(r.afterT).toBe("");                 // transform cleared on settle
-  });
-
-  test("S44.F with --static-pan OFF, render() rebuilds normally (no cv transform, sentinel wiped)", async ({ page }) => {
-    await open(page); // static-pan OFF
-    await seedNode(page);
-    const r = await page.evaluate(async () => {
-      const wait = () => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
-      const g = document.querySelector("#cv g.node");
-      if (g) g.setAttribute("data-sentinel", "keep");
-      document.body.classList.add("dragging");
-      await wait(); await wait();
-      const v = (window as any).__E2E.view(); v.x += 300;
-      (window as any).render();                 // normal full rebuild
-      const staticOn = !!(window as any).__staticPan;
-      const cvT = (document.getElementById("cv") as HTMLElement).style.transform;
-      const sentinelSurvived = !!document.querySelector('#cv g.node[data-sentinel="keep"]');
-      document.body.classList.remove("dragging");
-      return { staticOn, cvT, sentinelSurvived };
-    });
-    expect(r.staticOn).toBe(false);
-    expect(r.cvT).not.toContain("translate3d"); // no static-pan transform
-    expect(r.sentinelSurvived).toBe(false);      // rebuilt → sentinel gone
-  });
-});
+// (Sprint 4.4 --static-pan tests removed — static-pan was promoted to the
+//  default pan path in Sprint 4.5; the new wiring is covered by
+//  sprint4_5_fixup.spec.ts.)

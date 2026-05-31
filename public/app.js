@@ -967,22 +967,13 @@ function clampView(){
 function forceRepaint(){const cv=document.getElementById('cv');if(cv)void cv.offsetHeight}
 function render(){
   const W=Math.max(innerWidth||document.documentElement.clientWidth||800,400),H=Math.max(innerHeight||document.documentElement.clientHeight||600,400);
-  /* Sprint 4.4 · --static-pan isolation (DIAGNOSTIC, not a fix). While a gesture
-     is in motion, skip the entire per-frame innerHTML rebuild + viewBox/width/
-     height rewrite and just move the EXISTING layers with one cheap CSS
-     transform, relative to the gesture-start view (__staticPanV0). If pan is
-     smooth under --static-pan but janky without it, the per-frame rebuild — not
-     paint of the content — is the cost (Sprint 4.5 would harden it). Set by
-     static-pan.js off the gesture state; window.__staticPan is only ever true
-     when the flag is on, so this is inert by default. */
-  if(window.__staticPan&&window.__staticPanV0){
-    const V0=window.__staticPanV0,s=view.k/V0.k;
-    const tx=W/2*(1-s)+(view.x-V0.x)*view.k,ty=H/2*(1-s)+(view.y-V0.y)*view.k;
-    cv.style.transform=`translate3d(${tx}px,${ty}px,0) scale(${s})`;
-    const _ov=document.getElementById('canvasOverlay');
-    if(_ov)_ov.style.transform=`translate(${W/2}px,${H/2}px) scale(${view.k}) translate(${view.x}px,${view.y}px)`;
-    return;
-  }
+  /* Sprint 4.5 · render() now runs ONLY on data-model changes (add / move-in-
+     canvas-space / edit / delete / zone / edge / canvas-switch / view-mode) and
+     once on gesture settle — NEVER per pan/zoom frame. The per-frame transform
+     path is applyView() (below), called from CanvasTransform.commit(); it moves
+     all layers as one space without rebuilding. This counter lets the HUD prove
+     it: renders/s ≈ 0 during pan, one tick on settle. */
+  window.__renderTick=(window.__renderTick||0)+1;
   if(window.dlog&&location.search.includes('debug')&&!window._renderLogged){window._renderLogged=true;dlog('render W='+W+' H='+H+' zones='+(zs()?.length||0)+' nodes='+(ns()?.length||0))}
   // Phase 1.5 diagnostics — throttle so pan/drag doesn't flood, but always
   // log the first few renders + any render after a quiet window so we see
@@ -1061,7 +1052,7 @@ function render(){
      a pan frame no longer repaints 88 vector silhouettes + halos. Rich nodes
      return the instant motion settles. CanvasTransform calls render() every pan
      frame (transform.js), so making that per-frame paint cheap IS the fix. */
-  const simpleMode = !!(window.Flags && (window.Flags.on('simple-nodes') || (window.Flags.on('freeze-pan') && window.__inMotion)));
+  const simpleMode = !!(window.Flags && window.Flags.on('simple-nodes'));
   // Focus mode: if a node is selected, dim everything not related (same zone or edge-connected)
   const focusMode=!!sel&&!drag;
   let related=null;
@@ -1324,7 +1315,43 @@ function render(){
       };
     }catch(e){}
   }
+  /* Sprint 4.5 · the viewBox + overlay transform now encode the CURRENT view, so
+     the per-frame CSS delta (applyView) resets to identity and the frozen base
+     becomes this view. Any subsequent pan/zoom transforms relative to here until
+     the next render (data change or gesture settle). */
+  window.__panBase={x:view.x,y:view.y,k:view.k};
+  cv.style.transform='';
 }
+/* Sprint 4.5 · applyView — the per-frame pan/zoom path. Moves every canvas layer
+   as ONE coordinate space WITHOUT rebuilding the DOM. Called from
+   CanvasTransform.commit() on each pan/pinch/inertia frame; render() is NOT
+   called during motion (only on data changes + once on settle).
+     · #cv (nodes, edges, edge-labels, zone-rects): a CSS delta transform from
+       the frozen viewBox base (__panBase, set by the last render), transform-
+       origin 0 0 so it scales about the SAME point as the overlay — this is the
+       fix for the pinch "edges drift as a separate image" desync that bare
+       --static-pan showed.
+     · #canvasOverlay (node bodies + labels): the absolute view transform,
+       origin 0 0 — identical mapping to #cv's effective transform, locked together.
+     · #zoneChips (zone labels): positioned in screen space, so ZonesV2.reposition
+       recomputes them each frame (cheap world→screen math, no geometry read) —
+       this is the fix for "labels stuck in place".
+     · #tiles (grid + zone fills): TileCache.sync() re-applies its CSS transform
+       (normally driven by the render() wrap, which no longer fires during motion). */
+function applyView(){
+  const W=Math.max(innerWidth||document.documentElement.clientWidth||800,400),H=Math.max(innerHeight||document.documentElement.clientHeight||600,400);
+  const base=window.__panBase||{x:view.x,y:view.y,k:view.k};
+  const s=view.k/base.k;
+  const tx=W/2*(1-s)+(view.x-base.x)*view.k,ty=H/2*(1-s)+(view.y-base.y)*view.k;
+  cv.style.transformOrigin='0 0';
+  cv.style.transform=`translate3d(${tx}px,${ty}px,0) scale(${s})`;
+  const _abs=`translate(${W/2}px,${H/2}px) scale(${view.k}) translate(${view.x}px,${view.y}px)`;
+  const _ov=document.getElementById('canvasOverlay');
+  if(_ov)_ov.style.transform=_abs;
+  if(window.Flags&&window.Flags.on('zones-v2')&&window.ZonesV2){try{window.ZonesV2.reposition(zs(),view)}catch(e){}}
+  if(window.TileCache&&typeof window.TileCache.sync==='function'){try{window.TileCache.sync()}catch(e){}}
+}
+window.applyView=applyView;
 function bF(){const fl=document.getElementById('fl');if(!fl)return;const mode=S.filterMode||'zone';const otherMode=mode==='zone'?'status':'zone';const switchLabel=S.hebrewMode?(mode==='zone'?'אזורים ⇄ מצב':'מצב ⇄ אזורים'):(mode==='zone'?'Zones ⇄ Status':'Status ⇄ Zones');
   /* Phase 5b · filter bar starts collapsed. Toggle button expands/collapses. */
   let h=`<span class="pill fl-toggle" onclick="document.getElementById('fl').classList.toggle('collapsed')" title="Toggle filter pills">⚡</span>`;

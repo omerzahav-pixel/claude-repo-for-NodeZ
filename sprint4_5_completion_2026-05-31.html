@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 4.5 — One Transform Space · דוח השלמה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .clarify { background: var(--blue-soft); border-right: 4px solid var(--blue); padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+  .clarify h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--blue); font-size: 18px; margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 16px 20px; margin: 12px 0; border-right: 4px solid var(--green); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 17px; margin-bottom: 4px; }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 8px 0; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .ck { font-size: 18px; }
+  .step .body { font-size: 14.5px; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 15px; }
+  .recap-row .tag2 { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 4.5 · ONE TRANSFORM SPACE · התיקון האמיתי</div>
+  <h1>תנועה אחת על מרחב אחד — סוף מרדף ה-perf</h1>
+  <p class="subtitle">חיברנו הכל יחד. תנועה כבר לא בונה את ה-DOM מחדש. בדוק על הקישור למטה.</p>
+  <div class="buildbar">build 4.5.0 · 2026-05-31 — ודא שזה מה שכתוב ב-HUD</div>
+
+  <div class="insight">
+    <h2>מה תוקן — במשפט אחד</h2>
+    <p>pan או zoom הם עכשיו <em>transform אחד</em> על מרחב אחד שמחזיק יחד את הנודים, הקשתות והתוויות — ו-<span class="en">render()</span> רץ <em>רק כשהמידע משתנה</em> (הוספה/הזזה/עריכה/מחיקה), אף פעם לא כשהמסך זז.</p>
+    <p>Sprint 4.4 הוכיח: <span class="en">commit()</span> קרא ל-<span class="en">render()</span> בכל frame ובנה מחדש את כל ה-DOM. <em>ניתקנו את החיבור הזה.</em> עכשיו בתנועה רק ה-transform זז; בעצירה — render אחד מחדד הכל.</p>
+  </div>
+
+  <h2 class="section-title">1. מה נבנה</h2>
+
+  <div class="finding">
+    <h4>ניתוק <span class="en">render()</span> ממסלול התנועה</h4>
+    <p style="font-size:14.5px;"><span class="en">commit()</span> מחיל עכשיו רק את ה-CSS transform; <span class="en">render()</span> רץ על שינוי-מידע + פעם אחת בעצירה. שורת <span class="en">rend/s</span> חדשה ב-HUD מוכיחה את זה: <em>0 תוך כדי תנועה</em>.</p>
+  </div>
+
+  <div class="finding">
+    <h4>איחוד הנודים + הקשתות + התוויות למרחב אחד</h4>
+    <p style="font-size:14.5px;">כל השכבות מקבלות את אותו transform. תיקנתי את שתי התקלות ש-<span class="en">--static-pan</span> חשף: התוויות של האזורים (<span class="en">#zoneChips</span>) מחושבות מחדש כל frame (לא "תקועות"), ו-<span class="en">#cv</span> מקבל <span class="en">transform-origin: 0 0</span> כמו ה-overlay (לכן הקשתות לא "נפרדות" בזום).</p>
+  </div>
+
+  <div class="finding">
+    <h4>הסרת ה-freeze-frame (מקור ה"תקיעה הקטנה")</h4>
+    <p style="font-size:14.5px;">מנגנון ה-snapshot מ-4.3 היה מיותר ומזיק — הוא גרם ל"תקיעה קטנה" בתחילת ה-pan. הוסר. ה-frame הראשון של pan זול בדיוק כמו כל frame אחר.</p>
+  </div>
+
+  <div class="finding">
+    <h4>ניקיון</h4>
+    <p style="font-size:14.5px;">הוסרו <span class="en">freeze-pan.js</span> + <span class="en">static-pan.js</span> (~110 שורות פחות). נשמרו: tile-cache (רקע), culling (קנבסים גדולים), <span class="en">--no-fx</span>, <span class="en">--simple-nodes</span> (אופציה). האנימציה המתמדת — עדיין מוסרת (4.3).</p>
+  </div>
+
+  <h2 class="section-title">2. הבדיקה שלך — קישור אחד</h2>
+
+  <div class="linkcard">
+    <div class="lc-title">פתח את זה על ה-iPad:</div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1</a>
+  </div>
+
+  <p>ודא שכתוב <span class="en">build 4.5.0</span> בראש ה-HUD. עשה <em>pan עם אצבע אחת</em>, ואז <em>zoom (צביטה)</em>. תסתכל על חמשת הדברים האלה:</p>
+
+  <div class="step"><span class="ck">①</span><div class="body">התוויות (השמות) זזות <em>יחד</em> עם הריבועים? (לא תקועות במקום?)</div></div>
+  <div class="step"><span class="ck">②</span><div class="body">הקשתות דבוקות לנודים גם תוך כדי <em>zoom</em>? (לא "תמונה נפרדת" שזזה לבד?)</div></div>
+  <div class="step"><span class="ck">③</span><div class="body">שורת <span class="en">fps</span> מעל <em>55</em> תוך כדי תנועה?</div></div>
+  <div class="step"><span class="ck">④</span><div class="body">שורת <span class="en">rend/s</span> מראה <em>0</em> תוך כדי תנועה? (זו ההוכחה שהתיקון עובד — לא בונים מחדש.)</div></div>
+  <div class="step"><span class="ck">⑤</span><div class="body">אין "תקיעה קטנה" כשמתחילים pan — הקנבס מגיב למגע הראשון?</div></div>
+
+  <p style="margin-top:14px;">אם כל החמישה כן — <em>Phase 4 נסגר</em>.</p>
+
+  <div class="warn">
+    <strong>קישור חירום (אם משהו נשבר):</strong> יש מתג שמחזיר את ההתנהגות הישנה. רק אם הקנבס מתנהג מוזר:<br>
+    <span class="en" style="font-size:0.8em;word-break:break-all;">…canvas-tiles,cull-v1,legacy-pan</span> — הוסף <span class="en">legacy-pan</span> בסוף ה-flags.
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>7 בדיקות חדשות (<span class="en">sprint4_5_fixup.spec.ts</span>) + כל בדיקות ה-gesture עוברות: <span class="en">commit</span> מזיז שכבות בלי <span class="en">render</span> (0 ticks), render-בעצירה רץ פעם אחת, <span class="en">transform-origin 0 0</span>, ו-<span class="en">--legacy-pan</span> מחזיר את המסלול הישן. <span id="regress">החבילה המלאה עברה: <em>662 בדיקות (331 לכל מנוע) — אפס כשלים</em>.</span></p>
+  </div>
+
+  <div class="warn">
+    <strong>חשוב:</strong> ה-desktop אף פעם לא שחזר את הבעיה. הבדיקה האמיתית היא ה-iPad — <em>pan וגם zoom</em>, ובמיוחד התוויות והקשתות (שם סיכון הרגרסיה). pan רציף של 15 שניות חייב להחזיק את ה-fps.
+  </div>
+
+  <h2 class="section-title">3. מכאן — איזה כיוון נתחיל?</h2>
+
+  <div class="insight-block">
+    <h3>אם זה עובד — Phase 4 נסגר, ועוצרים את כל עבודת ה-perf/ויזואל</h3>
+    <p>הסכמנו: מספיק ליטוש. אחרי שתאמת ש-pan ו-zoom חלקים, עוברים לליבה ולפיצ'רים. <em>איזה כיוון מדבר אליך?</em></p>
+    <ul style="margin-top:8px;">
+      <li><strong>Bet 5 · חזרה מרווחת</strong> — להפוך את המפה לכלי תרגול/זיכרון.</li>
+      <li><strong>Bet 2 · קול</strong> — להוסיף ולערוך צמתים בדיבור.</li>
+      <li><strong>Bet 1 · Claude על הקנבס</strong> — עוזר AI שמבין את המפה ובונה אותה איתך.</li>
+      <li><strong>Bet 4 · סידור אוטומטי</strong> — לסדר צמתים יפה בלחיצה.</li>
+      <li><strong>בקשות שנרשמו</strong> — יצירת קנבס-אב (FR-1), שינוי שם ל-vault (FR-5), או דיאלוגי ייבוא/workspace (התחל-ריק + 3 אפשרויות ייבוא).</li>
+    </ul>
+    <p style="margin-top:10px;">תגיד לי מספר אחד (או במילים שלך), ונצא לדרך.</p>
+  </div>
+
+  <div class="recap-row"><span class="tag2">✓</span><span><span class="en">commit()</span> מנותק מ-<span class="en">render()</span> — תנועה = transform בלבד, <span class="en">rend/s</span> = 0.</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>נודים + קשתות + תוויות במרחב transform אחד (origin 0 0 + reposition).</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>freeze-frame הוסר (אין "תקיעה"); static-pan הפך לברירת המחדל.</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>render אחד בעצירה מחדד הכל; <span class="en">--legacy-pan</span> = רשת ביטחון.</span></div>
+  <div class="recap-row"><span class="tag2" style="color:var(--amber);background:var(--amber-soft)">○</span><span>פתוח: אישור iPad (5 הסעיפים) + בחירת כיוון הפיצ'רים.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 4.5 complete — Phase 4 closeout pending iPad verification</h3>
+    <p>פתח את הקישור, עשה pan ו-zoom, ועבור על 5 הסעיפים. אם הכל כן — <em>Phase 4 נסגר ועוברים לפיצ'רים</em>. בחר כיוון מהרשימה. לא מתחיל אף אחד לפני שתאמת ותבחר. אם משהו נשבר — קישור החירום עם <span class="en">legacy-pan</span>, ותגיד לי מה ראית.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">זה היה מסע ארוך של חמישה ספרינטים. תודה על הסבלנות — ועל ה-HUD, שבסוף נתן את התשובה.</p>
+  </div>
+
+</body>
+</html>

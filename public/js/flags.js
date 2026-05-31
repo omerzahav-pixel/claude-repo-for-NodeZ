@@ -53,9 +53,10 @@
     'cull-v1':           false,  // Sprint 4.1 · viewport culling (mount/unmount)
     'no-fx':             false,  // Sprint 4.2 · kill freshness halo + all canvas filters (paint diagnostic)
     'fx-motion':         false,  // Sprint 4.2 · drop fx only while the canvas is in motion (Path A fix)
-    'simple-nodes':      false,  // Sprint 4.3 · circle + state colour + title, no silhouette/halo
-    'freeze-pan':        false,  // Sprint 4.3 · render simple nodes during motion (cheap pan), rich at rest
-    'static-pan':        false   // Sprint 4.4 · DIAGNOSTIC — skip per-frame rebuild during motion, CSS-transform only
+    'simple-nodes':      false,  // Sprint 4.3 · circle + state colour + title (opt-in)
+    'freeze-pan':        false,  // RETIRED Sprint 4.5 — inert (kept so old ?flags= URLs don't error)
+    'static-pan':        false,  // RETIRED Sprint 4.5 — its behaviour is now the default pan path
+    'legacy-pan':        false   // Sprint 4.5 · emergency rollback to per-frame render() in commit()
   });
 
   const STORAGE_KEY = 'edgespace-flags';

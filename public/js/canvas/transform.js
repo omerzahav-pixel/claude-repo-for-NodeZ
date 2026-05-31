@@ -57,9 +57,17 @@
     const t0 = performance.now();
     try {
       if (typeof window.clampView === 'function') window.clampView();
-      if (typeof window.render === 'function') window.render();
+      /* Sprint 4.5 · THE FIX. Pan/zoom is transform-only — move all layers as one
+         space, never rebuild the DOM here. render() runs only on data changes and
+         once on gesture settle (driven by pan-settle.js). This severs the
+         commit()→render() wiring that rebuilt the whole DOM 60×/sec (the 4.4
+         reflow storm). --legacy-pan restores the old per-frame render() as an
+         emergency rollback. */
+      const legacy = window.Flags && window.Flags.on('legacy-pan');
+      if (!legacy && typeof window.applyView === 'function') window.applyView();
+      else if (typeof window.render === 'function') window.render();
     } catch (e) {
-      console.error('[EdgeSpace transform] render threw:', e);
+      console.error('[EdgeSpace transform] commit threw:', e);
     }
     lastCommitMs = performance.now() - t0;
     // Notify the perf HUD if it's listening.

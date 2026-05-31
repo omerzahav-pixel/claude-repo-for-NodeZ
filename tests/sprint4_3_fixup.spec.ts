@@ -119,51 +119,6 @@ test.describe("Sprint 4.3 · Issue 2 — --simple-nodes", () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-test.describe("Sprint 4.3 · freeze-pan — simple in motion, rich at rest", () => {
-  test("S43.F FreezePan installs; window.__inMotion drives simple rendering", async ({ page }) => {
-    await open(page, { "freeze-pan": true });
-    await seedProject(page);
-
-    const rest = await nshapeHtml(page);
-
-    // Enter motion (body.dragging is one of the polled motion signals); the
-    // watcher flips __inMotion and forces a re-render.
-    await page.evaluate(async () => {
-      const wait = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      document.body.classList.add("dragging");
-      await wait(); await wait();
-    });
-    const moving = await nshapeHtml(page);
-    const inMotion = await page.evaluate(() => !!(window as any).__inMotion);
-
-    // Settle.
-    await page.evaluate(async () => {
-      const wait = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      document.body.classList.remove("dragging");
-      await wait(); await wait();
-    });
-    const settled = await nshapeHtml(page);
-
-    expect(rest).not.toContain('r="26"');   // rich at rest
-    expect(inMotion).toBe(true);
-    expect(moving).toContain('r="26"');      // simple while moving
-    expect(settled).not.toContain('r="26"'); // rich again on settle
-  });
-
-  test("S43.G with --freeze-pan OFF, motion does NOT simplify (no watcher)", async ({ page }) => {
-    await open(page); // freeze-pan OFF
-    await seedProject(page);
-    const moving = await page.evaluate(async () => {
-      const wait = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      document.body.classList.add("dragging");
-      await wait(); await wait();
-      (window as any).render();
-      const el = document.querySelector('.nslice[data-nid="7777"] .nshape') as Element | null;
-      const html = el ? el.innerHTML : "NONE";
-      document.body.classList.remove("dragging");
-      return { html, inMotion: !!(window as any).__inMotion };
-    });
-    expect(moving.inMotion).toBe(false);
-    expect(moving.html).not.toContain('r="26"'); // still rich — freeze-pan off
-  });
-});
+// (Sprint 4.3 freeze-pan tests removed — freeze-pan retired in Sprint 4.5; the
+//  per-frame pan path is now applyView() + a single settle render. See
+//  sprint4_5_fixup.spec.ts.)

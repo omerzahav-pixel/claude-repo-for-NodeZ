@@ -57,6 +57,7 @@
       '<div style="color:#FF7A45;font-weight:600;margin-bottom:4px">perf</div>' +
       '<div id="ph-build" style="color:#9AA0AC;font-size:10px;margin-bottom:4px">build —</div>' +
       '<div id="ph-fps">fps —</div>' +
+      '<div id="ph-renders">rend/s —</div>' +
       '<div id="ph-worst">worst —</div>' +
       '<div id="ph-budget">budget —</div>' +
       '<div id="ph-rendered" style="margin-top:4px;color:#F2C462">rendered —</div>' +
@@ -71,6 +72,7 @@
     document.body.appendChild(root);
 
     const fpsEl    = root.querySelector('#ph-fps');
+    const rendersEl = root.querySelector('#ph-renders');
     const worstEl  = root.querySelector('#ph-worst');
     const budgetEl = root.querySelector('#ph-budget');
     const commitEl = root.querySelector('#ph-commit');
@@ -115,6 +117,9 @@
        a non-empty fps line even when the user isn't gesturing. This is
        what the existing test 1.4.2 checks. */
     let idleFps = 60;
+    /* Sprint 4.5 · renders/s — render() ticks window.__renderTick; this rate
+       proves pan/zoom no longer rebuilds the DOM (≈0 during motion). */
+    let lastRenderTick = 0, lastRenderTickTs = performance.now(), rendersPerSec = 0;
 
     function isActive() {
       try {
@@ -251,6 +256,15 @@
           fxEl.innerHTML = 'fx     <span style="color:#F87171">ON</span>';
         }
 
+        /* Sprint 4.5 · renders/s — ≈0 during motion (applyView, no rebuild), a
+           brief blip on settle. The headline proof that commit no longer renders. */
+        const _rt = window.__renderTick || 0;
+        const _rdt = (now - lastRenderTickTs) / 1000;
+        if (_rdt >= 0.5) { rendersPerSec = (_rt - lastRenderTick) / _rdt; lastRenderTick = _rt; lastRenderTickTs = now; }
+        let _rColor = '#4FD18B';
+        if (rendersPerSec > 30) _rColor = '#F87171';
+        else if (rendersPerSec > 5) _rColor = '#F2C462';
+        rendersEl.innerHTML = 'rend/s <span style="color:' + _rColor + '">' + rendersPerSec.toFixed(0).padStart(4) + '</span>';
         const gs = window.GestureV2 ? window.GestureV2.getState() : '—';
         stateEl.textContent  = 'state  ' + String(gs).padStart(7);
         if (performance && performance.memory) {

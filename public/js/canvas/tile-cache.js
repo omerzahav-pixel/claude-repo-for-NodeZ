@@ -309,6 +309,9 @@
   window.TileCache = Object.freeze({
     bake: function () { if (ctx) bake(); },
     refresh: refresh,
+    /* Sprint 4.5 · cheap per-frame transform sync (no re-bake) for applyView,
+       since the per-frame path no longer goes through the render() wrap. */
+    sync: function () { if (ctx) syncTransform(); },
     snapshot: function () {
       return {
         installed: !!ctx,
