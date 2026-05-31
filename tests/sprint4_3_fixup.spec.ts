@@ -78,8 +78,9 @@ test.describe("Sprint 4.3 · flags + Issue 0 version stamp", () => {
         buildText: buildEl ? buildEl.textContent : null,
       };
     });
-    expect(r.metaContent).toContain("4.3.0");
-    expect(r.buildText).toContain("4.3.0");
+    // Version-agnostic: the meta looks like a semver and the HUD echoes it.
+    expect(r.metaContent).toMatch(/\d+\.\d+\.\d+/);
+    expect(r.buildText).toContain(r.metaContent!);
   });
 });
 

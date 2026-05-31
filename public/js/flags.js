@@ -54,7 +54,8 @@
     'no-fx':             false,  // Sprint 4.2 · kill freshness halo + all canvas filters (paint diagnostic)
     'fx-motion':         false,  // Sprint 4.2 · drop fx only while the canvas is in motion (Path A fix)
     'simple-nodes':      false,  // Sprint 4.3 · circle + state colour + title, no silhouette/halo
-    'freeze-pan':        false   // Sprint 4.3 · render simple nodes during motion (cheap pan), rich at rest
+    'freeze-pan':        false,  // Sprint 4.3 · render simple nodes during motion (cheap pan), rich at rest
+    'static-pan':        false   // Sprint 4.4 · DIAGNOSTIC — skip per-frame rebuild during motion, CSS-transform only
   });
 
   const STORAGE_KEY = 'edgespace-flags';

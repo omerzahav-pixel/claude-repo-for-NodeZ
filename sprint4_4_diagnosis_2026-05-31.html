@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 4.4 — אבחון ה-Reflow · דוח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .clarify { background: var(--blue-soft); border-right: 4px solid var(--blue); padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+  .clarify h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--blue); font-size: 18px; margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .critical-block { background: var(--red-soft); border-right: 4px solid var(--red); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .critical-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--red); font-size: 19px; margin-bottom: 10px; }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 16px 20px; margin: 12px 0; border-right: 4px solid var(--rule); }
+  .finding.ok { border-right-color: var(--green); }
+  .finding.bug { border-right-color: var(--red); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 17px; margin-bottom: 4px; }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 8px 0; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .num { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--blue); color: white; font-weight: 700; padding: 5px 0; border-radius: 50%; text-align: center; width: 28px; height: 28px; }
+  .step .body { font-size: 14.5px; }
+  table.comparison { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; font-size: 14px; margin: 14px 0; }
+  table.comparison th { background: var(--accent-soft); padding: 10px 12px; text-align: right; font-weight: 700; font-size: 13px; }
+  table.comparison td { padding: 10px 12px; border-top: 1px dashed var(--rule); vertical-align: middle; }
+  table.comparison tr.gap td:first-child { border-right: 4px solid var(--red); }
+  table.comparison tr.match td:first-child { border-right: 4px solid var(--green); }
+  .tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; direction: ltr; }
+  .tag.gap { background: var(--red-soft); color: var(--red); }
+  .tag.match { background: var(--green-soft); color: var(--green); }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 15px; }
+  .recap-row .tag2 { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+  .formula { background: var(--code-bg); color: var(--code-ink); font-family: 'JetBrains Mono', monospace; font-size: 12.5px; padding: 12px 16px; border-radius: 6px; margin: 10px 0; direction: ltr; text-align: left; line-height: 1.6; }
+  .hud-shot { float: left; width: 200px; margin: 0 0 12px 16px; border: 1px solid var(--rule); border-radius: 6px; }
+  @media (max-width: 560px) { .hud-shot { float: none; width: 60%; margin: 8px auto; display: block; } }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 4.4 · אבחון בלבד · STOP GUESSING</div>
+  <h1>מצאתי את המקור — לפני שכותבים עוד תיקון</h1>
+  <p class="subtitle">ספרינט אבחון. בלי קוד-תיקון. רק להצביע על האשם, ולתת לך לאשר.</p>
+  <div class="buildbar">build 4.4.0 · 2026-05-31 — ודא שזה מה שכתוב ב-HUD</div>
+
+  <div class="insight">
+    <h2>הקליטה המרכזית</h2>
+    <p>ארבע תוצאות null אומרות דבר אחד: <em>ניחשנו</em>. אז עצרתי לנחש. עשיתי <em>code audit</em> (חיפוש בקוד עצמו) ובניתי שני מכשירי-מדידה. שלושתם מצביעים על אותו מקום: לא ה-paint של התוכן, אלא <em>הבנייה-מחדש של כל ה-DOM בכל frame של תנועה</em>.</p>
+    <p>ה-<span class="en">render()</span> קורע ובונה מחדש את כל ה-<span class="en">#cv</span> וה-<span class="en">#canvasOverlay</span> — 60 פעמים בשנייה תוך כדי pan. הדפדפן חייב לפרוס (layout) ולצייר את כל העץ החדש בכל frame.</p>
+  </div>
+
+  <h2 class="section-title">1. ההודאה — ארבעה ניחושים</h2>
+  <table class="comparison">
+    <thead><tr><th>ספרינט</th><th>מה ניסינו</th><th>תוצאה</th><th>אז זה לא…</th></tr></thead>
+    <tbody>
+      <tr class="gap"><td><strong>4</strong></td><td>tile-cache לרקע</td><td><span class="tag gap">null</span></td><td>הרקע</td></tr>
+      <tr class="gap"><td><strong>4.1</strong></td><td>culling לצמתים מחוץ למסך</td><td><span class="tag gap">null</span></td><td>מספר אלמנטים מחוץ למסך</td></tr>
+      <tr class="gap"><td><strong>4.2</strong></td><td><span class="en">--no-fx</span> מכבה filters</td><td><span class="tag gap">null</span></td><td>ה-filters</td></tr>
+      <tr class="gap"><td><strong>4.3</strong></td><td>צמתים פשוטים בתנועה</td><td><span class="tag gap">null</span></td><td>מורכבות התוכן</td></tr>
+    </tbody>
+  </table>
+  <p>אם אפילו עיגול פשוט בכל frame הוא 6fps — הבעיה היא לא <em>מה</em> מציירים, אלא <em>שבונים מחדש את הכל כל frame</em>.</p>
+
+  <h2 class="section-title">2. ה-code audit — מה ביטלתי ומה מצאתי</h2>
+
+  <div class="finding ok">
+    <h4>✗ בוטל: ה-brief חשד שניתוב הקשתות קורא גאומטריה כל frame</h4>
+    <p style="font-size:14.5px;">חיפשתי בקוד <span class="en">getBoundingClientRect</span> / <span class="en">getBBox</span> / <span class="en">getCTM</span> ב-<span class="en">edge-v2.js</span>, <span class="en">cull-v1.js</span>, <span class="en">freeze-pan.js</span> — <em>אפס תוצאות</em>. הקשתות והקיפול מחושבים מהמודל (<span class="en">node.x / node.y</span>), לא מקריאת מסך. אז הם <em>לא</em> גורמים reflow. הניחוש הזה היה שגוי.</p>
+  </div>
+
+  <div class="finding bug">
+    <h4>✓ נמצא: render() בונה מחדש את כל ה-DOM בכל frame</h4>
+    <p style="font-size:14.5px;"><span class="en">CanvasTransform.commit()</span> (ב-<span class="en">transform.js</span>) קורא ל-<span class="en">render()</span> בכל frame של pan. ו-<span class="en">render()</span> עושה <span class="en">cv.innerHTML = …</span> + <span class="en">canvasOverlay.innerHTML = …</span> + משנה <span class="en">viewBox/width/height</span> — מאפס, כל frame. זה מאלץ את הדפדפן לפרוס ולצייר עץ-DOM חדש לגמרי 60 פעמים בשנייה. <em>זה</em> מה שאף ספרינט לא נגע בו — כולם שינו את <em>התוכן</em> של הבנייה-מחדש, אף אחד לא ביטל את הבנייה-מחדש עצמה.</p>
+  </div>
+
+  <h2 class="section-title">3. שני מכשירים שיאשרו את זה על ה-iPad</h2>
+
+  <img class="hud-shot" src="docs/sprint44/hud-440.png" alt="HUD 4.4.0">
+
+  <div class="finding ok">
+    <h4>מכשיר א' — שורת <span class="en">layout</span> ב-HUD</h4>
+    <p style="font-size:14.5px;">עד עכשיו קראנו לפער "paint" — וזה היה <em>שם שגוי</em>. עכשיו אני מודד את ה-reflow ישירות (ב-<span class="en">transform.js</span>, אחרי כל render). ה-HUD מראה <span class="en">layout</span> (ה-reflow) ו-<span class="en">other</span> (paint+composite). אם <span class="en">layout</span> הוא המספר הגדול בזמן pan — הוכח: זה reflow מהבנייה-מחדש, לא ציור.</p>
+  </div>
+
+  <div class="finding ok">
+    <h4>מכשיר ב' — דגל <span class="en">--static-pan</span></h4>
+    <p style="font-size:14.5px;">בזמן תנועה, הדגל הזה גורם ל-<span class="en">render()</span> <em>לדלג על הבנייה-מחדש לגמרי</em> ורק להזיז את השכבות הקיימות עם CSS transform אחד. שום דבר לא נבנה מחדש. זה מבודד את השאלה: אם <span class="en">--static-pan</span> מהיר — הבנייה-מחדש הייתה הבעיה.</p>
+  </div>
+
+  <h2 class="section-title">4. הבדיקה שלך — שני קישורים</h2>
+
+  <div class="linkcard">
+    <div class="lc-title">א. רגיל — קרא את שורת <span class="en">layout</span></div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,-static-pan,-simple-nodes,-freeze-pan">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,-static-pan,-simple-nodes,-freeze-pan</a>
+  </div>
+  <div class="linkcard">
+    <div class="lc-title">ב. <span class="en">--static-pan</span> — קרא את שורת <span class="en">fps</span></div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,static-pan,-simple-nodes,-freeze-pan">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1,static-pan,-simple-nodes,-freeze-pan</a>
+  </div>
+
+  <div class="step">
+    <span class="num">1</span>
+    <div class="body">פתח את <strong>קישור א'</strong>. ודא <span class="en">build 4.4.0</span>. עשה pan עם אצבע אחת. תקרא שתי שורות: <span class="en">layout</span> ו-<span class="en">fps</span>. <em>רשום את שתיהן.</em></div>
+  </div>
+  <div class="step">
+    <span class="num">2</span>
+    <div class="body">פתח את <strong>קישור ב'</strong>. עשה pan. תקרא <span class="en">fps</span>. <em>רשום.</em></div>
+  </div>
+
+  <h2 class="section-title">5. איך נקרא את התוצאות</h2>
+  <table class="comparison">
+    <thead><tr><th>מה תראה</th><th>המסקנה</th><th>4.5 יהיה</th></tr></thead>
+    <tbody>
+      <tr class="match">
+        <td><span class="en">layout</span> גדול (אדום) ב-א', ו-<span class="en">fps</span> קופץ ל-50+ ב-ב'</td>
+        <td>אישור: הבנייה-מחדש כל frame = הבעיה</td>
+        <td>להפוך את <span class="en">static-pan</span> לקבוע: להזיז בזמן pan, לבנות מחדש רק בעצירה</td>
+      </tr>
+      <tr class="gap">
+        <td><span class="en">layout</span> קטן, או <span class="en">fps</span> נשאר ~6 גם ב-ב'</td>
+        <td>זה ה-compositing של השכבה הווקטורית עצמה</td>
+        <td>חזרה ל-trace; כנראה צריך לצייר ל-bitmap אמיתי (עם ספרייה, או renderer חדש)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="clarify">
+    <h3>אופציונלי — אם יש לך Mac עם כבל</h3>
+    <p>Safari → Develop → [iPad] → Web Inspector → לשונית <span class="en">Timeline</span> → הקלט → עשה pan 5 שניות → עצור. תגיד לי איזה פס הכי גדול: <em>Layout</em> (סגול) או <em>Paint</em> (ירוק), והאם מופיעה אזהרת <span class="en">"Forced synchronous layout"</span>. זה מאשר את אותו דבר ישירות. אבל שורת ה-<span class="en">layout</span> ב-HUD כבר נותנת את התשובה בלי כבל.</p>
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>6 בדיקות חדשות (<span class="en">sprint4_4_fixup.spec.ts</span>) עוברות על שני המנועים: דגלים, גרסה 4.4.0, שורות <span class="en">layout/other</span>, ו-<span class="en">--static-pan</span> שמדלג על הבנייה-מחדש (הוכחה: סימן שהושתל בצומת <em>שורד</em> את ה-render בזמן תנועה, ונמחק בלעדיו). <span id="regress">החבילה המלאה עברה: <em>658 בדיקות (329 לכל מנוע) — אפס כשלים</em>.</span> כל הקוד מאחורי דגלים כבויים.</p>
+  </div>
+
+  <div class="warn">
+    <strong>הודאה כנה (כפי שביקשת):</strong> ארבעת הספרינטים הקודמים ייעלו את תת-המערכת הלא-נכונה כי אבחנו בניחוש במקום ב-trace. זה מתוקן עכשיו: ה-code audit הצביע על המנגנון, ושני המכשירים יאשרו אותו על ה-iPad שלך. <em>לא כתבתי שום קוד-תיקון</em> בספרינט הזה — רק את שני מכשירי-האבחון.
+  </div>
+
+  <div class="recap-row"><span class="tag2">✓</span><span>ה-brief ניחש "קשתות קוראות גאומטריה" — בקוד אין אף קריאה כזו. בוטל.</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>המנגנון: <span class="en">render()</span> בונה מחדש את כל ה-DOM כל frame (<span class="en">transform.js</span> → <span class="en">render()</span>).</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>שורת <span class="en">layout</span> מודדת reflow ישירות; <span class="en">--static-pan</span> מבודד את הבנייה-מחדש.</span></div>
+  <div class="recap-row"><span class="tag2" style="color:var(--amber);background:var(--amber-soft)">○</span><span>פתוח: שני המספרים מה-iPad (layout ב-א', fps ב-ב').</span></div>
+
+  <div class="closing">
+    <h3>Sprint 4.4 diagnosis complete — culprit identified, 4.5 fix pending</h3>
+    <p>פתח את שני הקישורים, עשה pan, תחזיר לי: (1) מה <span class="en">layout</span> מראה בקישור א', (2) מה <span class="en">fps</span> מראה בקישור ב'. שני המספרים האלה סוגרים את האבחון — ואז 4.5 כותב את התיקון האמיתי (להזיז בזמן pan, לבנות מחדש רק בעצירה). לא כותב שום תיקון לפני שהמספרים בידיים.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">ה-desktop אף פעם לא שחזר את זה (הוא מהיר מספיק לבלוע את ה-reflow). ה-iPad שלך הוא המדידה.</p>
+  </div>
+
+</body>
+</html>

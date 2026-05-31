@@ -967,6 +967,22 @@ function clampView(){
 function forceRepaint(){const cv=document.getElementById('cv');if(cv)void cv.offsetHeight}
 function render(){
   const W=Math.max(innerWidth||document.documentElement.clientWidth||800,400),H=Math.max(innerHeight||document.documentElement.clientHeight||600,400);
+  /* Sprint 4.4 · --static-pan isolation (DIAGNOSTIC, not a fix). While a gesture
+     is in motion, skip the entire per-frame innerHTML rebuild + viewBox/width/
+     height rewrite and just move the EXISTING layers with one cheap CSS
+     transform, relative to the gesture-start view (__staticPanV0). If pan is
+     smooth under --static-pan but janky without it, the per-frame rebuild — not
+     paint of the content — is the cost (Sprint 4.5 would harden it). Set by
+     static-pan.js off the gesture state; window.__staticPan is only ever true
+     when the flag is on, so this is inert by default. */
+  if(window.__staticPan&&window.__staticPanV0){
+    const V0=window.__staticPanV0,s=view.k/V0.k;
+    const tx=W/2*(1-s)+(view.x-V0.x)*view.k,ty=H/2*(1-s)+(view.y-V0.y)*view.k;
+    cv.style.transform=`translate3d(${tx}px,${ty}px,0) scale(${s})`;
+    const _ov=document.getElementById('canvasOverlay');
+    if(_ov)_ov.style.transform=`translate(${W/2}px,${H/2}px) scale(${view.k}) translate(${view.x}px,${view.y}px)`;
+    return;
+  }
   if(window.dlog&&location.search.includes('debug')&&!window._renderLogged){window._renderLogged=true;dlog('render W='+W+' H='+H+' zones='+(zs()?.length||0)+' nodes='+(ns()?.length||0))}
   // Phase 1.5 diagnostics — throttle so pan/drag doesn't flood, but always
   // log the first few renders + any render after a quiet window so we see

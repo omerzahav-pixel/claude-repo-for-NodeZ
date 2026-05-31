@@ -66,6 +66,24 @@
     if (window.PerfHud && typeof window.PerfHud.markCommit === 'function') {
       window.PerfHud.markCommit(lastCommitMs);
     }
+    /* Sprint 4.4 · measure the forced LAYOUT the render's DOM writes incur, so
+       the HUD can separate layout (reflow) from paint instead of lumping both
+       into a mislabeled "paint" line. Only when the HUD asked for stats
+       (__RENDER_STATS_ON). getBoundingClientRect() forces the browser to flush
+       the pending (dirty) layout synchronously; we time that flush. Under
+       --static-pan render() rebuilds nothing, so the layout stays clean and this
+       reads ~0 — which is itself the diagnosis. */
+    if (window.__RENDER_STATS_ON) {
+      const cvEl = document.getElementById('cv');
+      if (cvEl) {
+        const l0 = performance.now();
+        cvEl.getBoundingClientRect();
+        const layoutMs = performance.now() - l0;
+        if (window.PerfHud && typeof window.PerfHud.markLayout === 'function') {
+          window.PerfHud.markLayout(layoutMs);
+        }
+      }
+    }
   }
 
   /**

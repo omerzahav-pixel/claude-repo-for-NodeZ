@@ -63,7 +63,8 @@
       '<div id="ph-visible">visible —</div>' +
       '<div id="ph-culled">culled —</div>' +
       '<div id="ph-commit" style="margin-top:4px">commit —</div>' +
-      '<div id="ph-paint">paint —</div>' +
+      '<div id="ph-layout">layout —</div>' +
+      '<div id="ph-other">other —</div>' +
       '<div id="ph-fx">fx —</div>' +
       '<div id="ph-state" style="margin-top:4px">state —</div>' +
       '<div id="ph-mem" style="margin-top:4px;color:#7C828E"></div>';
@@ -78,7 +79,8 @@
     const renderedEl = root.querySelector('#ph-rendered');
     const visibleEl  = root.querySelector('#ph-visible');
     const culledEl   = root.querySelector('#ph-culled');
-    const paintEl    = root.querySelector('#ph-paint');
+    const layoutEl   = root.querySelector('#ph-layout');
+    const otherEl    = root.querySelector('#ph-other');
     const fxEl       = root.querySelector('#ph-fx');
 
     /* Sprint 4.3 Issue 0 · surface the build stamp so the user can confirm the
@@ -107,6 +109,7 @@
     let lastTs = performance.now();
     let lastActiveTs = 0;           // ts of the last active frame, for window decay
     let commitSamples = [];         // recent commit times for rolling avg
+    let layoutSamples = [];         // Sprint 4.4 · recent forced-layout (reflow) times
     const COMMIT_WINDOW = 60;
     /* Sprint 3.6 — also track an idle-baseline fps EMA so the HUD shows
        a non-empty fps line even when the user isn't gesturing. This is
@@ -211,22 +214,29 @@
           commitEl.textContent = 'commit — (legacy path)';
         }
 
-        /* Sprint 4.2 Issue 1 · paint = worst − commit. The transform write is
-           cheap (~2ms); the rest of the worst frame is rasterisation. On a dense
-           iPad canvas that remainder is the ~200ms that the tile cache and
-           culling never touched — it's the freshness-halo animation + filters.
-           Naming the gap makes the diagnosis impossible to miss on the HUD. */
-        if (worstFrame >= 0 && commitAvg != null) {
-          const paint = Math.max(0, worstFrame - commitAvg);
-          let pColor = '#4FD18B';
-          if (paint > 50) pColor = '#F87171';
-          else if (paint > 16) pColor = '#F2C462';
-          paintEl.innerHTML = 'paint  <span style="color:' + pColor + '">' +
-            paint.toFixed(0).padStart(4) + 'ms</span> worst−commit';
-        } else if (worstFrame >= 0) {
-          paintEl.textContent = 'paint  ~' + worstFrame.toFixed(0) + 'ms (no commit)';
+        /* Sprint 4.4 · layout (forced reflow) is now measured DIRECTLY in
+           transform.js after each render (getBoundingClientRect flush), instead
+           of guessing it as worst−commit and mislabeling it "paint". `other` =
+           worst − commit − layout ≈ paint + composite. If `layout` is the big
+           number on Algo Execution during pan, the cost is reflow from the
+           per-frame rebuild — not painting pixels. Under --static-pan (no
+           rebuild) layout collapses to ~0, which proves it. */
+        let layoutAvg = null;
+        if (layoutSamples.length) {
+          layoutAvg = layoutSamples.reduce((a, b) => a + b, 0) / layoutSamples.length;
+          let lColor = '#4FD18B';
+          if (layoutAvg > 50) lColor = '#F87171';
+          else if (layoutAvg > 16) lColor = '#F2C462';
+          layoutEl.innerHTML = 'layout <span style="color:' + lColor + '">' +
+            layoutAvg.toFixed(0).padStart(4) + 'ms</span> reflow';
         } else {
-          paintEl.textContent = 'paint  — (idle)';
+          layoutEl.textContent = 'layout — (idle)';
+        }
+        if (worstFrame >= 0 && commitAvg != null) {
+          const other = Math.max(0, worstFrame - commitAvg - (layoutAvg || 0));
+          otherEl.textContent = 'other  ' + other.toFixed(0).padStart(4) + 'ms (paint+comp)';
+        } else {
+          otherEl.textContent = 'other  — (idle)';
         }
 
         /* fx state — reflects --no-fx (Issue 2) / --fx-motion (Issue 3). ON in
@@ -259,12 +269,19 @@
       commitSamples.push(ms);
       if (commitSamples.length > COMMIT_WINDOW) commitSamples.shift();
     }
+    /** Sprint 4.4 · forced-layout (reflow) time after each commit (transform.js). */
+    function markLayout(ms) {
+      layoutSamples.push(ms);
+      if (layoutSamples.length > COMMIT_WINDOW) layoutSamples.shift();
+    }
 
     window.PerfHud = Object.freeze({
       markCommit,
+      markLayout,
       reset: function () {
         activeFrames.length = 0;
         commitSamples.length = 0;
+        layoutSamples.length = 0;
       },
       hide: function () { root.style.display = 'none'; },
       show: function () { root.style.display = 'block'; },

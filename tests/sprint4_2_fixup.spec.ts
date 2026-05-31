@@ -158,15 +158,18 @@ test.describe("Sprint 4.2 · Issue 3 Path A — --fx-motion drops fx in motion",
 
 // ──────────────────────────────────────────────────────────────────────────
 test.describe("Sprint 4.2 · Issue 1 — HUD paint + fx lines", () => {
-  test("S42.H HUD shows paint + fx lines; fx reads OFF under --no-fx", async ({ page }) => {
+  // Sprint 4.4 note: the perf-breakdown line was renamed ph-paint → ph-layout
+  // (worst−commit "paint" was mislabeled; layout is now measured directly).
+  // This test now checks the breakdown line exists + the fx line reads OFF.
+  test("S42.H HUD shows the perf breakdown + fx lines; fx reads OFF under --no-fx", async ({ page }) => {
     await open(page, { "perf-hud": true, "no-fx": true });
     await page.waitForTimeout(350);
     const r = await page.evaluate(() => {
-      const paint = document.getElementById("ph-paint");
+      const layout = document.getElementById("ph-layout");
       const fx = document.getElementById("ph-fx");
-      return { hasPaint: !!paint, hasFx: !!fx, fxText: fx ? fx.textContent || "" : "" };
+      return { hasLayout: !!layout, hasFx: !!fx, fxText: fx ? fx.textContent || "" : "" };
     });
-    expect(r.hasPaint).toBe(true);
+    expect(r.hasLayout).toBe(true);
     expect(r.hasFx).toBe(true);
     expect(r.fxText).toContain("OFF");
   });

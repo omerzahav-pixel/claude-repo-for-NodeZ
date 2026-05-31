@@ -6,7 +6,7 @@
 <!-- Sprint 4.3 Issue 0 · visible build stamp. Bump every deploy. The perf HUD
      surfaces this as its top `build` line so the user can confirm at a glance
      that the iPad is running the build under test. -->
-<meta name="edgespace-build" content="4.3.0 · 2026-05-31">
+<meta name="edgespace-build" content="4.4.0 · 2026-05-31">
 <!-- Phase 1 (Pass 5 §06) · pre-paint service worker registration.
      Gated by the --lifecycle-v2 flag, read directly from localStorage so
      this script can run BEFORE flags.js. The controllerchange reload is
@@ -232,6 +232,10 @@
      frame paints cheap; full rich nodes return on settle. Read-only gesture
      poll; gated; default OFF. -->
 <script src="./js/canvas/freeze-pan.js"></script>
+<!-- Sprint 4.4 · --static-pan DIAGNOSTIC. While in motion, render() skips the
+     per-frame rebuild and CSS-transforms the existing layers instead. Isolates
+     whether the per-frame innerHTML rebuild is the cost. Gated; default OFF. -->
+<script src="./js/canvas/static-pan.js"></script>
 <script src="./js/editor/script-boundary.js"></script>
 <script src="./app.js"></script>
 <!-- Phase 3 (Pass 4) · navigation chrome. Loads AFTER app.js so the
