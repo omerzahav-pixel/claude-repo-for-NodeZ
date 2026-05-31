@@ -270,12 +270,21 @@ body.he #toast{right:auto;left:16px;align-items:flex-start;font-family:'Assistan
 #canvasOverlay .nslice .nrz{pointer-events:auto;cursor:nwse-resize}
 /* Formula node overlay pieces: header label strip + KaTeX body. */
 #canvasOverlay .fnode-label{display:flex;align-items:center;justify-content:center;font-family:'Inter','Assistant',system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
-#canvasOverlay .fnode{display:flex;align-items:center;justify-content:center;color:var(--text);font-size:13px;text-align:center;overflow:auto}
+/* Sprint 6 Issue 3 — contain the formula: rendered math (or raw LaTeX) is
+   clipped to the card and can never run off-screen. The full formula is in the
+   info-panel (edit). */
+#canvasOverlay .fnode{display:flex;align-items:center;justify-content:center;color:var(--text);font-size:13px;text-align:center;overflow:hidden;max-width:100%}
+#canvasOverlay .fnode .katex{max-width:100%;overflow:hidden}
 #canvasOverlay .fnode .katex{color:var(--text)}
 /* D5 · Phase 1.6 — note body migrated from <foreignObject> to overlay div.
    iOS WebKit refuses to paint rich HTML inside foreignObject, so the body
    now renders here where it gets the same treatment as formula nodes. */
-#canvasOverlay .note-body{color:var(--text);font-family:'Inter','Assistant',system-ui,sans-serif;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-wrap:break-word;box-sizing:border-box;padding:0}
+/* Sprint 6 Issue 3 — clamp the note body to the card and fade the bottom edge so
+   a long description is a contained preview (no text spilling outside the note);
+   the full text is read by opening the node. overflow-wrap:anywhere kills sideways
+   overflow from long unbroken tokens. The fade sits over empty space for short
+   notes (invisible) and over the last lines for long ones (the "more" cue). */
+#canvasOverlay .note-body{color:var(--text);font-family:'Inter','Assistant',system-ui,sans-serif;font-size:11px;line-height:1.5;overflow:hidden;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere;box-sizing:border-box;padding:0;-webkit-mask-image:linear-gradient(to bottom,#000 84%,transparent 100%);mask-image:linear-gradient(to bottom,#000 84%,transparent 100%)}
 #canvasOverlay .note-body h1,#canvasOverlay .note-body h2,#canvasOverlay .note-body h3{margin:4px 0 2px;font-weight:700}
 #canvasOverlay .note-body h1{font-size:14px}#canvasOverlay .note-body h2{font-size:13px}#canvasOverlay .note-body h3{font-size:12px}
 #canvasOverlay .note-body strong{font-weight:700}

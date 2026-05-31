@@ -452,7 +452,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
   // -- Bug #4: Note overflow --------------------------------------------------
 
-  test("1.4 Long-body note is contained — inner scroll, no visual spill", async ({
+  test("1.4 Long-body note is contained — clamped + fade, no visual spill (Sprint 6 Issue 3)", async ({
     page,
   }) => {
     await openCleanApp(page);
@@ -488,16 +488,16 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
       ) as HTMLElement | null;
       if (!noteBody) return { ok: false, reason: "note body not found" };
       const style = getComputedStyle(noteBody);
-      const scrolls = noteBody.scrollHeight > noteBody.clientHeight + 1;
-      const overflowAuto =
-        style.overflow === "auto" ||
-        style.overflowY === "auto" ||
-        style.overflow === "scroll" ||
-        style.overflowY === "scroll";
+      // Sprint 6 Issue 3 — long notes are CLAMPED with a fade (a preview), not
+      // inner-scrolled. A canvas note isn't interactive, so overflow:auto just
+      // clipped with no scroll affordance — the user couldn't see the bottom.
+      // Contained now = overflow hidden + content clipped + a fade-mask cue.
+      const hasMoreContent = noteBody.scrollHeight > noteBody.clientHeight + 1;
+      const clamped = style.overflowY === "hidden";
+      const faded = (style.maskImage || (style as any).webkitMaskImage || "").includes("gradient");
       return {
-        ok: scrolls && overflowAuto,
-        scrolls,
-        overflowAuto,
+        ok: hasMoreContent && clamped && faded,
+        hasMoreContent, clamped, faded,
         scrollHeight: noteBody.scrollHeight,
         clientHeight: noteBody.clientHeight,
       };
@@ -505,7 +505,7 @@ test.describe("Phase 1 · Task 1.0 · Blocker bug repros", () => {
 
     expect(
       overflowHandled.ok,
-      `Expected long-body note to be contained with inner scrolling. Got ${JSON.stringify(
+      `Expected long-body note clamped + faded (contained, no spill). Got ${JSON.stringify(
         overflowHandled
       )}`
     ).toBe(true);

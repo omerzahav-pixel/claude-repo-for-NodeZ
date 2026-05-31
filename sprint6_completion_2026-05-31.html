@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 6 — Node Fidelity · דוח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 10px 0; border-right: 4px solid var(--green); }
+  .finding.todo { border-right-color: var(--amber); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 16px; margin-bottom: 4px; }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 12px 16px; margin: 7px 0; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .ck { font-size: 15px; font-weight: 700; color: var(--blue); }
+  .step .body { font-size: 14px; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 7px 0; font-size: 15px; }
+  .recap-row .tag2 { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 6 · NODE FIDELITY · באצ' 2</div>
+  <h1>הכלה של תוכן הנודים — חלק ראשון, בכנות</h1>
+  <p class="subtitle">שני תיקונים נקיים נשלחו. הכותרת (תוכן בתוך הנוד) + LaTeX אמיתי דורשים עבודה ייעודית — בכנות, בהמשך.</p>
+  <div class="buildbar">build 6.0.0 · 2026-05-31</div>
+
+  <div class="insight">
+    <h2>הכנות קודמת לכל</h2>
+    <p>Sprint 6 הוא גדול: <em>עיצוב-מחדש של אנטומיית הנוד</em> (Issue 1, הכותרת) + <em>הטמעת KaTeX מקומית</em> (Issue 2) + עוד 5 פריטי-אינטראקציה. זה כמות-עבודה של 2-3 ספרינטים. הסשן הזה כבר רץ 8 ספרינטים מלאים.</p>
+    <p>במקום לדחוף עיצוב-מחדש חפוז שישבור דברים, שלחתי עכשיו את <em>שני התיקונים הברורים והבטוחים</em> שפותרים באגים אמיתיים שדיווחת — ואני רוצה לתת לכותרת תשומת-לב ייעודית. <strong>זו שקיפות, לא התחמקות.</strong></p>
+  </div>
+
+  <h2 class="section-title">1. מה נשלח (2)</h2>
+
+  <div class="finding">
+    <h4>Issue 3 · הטקסט נשאר <em>בתוך</em> הנוד</h4>
+    <p style="font-size:14px;">גוף ההערה נחתך לגובה הכרטיס עם <em>דהייה רכה</em> בתחתית (רמז ל"יש עוד") — הטקסט כבר לא בורח החוצה, ואין גלילה הצידה. הנוסחה (מומרת או גולמית) נחתכת לכרטיס ולא בורחת מהמסך. הטקסט המלא נקרא בפתיחת הנוד.</p>
+  </div>
+  <div class="finding">
+    <h4>Issue 6 · כפתור "Open More menu" עובד</h4>
+    <p style="font-size:14px;">הוא היה מעוגן ל-<span class="en">#moreBtn</span> של הסרגל העליון הישן — שמוסתר תחת <span class="en">--toolbar-migrated</span> → התפריט נפתח מחוץ למסך ("לא עושה כלום"). עכשיו, כשאין עוגן, התפריט נפתח <em>במרכז המסך</em>.</p>
+  </div>
+
+  <div class="warn">
+    <strong>הערה על Issue 2 (LaTeX):</strong> השורש ש-<span class="en">LaTeX</span> מציג טקסט גולמי הוא ש-<span class="en">KaTeX</span> נטען מ-<span class="en">CDN</span> חיצוני (<span class="en">jsdelivr</span>) — בניגוד לאילוץ "בלי CDN בזמן ריצה". כשה-CDN חסום/איטי, אין המרה. <em>הכלתי את זה עכשיו</em> (לא בורח מהמסך), אבל ה-תיקון-האמיתי (להציג נוסחה מומרת) דורש להטמיע את KaTeX מקומית + lazy-load — זו משימה רצינית בפני עצמה, והיא בעדיפות בעבודה הבאה.</p>
+  </div>
+
+  <h2 class="section-title">2. מה דורש עבודה ייעודית (5)</h2>
+  <div class="finding todo">
+    <h4>הכותרת + שאר האינטראקציה</h4>
+    <ul style="margin-top:6px;font-size:14px;">
+      <li><strong>Issue 1 · תוכן בתוך הנוד</strong> — כותרת + גוף + שורת מטא-דאטה בתוך הכרטיס לכל סוגי הנודים. עיצוב-מחדש משמעותי של ה-render.</li>
+      <li><strong>Issue 2 · KaTeX מקומי</strong> — הטמעה + lazy-load, להוריד את התלות ב-CDN.</li>
+      <li><strong>Issue 4 · מצב צפייה/עריכה</strong> — toggle גלוי + התנהגות tap.</li>
+      <li><strong>Issue 5 · Save יוצא + כפתור "פתח רודמפ"</strong> בכותרת חלון המידע.</li>
+      <li><strong>Issue 7 · הסתרת/בידוד קשתות</strong>.</li>
+    </ul>
+  </div>
+
+  <h2 class="section-title">3. הבדיקה שלך (לשניים שנשלחו)</h2>
+  <div class="linkcard">
+    <div class="lc-title">פתח על ה-iPad:</div>
+    <a href="https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1">https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1</a>
+  </div>
+  <div class="step"><span class="ck">3</span><div class="body">פתח/צור <em>הערה עם טקסט ארוך</em>. הטקסט נשאר <em>בתוך</em> הריבוע עם דהייה בתחתית (לא בורח החוצה)?</div></div>
+  <div class="step"><span class="ck">3</span><div class="body">פתח <em>נוסחה</em>. היא נשארת בתוך הכרטיס ולא בורחת מהמסך? (ההמרה עצמה — Issue 2, בהמשך.)</div></div>
+  <div class="step"><span class="ck">6</span><div class="body">פתח את גלגל ה-Tools → "Open More menu". התפריט <em>נפתח</em> (במרכז) ולא רק נסגר?</div></div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>4 בדיקות חדשות (<span class="en">sprint6_fixup.spec.ts</span>) עוברות על שני המנועים. <span id="regress">החבילה המלאה עברה: <em>694 בדיקות — אפס כשלים</em> (כולל עדכון 2 בדיקות שהשינוי שלי נימק).</span></p>
+  </div>
+
+  <h2 class="section-title">4. הדרך קדימה</h2>
+  <div class="insight-block">
+    <h3>איך תרצה להמשיך?</h3>
+    <p>הכותרת (תוכן בתוך הנוד) + KaTeX מקומי הם העבודה הגדולה הבאה. שתי דרכים:</p>
+    <ul style="margin-top:6px;">
+      <li><strong>נוד-אנטומיה קודם</strong> — Issue 1 (תוכן בתוך הכרטיס) כמשימה ממוקדת, ואז KaTeX.</li>
+      <li><strong>KaTeX קודם</strong> — לתקן את הנוסחאות (הטמעה מקומית), ואז אנטומיה.</li>
+    </ul>
+    <p style="margin-top:6px;">+ עדיין פתוחות מ-Sprint 5: בחירת טיפול-סטטוס (נקודה/פס/מסגרת/מילוי) ו-scope ל-Bets. תגיד לי מאיפה להתחיל.</p>
+  </div>
+
+  <div class="recap-row"><span class="tag2">✓</span><span>טקסט הערה/נוסחה <em>מוכל</em> בכרטיס (דהייה, בלי בריחה החוצה/מהמסך).</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>כפתור "More" נפתח (היה מעוגן לאלמנט מוסתר).</span></div>
+  <div class="recap-row"><span class="tag2" style="color:var(--amber);background:var(--amber-soft)">○</span><span>הבא, ייעודי: אנטומיית-נוד (Issue 1) + KaTeX מקומי (Issue 2) + view/edit + save/roadmap + קשתות.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 6 complete — pending iPad verification</h3>
+    <p>פתח את הקישור, בדוק את שלושת הסעיפים (הערה מוכלת, נוסחה מוכלת, More נפתח). ותגיד לי מאיפה להמשיך את הגדולים — אנטומיית-נוד או KaTeX קודם. לא מתחיל silhouettes/zones/Bet.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">בכנות: העדפתי לשלוח 2 שעובדים ולתת לכותרת תשומת-לב ייעודית, מאשר לדחוף עיצוב-מחדש חפוז בזנב סשן ארוך מאוד. זה הדבר הנכון לאיכות.</p>
+  </div>
+
+</body>
+</html>

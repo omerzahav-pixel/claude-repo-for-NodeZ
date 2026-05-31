@@ -33,7 +33,7 @@ test.describe("Sprint 5 · chrome + perf", () => {
       meta: document.querySelector('meta[name="edgespace-build"]')?.getAttribute("content"),
       build: document.getElementById("ph-build")?.textContent,
     }));
-    expect(r.meta).toContain("5.0.0");
+    expect(r.meta).toMatch(/\d+\.\d+\.\d+/); // version-agnostic (bumps each sprint)
     expect(r.build).toContain(r.meta!);
   });
 

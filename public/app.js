@@ -729,7 +729,17 @@ function toggleMore(){
   if(!more)return;
   if(more.classList.contains('on')){more.classList.remove('on');return}
   more.classList.add('on');
-  placePopover('more','moreBtn');
+  /* Sprint 6 Issue 6 — #moreBtn lived on the old top toolbar (#tb), which is
+     hidden under --toolbar-migrated, so placePopover anchored to a missing /
+     invisible element and the menu opened off-screen ("button does nothing").
+     Anchor to the toolbar button only when it's actually visible; otherwise
+     centre the menu on screen so it's always reachable from the Tools panel. */
+  const anchor=document.getElementById('moreBtn');
+  if(anchor&&anchor.offsetParent!==null){placePopover('more','moreBtn');}
+  else{
+    more.style.left='50%';more.style.top='50%';more.style.right='auto';more.style.bottom='auto';
+    more.style.transform='translate(-50%,-50%) scale(1)';more.style.transformOrigin='center center';
+  }
 }
 // Keep the More menu anchored while open if the viewport reflows.
 window.addEventListener('resize',()=>{
