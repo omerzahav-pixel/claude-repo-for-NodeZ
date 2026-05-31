@@ -1254,6 +1254,49 @@ function render(){
     }
     else{sh=`<circle cx="${n.x}" cy="${n.y}" r="${s*.75}" fill="${c}" stroke="rgba(255,255,255,.18)"/>`;if(se||tg)ring=`<circle class="ring" cx="${n.x}" cy="${n.y}" r="${s*.75+4}"/>`}
     }
+    /* Sprint 7 Issue 1 — render the TITLE + BODY *inside* the card (Pass 3 §01).
+       The old path drew a small silhouette and the title as a label BELOW the
+       rect — the bug reported in Sprint 5 AND 6. note/formula already place
+       content inside; this covers every other type. A content card: rounded rect
+       + inline-start status bar (the SVG sh) with title (bold, ink) + body
+       (ink-2, clamped + fade) as HTML on top, and NO label below. Regular nodes
+       stay light (status bar only, no edge count); project gets a richer metadata
+       block (sub-canvas + node count + drill chip) + accent rim + sharp corner. */
+    let cardNode=false;
+    if(!simpleMode && n.shape!=='note' && n.shape!=='formula'){
+      cardNode=true;
+      const isProject=n.shape==='project';
+      const cw=n.userW||(isProject?112:98), ch=n.userH||(isProject?70:58);
+      n._w=cw;n._h=ch;
+      const cardRtl=/[֐-׿]/.test((n.label||'')+(n.notes||n.rationale||''));
+      const accent=isProject?'var(--hot)':c;
+      /* Sprint 7 Issue 1 — the card overrides the silhouette's `sh`, so it must
+         carry the same two affordances the silhouette did, or it silently drops
+         them: (a) the status bar (`.es-status-bar`, the inline-start stripe — same
+         class/width the silhouette used, so it stays "readable from afar"), and
+         (b) the freshness halo. The halo is STATIC (no pulse animation; that was
+         retired in 4.3) — a subtle ring at the top-trailing corner of fresh nodes,
+         built by the shared FreshnessHalo so --no-fx / --fx-motion still gate it. */
+      const _halo=window.FreshnessHalo?window.FreshnessHalo.haloSvg(n,(cardRtl?n.x-cw:n.x+cw),n.y-ch,9,c):'';
+      sh=`<rect x="${n.x-cw}" y="${n.y-ch}" width="${cw*2}" height="${ch*2}" rx="${isProject?4:10}" fill="var(--srf-3,#1E232B)" stroke="${accent}" stroke-width="${se||tg?2:1.5}"/>`
+        +`<rect class="es-status-bar" x="${n.x-cw}" y="${n.y-ch}" width="5" height="${ch*2}" rx="2" fill="${c}"/>`
+        +`<rect class="nrz" data-nrz="${n.id}" x="${n.x+cw-12}" y="${n.y+ch-12}" width="14" height="14" rx="3" fill="${accent}" opacity="0.35"/>`
+        +_halo;
+      if(se||tg)ring=`<rect class="ring" x="${n.x-cw-4}" y="${n.y-ch-4}" width="${cw*2+8}" height="${ch*2+8}" rx="${isProject?6:12}"/>`;
+      const _title=esc(n.label||'(untitled)');
+      const _body=esc(n.notes||n.rationale||'');
+      let _meta='';
+      if(isProject){
+        const _hasChild=n.childCanvas&&S.canvases[n.childCanvas];
+        const _nodeCount=_hasChild?(S.canvases[n.childCanvas].nodes||[]).length:0;
+        _meta=`<div class="ncard-meta">${_hasChild?1:0} SUB-CANVAS · ${_nodeCount} NODES${_hasChild?' · ⤓ OPEN':''}</div>`;
+      }
+      richContent=`<div class="nov ncard${isProject?' proj':''}" data-nid="${n.id}" style="left:${-cw+12}px;top:${-ch+8}px;width:${cw*2-22}px;height:${ch*2-16}px;direction:${cardRtl?'rtl':'ltr'};text-align:${cardRtl?'right':'left'}">`
+        +`<div class="ncard-title">${_title}</div>`
+        +(_body?`<div class="ncard-body">${_body}</div>`:'')
+        +_meta
+        +`</div>`;
+    }
     const lbl=(n.label||'').length>26?n.label.slice(0,24)+'…':(n.label||'');
     const portal=n.childCanvas?`<text x="${n.x+s-6}" y="${n.y-s*.45}" font-size="14" fill="var(--accent)">↗</text>`:'';
     const linkGlyph=n.url?`<text x="${n.x}" y="${n.y+4}" font-size="13" text-anchor="middle" fill="rgba(26,24,21,.85)" font-weight="700">🔗</text>`:'';
@@ -1268,7 +1311,7 @@ function render(){
     const semanticCompact=view.k<0.45&&['formula','note'].includes(n.shape)&&!isCompactFormula;
     if(semanticCompact)richContent='';
     const showLabel=simpleMode?view.k>0.28:(view.k>0.28&&(!['formula','note'].includes(n.shape)||isCompactFormula||semanticCompact));
-    const isBigShape=!simpleMode&&((n.shape==='formula'&&!n.compact)||n.shape==='note');
+    const isBigShape=!simpleMode&&(cardNode||(n.shape==='formula'&&!n.compact)||n.shape==='note');
     const hitRect=isBigShape?`<rect class="th" x="${n.x-(n._w||100)}" y="${n.y-(n._h||60)}" width="${(n._w||100)*2}" height="${(n._h||60)*2}" rx="6" fill="transparent"/>`:`<circle class="th" cx="${n.x}" cy="${n.y}" r="${hitR}"/>`;
     // Outer SVG: just an invisible hit target wrapped in <g.node data-id> so
     // the existing closest('.node') event delegation keeps routing drags.
@@ -1280,7 +1323,9 @@ function render(){
     const dimCls=(n.dim||focusDim)?' dim':'';
     const tgtCls=tg?' tgt':'';
     const selCls=se?' sel':'';
-    const svgLabel=showLabel?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:'';
+    /* Sprint 7 Issue 1 — card nodes carry their title INSIDE (ncard-title); no
+       label below the rectangle. Only non-card paths (simple circles) keep it. */
+    const svgLabel=(!cardNode&&showLabel)?`<text x="${n.x}" y="${n.y+s+16}" direction="${rtl?'rtl':'ltr'}">${esc(lbl)}</text>`:'';
     const glyphs=(['resource','library'].includes(n.shape)?linkGlyph:'')+portal+conf+svgLabel;
     /* Sprint 4.1 · overlay level-of-detail. The visible shapes normally live in
        the DOM overlay — one .nslice per node, i.e. one iOS compositor layer per
@@ -1663,11 +1708,20 @@ function op(n){aFlush();autosaveSnapped=false;sel=n;pn.classList.add('on');
     ${colorPicker}
     ${compactToggle}`;
   const detailsBlock=`<details class="pn-more" ${panelDetailsOpen?'open':''} ontoggle="panelDetailsOpen=this.open"><summary>${t('moreDetails')}</summary><div class="pn-more-body">${detailFields}</div></details>`;
-  pn.innerHTML=`<button class="pn-close" onclick="cp()" aria-label="Close">&times;</button><h2>${esc(n.label||t('untitled'))}</h2><div class="meta">${esc(t(n.status))} · ${esc(zoneName)} · ${t('addedOn')} ${n.created}</div>${up}${docLink}${originBadge}
+  /* Sprint 7 (Issue 2) · three-region layout so the action buttons are ALWAYS
+     reachable: a fixed head (title + meta), a scrollable body (all the fields),
+     and a sticky foot (Save/Close/Delete + Copy/Pull/portal). Previously the
+     button rows were the last children of one big scroll box, so on a short
+     viewport — or with the iPad keyboard up — they scrolled off the bottom and
+     the user could not reach "Copy to vault" / "Pull from vault". */
+  pn.innerHTML=`<button class="pn-close" onclick="cp()" aria-label="Close">&times;</button>
+    <div class="pn-head"><h2>${esc(n.label||t('untitled'))}</h2><div class="meta">${esc(t(n.status))} · ${esc(zoneName)} · ${t('addedOn')} ${n.created}</div></div>
+    <div class="pn-body">${up}${docLink}${originBadge}
     ${primaryFields}
-    ${detailsBlock}
+    ${detailsBlock}</div>
+    <div class="pn-foot">
     <div class="brow"><button class="pr" onclick="sP()">${t('save')}</button><button onclick="cp()">${t('close')}</button><button class="dn" onclick="delN(${n.id})">${t('del')}</button></div>
-    ${portalBtn||copyBtn||pullBtn?`<div class="brow">${portalBtn}${copyBtn}${pullBtn}</div>`:''}`;
+    ${portalBtn||copyBtn||pullBtn?`<div class="brow">${portalBtn}${copyBtn}${pullBtn}</div>`:''}</div>`;
   if(isFormula)updateLatexPreview();
   // Phase 5 P2 — auto-grow every textarea to fit existing content after
   // rebuild. Runs once per op(); subsequent typing calls aGrow(this) via

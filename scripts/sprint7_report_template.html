@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 7 — Node Anatomy Done Right · דוח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 10px 0; border-right: 4px solid var(--green); }
+  .finding.todo { border-right-color: var(--amber); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 16px; margin-bottom: 4px; }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 12px 16px; margin: 7px 0; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .ck { font-size: 15px; font-weight: 700; color: var(--blue); }
+  .step .body { font-size: 14px; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 7px 0; font-size: 15px; }
+  .recap-row .tag2 { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+  .shot { margin: 18px 0; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: #0f0f0f; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption { background: var(--card); color: var(--ink-soft); font-size: 13px; padding: 10px 14px; border-top: 1px solid var(--rule); direction: rtl; text-align: right; }
+  .shot figcaption strong { color: var(--ink); }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 7 · NODE ANATOMY DONE RIGHT</div>
+  <h1>הכותרת סוף-סוף בתוך הנוד — עם הוכחה בתמונה</h1>
+  <p class="subtitle">באצ' P0 נשלח (5 פריטים): אנטומיית-נוד, KaTeX מקומי, חלון-מידע, PWA, More — כל טענה ויזואלית עם צילום מסך.</p>
+  <div class="buildbar">build 7.0.0 · 2026-05-31</div>
+
+  <div class="insight">
+    <h2>הכותרת בתוך הנוד — הפעם באמת</h2>
+    <p>זה פספס <em>פעמיים</em> (Sprint 5 ו-6). השורש: הכותרת הייתה <span class="en">&lt;text&gt;</span> של SVG שצויר ב-<span class="en">y+s+16</span> — כלומר <em>מתחת</em> לריבוע, לא בתוכו. שינויי הסטטוס-בר וההכלה לא הזיזו את זה.</p>
+    <p>עכשיו כל נוד (פרט להערה/נוסחה) מצויר ככרטיס-תוכן: <em>כותרת + גוף בתוך הריבוע</em>, פס-סטטוס בקצה, ואין שום טקסט מתחת. הנה הצומת שדיווחת עליו — <span class="en">"create signal bot per strategy"</span>:</p>
+    <figure class="shot">
+      <img alt="ארבעה נודים על הקנבס, כל אחד עם כותרת וגוף בתוך הכרטיס; נוד הפרויקט בולט בכתום עם שורת מטא-דאטה" src="{{IMG_NODES}}">
+      <figcaption><strong>Issue 1 ·</strong> הכותרת והגוף <em>בתוך</em> הכרטיס. שמאל-עליון = הצומת שלך (<span class="en">experiment</span>, פס כחול + פינת-סמן). ימין-עליון = נוד <span class="en">project</span> "Algo Execution" — מסגרת כתומה, פינות חדות, ושורת <span class="en">1 SUB-CANVAS · 2 NODES · ↓ OPEN</span>. שום טקסט לא יורד מתחת לאף נוד.</figcaption>
+    </figure>
+  </div>
+
+  <h2 class="section-title">1. מה נשלח — באצ' P0 (5)</h2>
+
+  <div class="finding">
+    <h4>Issue 1 · אנטומיית-נוד: תוכן בתוך הכרטיס</h4>
+    <p style="font-size:14px;">נוד רגיל (<span class="en">idea</span>/<span class="en">question</span>/<span class="en">experiment</span>...) = כרטיס <em>קליל</em>: כותרת מודגשת + גוף נחתך-עם-דהייה + פס-סטטוס צבעוני בקצה. <strong>בלי ספירת-קשתות</strong> — בדיוק כמו שביקשת ("לא רלוונטי, תוריד"). נוד <span class="en">project</span> מקבל יחס <em>מיוחד</em>: מסגרת מודגשת, פינות חדות, ושורת מטא-דאטה (תת-קנבס + מספר נודים). <span class="en">experiment</span> = הערה + סמן-פינה סטטי (בלי אנימציה — לא מחזיר את בעיית-הביצועים).</p>
+  </div>
+
+  <div class="finding">
+    <h4>Issue 0 · KaTeX מוטמע מקומית — וזה גם השורש של "Script Error"</h4>
+    <p style="font-size:14px;">ה-<span class="en">Script Error @?:?</span> האטום ב-Safari הוא החתימה הקלאסית של שגיאה <em>חוצת-מקור</em>: הסקריפט שזרק (KaTeX מ-<span class="en">jsdelivr</span>) לא היה מאותו מקור, אז הדפדפן מסתיר את הקובץ והשורה (<span class="en">?:?</span>). הטמעתי את KaTeX מקומית תחת <span class="en">./katex/</span> — אותו מקור → שגיאות אמיתיות עם stack, ואין יותר תלות ב-CDN (תואם לאילוץ "בלי CDN"). הנוסחאות והמתמטיקה-בתוך-טקסט מומרות:</p>
+    <figure class="shot">
+      <img alt="הערה עם נוסחת LaTeX מומרת בתוך הכרטיס, מצוירת על-ידי KaTeX המקומי" src="{{IMG_KATEX}}">
+      <figcaption><strong>Issue 0 ·</strong> KaTeX נטען מ-<span class="en">./katex/katex.min.js</span> (מקומי, לא CDN) וממיר נוסחאות בתוך נוד וגם <span class="en">$w_i = 1/\sigma_i$</span> בתוך גוף-הערה. הבדיקה אישרה <em>אפס פניות ל-CDN של katex</em>.</figcaption>
+    </figure>
+  </div>
+
+  <div class="finding">
+    <h4>Issue 2 · חלון-המידע נכנס למסך + פוטר דביק</h4>
+    <p style="font-size:14px;">דיווחת שאי-אפשר להגיע ל-<span class="en">Copy to vault</span>/<span class="en">Pull from vault</span> — הכפתורים היו בתחתית תיבת-גלילה אחת גדולה ונגללו אל מחוץ למסך. עכשיו החלון בנוי בשלוש שכבות: <em>ראש קבוע</em> (כותרת) · <em>גוף נגלל</em> (השדות) · <em>פוטר דביק</em> (Save/Close/Delete + Copy/Pull/Roadmap) שתמיד נראה. הנוסחה בתצוגה-המקדימה כבר לא בורחת ימינה — היא נגללת אופקית בתוך החלון.</p>
+    <figure class="shot">
+      <img alt="חלון מידע על מסך נמוך: ראש קבוע, גוף נגלל, ושורת כפתורי Save/Close צמודה לתחתית" src="{{IMG_PANEL}}">
+      <figcaption><strong>Issue 2 ·</strong> מסך נמוך (560px, מדמה iPad-לרוחב עם מקלדת). הגוף נגלל, אבל <span class="en">Save</span>/<span class="en">Close</span> נשארים <em>בתוך המסך</em> בתחתית. הנוסחה הרחבה מוכלת (נגללת, לא בורחת).</figcaption>
+    </figure>
+  </div>
+
+  <div class="finding">
+    <h4>Issue 4 · PWA טוען בנייה ישנה — תוקן</h4>
+    <p style="font-size:14px;">"Add-to-Home-Screen טוען גרסה ישנה מאוד." הסיבה: ה-<span class="en">service worker</span> הגיש את <span class="en">app.js</span> ב-<span class="en">stale-while-revalidate</span> — כלומר משתמש חוזר קיבל את הקוד <em>הישן</em> מיד, והחדש רק בטעינה הבאה. תיקנתי: הלוגיקה (<span class="en">.js</span>) והעיצוב (<span class="en">.css</span>) עכשיו <em>network-first</em> (רשת קודם, cache רק כגיבוי לא-מקוון), והעליתי את גרסת ה-cache ל-<span class="en">phase7</span> כדי לטאטא caches ישנים.</p>
+  </div>
+
+  <div class="finding">
+    <h4>Issue 3 · כפתור "More" נפתח — אומת</h4>
+    <p style="font-size:14px;">תיקון Sprint 6 (מרכוז התפריט כשהעוגן <span class="en">#moreBtn</span> מוסתר) מחזיק. הוספתי בדיקה אוטומטית: התפריט נפתח <em>בתוך גבולות המסך</em>.</p>
+  </div>
+
+  <h2 class="section-title">2. הבדיקה שלך (על ה-iPad)</h2>
+  <div class="linkcard">
+    <div class="lc-title">פתח את ה-URL המלא:</div>
+    <a href="https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1">https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1</a>
+  </div>
+  <div class="warn"><strong>חשוב ל-PWA:</strong> תיקון הבנייה-הישנה נכנס לתוקף רק <em>אחרי</em> שה-service worker החדש מתקין. אם אתה על אייקון מסך-הבית הישן — פתח פעם אחת בדפדפן (Safari) כדי שה-SW יתעדכן, ואז הוסף-למסך-הבית מחדש. אחרי זה כל deploy ייראה מיד.</div>
+  <div class="step"><span class="ck">1</span><div class="body">צור צומת <span class="en">experiment</span> בשם "create signal bot per strategy" עם גוף-טקסט. הכותרת <em>והגוף</em> בתוך הריבוע, ושום דבר לא יורד מתחת?</div></div>
+  <div class="step"><span class="ck">1</span><div class="body">צור נוד <span class="en">project</span>. הוא נראה <em>שונה</em> — מסגרת מודגשת + שורת מטא-דאטה (תת-קנבס/מספר נודים)?</div></div>
+  <div class="step"><span class="ck">0</span><div class="body">פתח נוסחה או הקלד <span class="en">$x^2$</span> בגוף-הערה. היא <em>מומרת</em> (לא טקסט גולמי)? אין יותר <span class="en">Script Error</span> אדום ב-Safari?</div></div>
+  <div class="step"><span class="ck">2</span><div class="body">פתח נוד והחזק את החלון פתוח. כפתורי <em>Save/Close/Copy-to-vault</em> נראים בתחתית בלי לגלול? הנוסחה לא בורחת ימינה?</div></div>
+  <div class="step"><span class="ck">4</span><div class="body">(PWA) אחרי שתי טעינות — האם הגרסה בכותרת התחתית היא <span class="en">7.0.0</span>?</div></div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>5 בדיקות חדשות (<span class="en">sprint7_fixup.spec.ts</span>) — כולל ההוכחה שהכותרת בתוך הכרטיס ואין <span class="en">&lt;text&gt;</span> מתחת — עוברות. <span id="regress">{{REGRESSION}}</span></p>
+  </div>
+
+  <h2 class="section-title">3. מה נשאר — באצ' Features (4)</h2>
+  <div class="finding todo">
+    <h4>נדחה בכוונה לספרינט הבא (לא נדחק בזנב סשן ארוך)</h4>
+    <ul style="margin-top:6px;font-size:14px;">
+      <li><strong>Issue 5 · סילואטות מובחנות</strong> — note/formula/library(=resource)/document/project עם צורה ייחודית; <span class="en">experiment</span>=הערה+סמן, <span class="en">principle</span>=הערה בצבע אחר.</li>
+      <li><strong>Issue 6 · בורר-נוד רדיאלי</strong> — תפריט-טבעת לבחירת סוג הנוד (אמרת "אני אוהב את הרדיאלי").</li>
+      <li><strong>Issue 7 · יצירת workspace</strong> — שם + ריק/תבנית.</li>
+      <li><strong>Issue 8 · כפתור Reset</strong> — מוחק הכול ומחזיר למצב התחלה + מסך-ריק בהתקנה ראשונה.</li>
+    </ul>
+  </div>
+
+  <div class="recap-row"><span class="tag2">✓</span><span>הכותרת + הגוף <em>בתוך</em> הנוד — עם צילום מסך (הצומת שדיווחת עליו).</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>נוד <span class="en">project</span> מיוחד · נוד רגיל קליל (בלי ספירת-קשתות).</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>KaTeX מקומי (שורש ה-<span class="en">Script Error</span>) · נוסחאות מומרות.</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>חלון-מידע עם פוטר דביק · PWA network-first · More נפתח.</span></div>
+  <div class="recap-row"><span class="tag2" style="color:var(--amber);background:var(--amber-soft)">○</span><span>הבא: סילואטות · בורר-רדיאלי · workspace חדש · Reset.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 7 (P0) complete — pending iPad verification</h3>
+    <p>הדבר שפספס פעמיים — הכותרת בתוך הנוד — נשלח עכשיו <em>עם הוכחה בתמונה</em>, ועוד 4 תיקונים אמיתיים (KaTeX, חלון-מידע, PWA, More). פתח את ה-URL, בדוק את 5 הצעדים, ותגיד לי אם הכותרת סוף-סוף יושבת נכון על ה-iPad האמיתי.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">את הבאצ' השני (סילואטות, בורר-רדיאלי, workspace, Reset) אני שומר לספרינט ייעודי — הם פיצ'רים, לא באגים, וראויים לתשומת-לב נקייה. לא מתחיל אותם עכשיו. לא מתחיל Bet.</p>
+  </div>
+
+</body>
+</html>

@@ -54,23 +54,25 @@ test.describe("Sprint 3.3 · Issue 1 — workspace label refresh", () => {
 
 // ──────────────────────────────────────────────────────────────────────────
 test.describe("Sprint 3.3 · Issue 2 — edges connect to node outline", () => {
-  test("S3_3.I2.A halfExtents defaults to 42 for unset _w/_h (was 80/60)", async ({ page }) => {
+  test("S3_3.I2.A edges anchor to the rendered node outline (card _w/_h)", async ({ page }) => {
     await open(page, { "edges-v2": true });
     const probe = await page.evaluate(() => {
       const E = (window as any).__E2E;
       const z = E.current().zones[0]?.id || "ideas";
       const today = new Date().toISOString();
-      // Idea-shape node has no _w/_h set anywhere in app.js.
+      // Sprint 7: an idea node now renders as a content CARD, so render() sets
+      // n._w/_h (the card half-extents). bestAnchor must meet the card's right
+      // edge — x = a.x + a._w — not the bare 42 fallback or the old 80/60.
       E.addNodeRaw({ id: 8801, label: "A", shape: "idea", status: "idea", x: -100, y: 0, zone: z, created: today, modified: today });
       E.addNodeRaw({ id: 8802, label: "B", shape: "idea", status: "idea", x:  100, y: 0, zone: z, created: today, modified: today });
       const a = E.current().nodes.find((n: any) => n.id === 8801);
       const b = E.current().nodes.find((n: any) => n.id === 8802);
       const ev2 = (window as any).EdgeV2;
-      // bestAnchor for A heading toward B should be the right mid-edge:
-      // x = a.x + 42 (not a.x + 80).
       const anchorA = ev2.bestAnchor(a, b);
-      return { anchor: anchorA, expectedX: a.x + 42, expectedY: a.y };
+      // a._w is the card half-width (set by render); fall back to 42 if unset.
+      return { anchor: anchorA, expectedX: a.x + (a._w || 42), expectedY: a.y, w: a._w };
     });
+    expect(probe.w).toBeGreaterThan(42);     // card sizing did set a real half-extent
     expect(probe.anchor.x).toBe(probe.expectedX);
     expect(probe.anchor.y).toBe(probe.expectedY);
   });

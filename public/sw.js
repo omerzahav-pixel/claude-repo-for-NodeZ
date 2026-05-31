@@ -16,7 +16,7 @@
  * shell assets.
  * ============================================================================= */
 
-const VERSION = "edgespace-v2.phase6.1";
+const VERSION = "edgespace-v2.phase7";
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 const CDN = `${VERSION}-cdn`;
@@ -73,6 +73,20 @@ function isCdnFontOrKatex(url) {
       || u.hostname === "cdn.jsdelivr.net";
 }
 
+// Sprint 7 (Issue 4) · the PWA "stale build" fix. App LOGIC (.js/.mjs) and
+// STYLES (.css) must be fetched network-first so a deploy is visible on the
+// very next online load — previously these were served stale-while-revalidate,
+// so a returning Add-to-Home-Screen user ran the OLD bundle for a whole cycle.
+// Content-addressed assets (fonts, icons, katex font files) stay SWR/cache-first.
+function isFreshAsset(url) {
+  const p = new URL(url).pathname;
+  // Vendored KaTeX is a versioned third-party bundle (~300KB) that only changes
+  // on a redeploy — and a redeploy bumps VERSION, which sweeps its cache anyway.
+  // Keep it on SWR so we don't re-download it on every online load.
+  if (p.includes("/katex/")) return false;
+  return /\.(?:js|mjs|css)$/.test(p);
+}
+
 async function networkFirst(req, cacheName) {
   const cache = await caches.open(cacheName);
   try {
@@ -122,6 +136,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (isSameOrigin(url)) {
+    // Logic + styles: network-first (fresh deploy wins; cache is offline fallback).
+    if (isFreshAsset(url)) {
+      event.respondWith(networkFirst(req, RUNTIME));
+      return;
+    }
+    // Everything else same-origin (fonts, icons, images): SWR.
     event.respondWith(staleWhileRevalidate(req, RUNTIME));
     return;
   }
