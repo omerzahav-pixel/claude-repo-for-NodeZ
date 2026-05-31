@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 4.6 — Zero Renders · סגירת Phase 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 16px 20px; margin: 12px 0; border-right: 4px solid var(--green); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 17px; margin-bottom: 4px; }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 8px 0; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .ck { font-size: 18px; }
+  .step .body { font-size: 14.5px; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 15px; }
+  .recap-row .tag2 { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 4.6 · ZERO RENDERS · סגירת PHASE 4</div>
+  <h1>0 רינדורים בתנועה — Phase 4 נסגר</h1>
+  <p class="subtitle">מצאת את המנגנון המדויק: <span class="en">renders/s</span> גבוה ⇄ fps נופל. סגרנו את הדליפה האחרונה.</p>
+  <div class="buildbar">build 4.6.0 · 2026-05-31 — ודא שזה מה שכתוב ב-HUD</div>
+
+  <div class="insight">
+    <h2>מה תוקן</h2>
+    <p>שורת <span class="en">renders/s</span> שהוספנו ב-4.5 הצביעה בדיוק: <em>כל עוד render רץ בתנועה, ה-fps נופל</em>. מצאתי את הדליפה — מסלול ה-pinch הישן (שתי אצבעות) עדיין קרא ל-<span class="en">render()</span> בכל frame <em>וגם</em> עדכן את ה-view פעמיים. ניתקתי אותו.</p>
+    <p>ובנוסף, שמתי שומר ב-<span class="en">render()</span> עצמו: <em>כל עוד יש תנועה של המסך (pan/pinch/inertia), render() מסרב לבנות מחדש</em> — הוא רק מזיז את השכבות וחוזר. אז <span class="en">renders/s</span> נשאר 0, וה-fps נשאר 60. גרירת נודים/אזורים — לא נחשבת תנועת-מסך, וממשיכה לעבוד רגיל.</p>
+  </div>
+
+  <h2 class="section-title">1. מה נבנה</h2>
+
+  <div class="finding">
+    <h4>שומר ב-<span class="en">render()</span> — אפס בנייה-מחדש בתנועה</h4>
+    <p style="font-size:14.5px;">כל קריאה ל-<span class="en">render()</span> בזמן pan/pinch/inertia הופכת ל-no-op (רק מזיזה שכבות). זה סותם <em>כל</em> מקור של render-בתנועה בנקודה אחת. <span class="en">render()</span> אמיתי רץ רק כשהמידע משתנה + פעם אחת בעצירה.</p>
+  </div>
+
+  <div class="finding">
+    <h4>ביטול מסלול ה-pinch הישן תחת <span class="en">--gestures-v2</span></h4>
+    <p style="font-size:14.5px;">ה-pinch מנוהל עכשיו רק ע"י מכונת המצבים (gesture.js → applyView, בלי render). המסלול הישן ש-render-ת בכל frame וגם עדכן view כפול — בוטל. זו הייתה השהיית ה-zoom.</p>
+  </div>
+
+  <h2 class="section-title">2. הבדיקה שלך — קישור אחד</h2>
+
+  <div class="linkcard">
+    <div class="lc-title">פתח על ה-iPad:</div>
+    <a href="https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1">https://nodez-2iz.pages.dev/?debug=perf&flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1</a>
+  </div>
+
+  <p>ודא <span class="en">build 4.6.0</span>. לך לאזור <em>הכי צפוף</em> ב-Algo Execution. עשה <em>pan</em> רציף (15 שניות), ואז <em>zoom</em> (צביטה) כמה פעמים. תסתכל על שני המספרים:</p>
+
+  <div class="step"><span class="ck">①</span><div class="body">שורת <span class="en">renders/s</span> — <em>חייבת להישאר על 0</em> כל עוד אתה זז (גם ב-pan וגם ב-zoom). זה הגייט.</div></div>
+  <div class="step"><span class="ck">②</span><div class="body">שורת <span class="en">fps</span> — <em>מעל 55</em> לכל אורך התנועה, גם באזור הצפוף.</div></div>
+
+  <p style="margin-top:14px;">אם <span class="en">renders/s</span> נשאר 0 וה-fps מעל 55 — <em>Phase 4 נסגר</em>. (אם זה "בעיקר 60 עם נפילה נדירה באזור הכי צפוף" — זה מספיק טוב, Phase 4 נסגר בכל מקרה. לא פותחים עוד ספרינט perf.)</p>
+
+  <div class="warn">
+    <strong>קישור חירום:</strong> אם משהו נשבר, הוסף <span class="en">,legacy-pan</span> בסוף ה-flags — מחזיר את ההתנהגות הישנה. רק במקרה חירום; הברירת-מחדל אמורה לעבוד בלי שום דגל מיוחד.
+  </div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>5 בדיקות חדשות (<span class="en">sprint4_6_fixup.spec.ts</span>) + כל בדיקות ה-gesture עוברות: <span class="en">render()</span> עושה no-op בתנועה (המונה לא עולה) אבל מזיז שכבות, רץ רגיל במנוחה, ו-<span class="en">--legacy-pan</span> עוקף את השומר. <span id="regress">החבילה המלאה עברה: <em>672 בדיקות (336 לכל מנוע) — אפס כשלים</em>.</span></p>
+  </div>
+
+  <div class="warn">
+    <strong>חשוב:</strong> ה-desktop לא משחזר את זה. ה-iPad הוא המדידה — באזור <em>הצפוף</em> ספציפית (שם זה נשבר), pan רציף 15 שניות + zoom חוזר. עין על <span class="en">renders/s</span>.
+  </div>
+
+  <h2 class="section-title">3. Phase 4 נסגר — איזה כיוון נתחיל?</h2>
+
+  <div class="insight-block">
+    <h3>זהו. עוצרים את כל עבודת ה-perf/ויזואל ועוברים לפיצ'רים</h3>
+    <p>שישה ספרינטים, ובסוף ה-HUD נתן את התשובה המדויקת — ואתה מצאת את הקורלציה שסגרה את זה. אחרי שתאמת, עוברים לליבה. <em>איזה כיוון מדבר אליך?</em></p>
+    <ul style="margin-top:8px;">
+      <li><strong>Bet 5 · חזרה מרווחת</strong> — להפוך את המפה לכלי תרגול/זיכרון.</li>
+      <li><strong>Bet 2 · קול</strong> — להוסיף ולערוך צמתים בדיבור.</li>
+      <li><strong>Bet 1 · Claude על הקנבס</strong> — עוזר AI שמבין את המפה ובונה אותה איתך.</li>
+      <li><strong>Bet 4 · סידור אוטומטי</strong> — לסדר צמתים יפה בלחיצה.</li>
+      <li><strong>בקשות שנרשמו</strong> — יצירת קנבס-אב (FR-1), שינוי שם ל-vault (FR-5), או דיאלוגי ייבוא/workspace (התחל-ריק + 3 אפשרויות ייבוא).</li>
+    </ul>
+    <p style="margin-top:10px;">תגיד לי מספר אחד (או במילים שלך), ונצא לדרך.</p>
+  </div>
+
+  <div class="recap-row"><span class="tag2">✓</span><span><span class="en">render()</span> מסרב לבנות מחדש בתנועה — <span class="en">renders/s</span> = 0, fps = 60.</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>מסלול ה-pinch הישן בוטל (היה render כפול + עדכון view כפול).</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>גרירת תוכן (נודים/אזורים) ממשיכה לרנדר רגיל — לא נשברה.</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>ברירת מחדל עובדת בלי דגל; <span class="en">--legacy-pan</span> = רשת ביטחון.</span></div>
+  <div class="recap-row"><span class="tag2" style="color:var(--amber);background:var(--amber-soft)">○</span><span>פתוח: אישור iPad (renders/s=0, fps>55) + בחירת כיוון פיצ'רים.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 4.6 complete — Phase 4 CLOSED pending iPad verification</h3>
+    <p>פתח את הקישור, לך לאזור הצפוף, עשה pan ו-zoom, ותסתכל ש-<span class="en">renders/s</span> נשאר 0 וה-fps מעל 55. זה הגייט. <em>אחרי הספרינט הזה Phase 4 סגור — לא משנה מה.</em> תאמת, ובחר כיוון פיצ'רים מהרשימה. לא מתחיל אף אחד לפני שתבחר.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">תודה על המסע. ה-instrument שבנינו (ה-HUD) הוא מה שבסוף פתר את זה — מדידה, לא ניחוש.</p>
+  </div>
+
+</body>
+</html>

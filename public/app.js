@@ -965,7 +965,31 @@ function clampView(){
    triggers reflow. Only used after pinch/pan/wheel — render() itself rebuilds
    innerHTML which already flushes. */
 function forceRepaint(){const cv=document.getElementById('cv');if(cv)void cv.offsetHeight}
+/* Sprint 4.6 · is a viewport pan/pinch/inertia in progress? render() refuses to
+   rebuild while this is true (it just moves the layers via applyView), so
+   renders/s stays 0 during motion and fps stays 60. Content drags (node / zone /
+   marquee / resize / edge) are NOT viewport motion — they short-circuit to false
+   so they keep rendering every move. Reliable because gesture.js never goes IDLE
+   mid-pan (it settles only on finger-up; see gesture.js pointerUpOrCancel). */
+function isViewportMotion(){
+  if(drag&&drag.k!=='pan')return false;            // a content drag — must render
+  if(window._inertiaActive)return true;
+  try{const g=window.GestureV2;if(g&&typeof g.getState==='function'){const s=g.getState();if(s==='pan'||s==='pinch'||s==='inertia')return true;}}catch(e){}
+  if(pinchState)return true;                        // legacy 2-finger (gestures-v2 OFF)
+  if(drag&&drag.k==='pan')return true;              // legacy pan (gestures-v2 OFF)
+  return false;
+}
 function render(){
+  /* Sprint 4.6 · ZERO renders during viewport motion (the Phase-4 closeout). If
+     a pan/pinch/inertia is in progress, never rebuild the DOM — just move the
+     layers (applyView) and bail. This plugs every render-during-motion path at
+     one chokepoint, so renders/s reads 0 and fps holds 60. The single settle
+     render (pan-settle.js) restores full fidelity when motion ends. --legacy-pan
+     opts out (per-frame render rollback). */
+  if(!(window.Flags&&window.Flags.on('legacy-pan'))&&isViewportMotion()){
+    if(typeof applyView==='function')applyView();
+    return;
+  }
   const W=Math.max(innerWidth||document.documentElement.clientWidth||800,400),H=Math.max(innerHeight||document.documentElement.clientHeight||600,400);
   /* Sprint 4.5 · render() now runs ONLY on data-model changes (add / move-in-
      canvas-space / edit / delete / zone / edge / canvas-switch / view-mode) and
@@ -1856,8 +1880,15 @@ cv.addEventListener('pointerdown',e=>{
        it BEFORE recording the pinch baseline so view.x/view.y don't drift
        between baseline-snapshot and the first move event. */
     if(window._inertiaActive&&window._cancelInertia){window._cancelInertia()}
-    const [p1,p2]=[...activePtrs.values()];
-    pinchState={dist:Math.hypot(p2.x-p1.x,p2.y-p1.y)||1,cx:(p1.x+p2.x)/2,cy:(p1.y+p2.y)/2,k:view.k};
+    /* Sprint 4.6 · under --gestures-v2 the pinch is owned by the gesture state
+       machine (gesture.js → CanvasTransform → applyView, render-free). Setting
+       the legacy pinchState here would run render() every move (the zoom render
+       leak) AND double-update the view alongside the v2 path. Skip it when v2 is
+       on; gesture.js handles the pinch. */
+    if(!(window.Flags&&window.Flags.on('gestures-v2'))){
+      const [p1,p2]=[...activePtrs.values()];
+      pinchState={dist:Math.hypot(p2.x-p1.x,p2.y-p1.y)||1,cx:(p1.x+p2.x)/2,cy:(p1.y+p2.y)/2,k:view.k};
+    }
     e.preventDefault();return;
   }
   if(activePtrs.size>2)return;
