@@ -111,6 +111,11 @@
       const persisted = loadStored();
       let dirty = false;
       for (const k of Object.keys(queried)) {
+        /* Sprint 5 Issue 6 — `perf-hud` (set by ?debug=perf) is a one-shot debug
+           override and must NOT persist; otherwise opening ?debug=perf once
+           leaves the HUD stuck on forever. Its persistent state is owned by the
+           "Show performance HUD" settings toggle (Flags.set), not the URL. */
+        if (k === 'perf-hud') continue;
         if (persisted[k] !== queried[k]) {
           persisted[k] = queried[k];
           dirty = true;

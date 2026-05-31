@@ -954,6 +954,18 @@ body[dir="rtl"] #viewStage .vs-kanban { direction: rtl; }
 #viewStage .vs-card-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #viewStage .vs-card-body { margin-top: 4px; font-size: 11px; color: var(--ink-3); line-height: 1.4; }
 
+/* Sprint 5 Issue 7 — contain card content so a long unbroken token (URL, code,
+   math) in any column (the Pending column was the reported case) can't escape
+   its card and create sideways scroll. Columns scroll only vertically. */
+#viewStage .vs-col-body { overflow-x: hidden; }
+#viewStage .vs-card { min-width: 0; }
+#viewStage .vs-card-body { overflow-wrap: anywhere; word-break: break-word; }
+
+/* Sprint 5 Issue 8 — the lightning/filter entry point is hidden by default.
+   A "Show filter button" toggle in Workspace settings adds body.show-filter to
+   reveal it. The filter itself is unchanged — only its chrome visibility. */
+body:not(.show-filter) #fl { display: none !important; }
+
 /* Timeline view */
 #viewStage .vs-timeline { max-width: 720px; margin: 0 auto; }
 #viewStage .vs-tl-group { margin-bottom: 28px; }

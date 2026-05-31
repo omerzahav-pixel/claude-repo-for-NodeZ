@@ -443,6 +443,8 @@ setTimeout(()=>{runWeakspotMigration()},2000);
 function openWorkspaceSettings(){
   const ws=currentWs||'workspace';
   const enabled=isWeakspotEnabled(ws);
+  const perfOn=!!(window.Flags&&window.Flags.on('perf-hud'));
+  let filterOn=false;try{filterOn=localStorage.getItem('edgespace-show-filter')==='1'}catch(e){}
   /* Sprint 3.6 Issue 5 — Reset workspace as a destructive footer action. */
   const body=
     '<h3 style="margin:0 0 12px;font-family:var(--font-sans);font-size:16px">Workspace settings — '+esc(ws)+'</h3>'+
@@ -451,6 +453,21 @@ function openWorkspaceSettings(){
       '<div style="flex:1">'+
         '<div style="font-weight:500;color:var(--ink,#F0EBE5)">Enable Weak-spot view for this workspace</div>'+
         '<div style="font-size:12px;color:var(--ink-3,#7C828E);margin-top:4px">Spaced-repetition ranking. Useful for study workspaces; noise for project ones.</div>'+
+      '</div>'+
+    '</label>'+
+    /* Sprint 5 Issue 6 + 8 — chrome visibility toggles. */
+    '<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line-2,#2A2F3A);border-radius:8px;cursor:pointer;margin-top:10px">'+
+      '<input type="checkbox" id="__wsPerfHud"'+(perfOn?' checked':'')+' style="width:18px;height:18px"/>'+
+      '<div style="flex:1">'+
+        '<div style="font-weight:500;color:var(--ink,#F0EBE5)">Show performance HUD</div>'+
+        '<div style="font-size:12px;color:var(--ink-3,#7C828E);margin-top:4px">The fps / renders overlay. Off by default; ?debug=perf still forces it on.</div>'+
+      '</div>'+
+    '</label>'+
+    '<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line-2,#2A2F3A);border-radius:8px;cursor:pointer;margin-top:10px">'+
+      '<input type="checkbox" id="__wsShowFilter"'+(filterOn?' checked':'')+' style="width:18px;height:18px"/>'+
+      '<div style="flex:1">'+
+        '<div style="font-weight:500;color:var(--ink,#F0EBE5)">Show filter button (⚡)</div>'+
+        '<div style="font-size:12px;color:var(--ink-3,#7C828E);margin-top:4px">The lightning filter entry point, bottom-left. Off by default.</div>'+
       '</div>'+
     '</label>'+
     /* Destructive zone — separated by a divider, red border, opt-in by tap. */
@@ -473,11 +490,20 @@ function openWorkspaceSettings(){
   function saveSettings(){
     const t=document.getElementById('__wsWeakspotToggle');
     if(t)setWeakspotEnabled(ws,t.checked);
+    /* Sprint 5 Issue 6 — perf HUD visibility is owned by this toggle now (not the
+       URL). Persist via the flag; hide live if it's currently showing. */
+    const hudT=document.getElementById('__wsPerfHud');
+    if(hudT){try{window.Flags&&window.Flags.set('perf-hud',hudT.checked)}catch(e){}if(!hudT.checked&&window.PerfHud){try{window.PerfHud.hide()}catch(e){}}}
+    /* Sprint 5 Issue 8 — filter button visibility via body.show-filter. */
+    const filT=document.getElementById('__wsShowFilter');
+    if(filT){try{localStorage.setItem('edgespace-show-filter',filT.checked?'1':'0')}catch(e){}document.body.classList.toggle('show-filter',filT.checked)}
     /* Re-render view tabs so the Weak-spot button shows/hides immediately. */
     try{window.ViewTabs&&window.ViewTabs.refresh&&window.ViewTabs.refresh()}catch(e){}
   }
 }
 window.openWorkspaceSettings=openWorkspaceSettings;
+/* Sprint 5 Issue 8 — apply the persisted filter-button visibility on load. */
+(function(){function a(){try{if(localStorage.getItem('edgespace-show-filter')==='1')document.body.classList.add('show-filter')}catch(e){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',a,{once:true});else a();})();
 
 /* Sprint 3.6 Issue 5 — empty the entire workspace in one transaction.
    Leaves exactly one empty vault canvas. Single undo restores

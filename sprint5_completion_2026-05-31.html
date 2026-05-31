@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 5 — Node Interaction & Chrome · דוח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .clarify { background: var(--blue-soft); border-right: 4px solid var(--blue); padding: 16px 20px; border-radius: 6px; margin: 20px 0; }
+  .clarify h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--blue); font-size: 18px; margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .insight-block { background: var(--purple-soft); border-right: 4px solid var(--purple); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .insight-block h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--purple); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 10px 0; border-right: 4px solid var(--green); }
+  .finding.todo { border-right-color: var(--amber); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 16px; margin-bottom: 4px; }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 12px 16px; margin: 7px 0; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .ck { font-size: 15px; font-weight: 700; color: var(--blue); }
+  .step .body { font-size: 14px; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 7px 0; font-size: 15px; }
+  .recap-row .tag2 { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 5 · NODE INTERACTION & CHROME · החל מ-PHASE 4 סגור</div>
+  <h1>הספרינט הראשון אחרי ה-perf — חלק ראשון</h1>
+  <p class="subtitle">חמישה תיקונים נקיים נשלחו. ארבעה גדולים (מצב צפייה/עריכה, חלון מידע, קשתות, More) — בבאצ' הבא. ושתי שאלות בסוף.</p>
+  <div class="buildbar">build 5.0.0 · 2026-05-31</div>
+
+  <div class="insight">
+    <h2>מה יש כאן — ולמה לא הכל</h2>
+    <p>זה ספרינט גדול (9 נושאים). שלחתי את <em>חמשת הנקיים והבטוחים</em> עכשיו, בדוקים ועובדים: באג ה-perf של גרירת הקשת, נראות הסטטוס, והשלושה שביקשת להסתיר/לתקן (HUD, פילטר, עמודת Pending).</p>
+    <p>הארבעה הגדולים — <em>מצב צפייה/עריכה</em>, <em>חלון המידע (Save שיוצא + כפתור רודמפ)</em>, <em>הסתרת/בידוד קשתות</em>, ותיקון כפתור <span class="en">More</span> — הם שינויי-אינטראקציה גדולים שמגיע להם מימוש זהיר ואימות-iPad משלהם. הם הבאצ' הבא. אני מעדיף לשלוח 5 שעובדים מצוין מאשר 9 חפוזים.</p>
+  </div>
+
+  <h2 class="section-title">1. מה נשלח (5)</h2>
+
+  <div class="finding">
+    <h4>Issue 0 · גרירת קשת ב-60fps (היה ~5fps)</h4>
+    <p style="font-size:14px;">הקשת-בציור ציירה את הקו הזמני <em>בתוך</em> שכבת ה-<span class="en">#cv</span> הכבדה → iOS רינדר מחדש 88 נודים בכל תזוזה. עכשיו הקו נמצא ב-SVG נפרד וקליל — אותו שורש כמו תיקון ה-pan.</p>
+  </div>
+  <div class="finding">
+    <h4>Issue 1 · סטטוס קריא מרחוק (פס צבע בצד)</h4>
+    <p style="font-size:14px;">לכל נוד נוסף <em>פס בצבע המצב</em> בצד הפנימי (שמאל ב-LTR, ימין בעברית) + הנקודה הוגדלה. נראה מרחוק, זול (בלי filter). <strong>זו הברירת-מחדל המומלצת — אתה תבחר את הטיפול הסופי (ראה שאלה 1).</strong></p>
+  </div>
+  <div class="finding">
+    <h4>Issue 6 · ה-HUD מוסתר כברירת מחדל</h4>
+    <p style="font-size:14px;">לא יופיע יותר לבד. <span class="en">?debug=perf</span> כבר לא נשמר (זו הייתה הסיבה שהוא נתקע דלוק). להפעלה: הגדרות workspace → "Show performance HUD".</p>
+  </div>
+  <div class="finding">
+    <h4>Issue 7 · עמודת Pending לא נגללת הצידה</h4>
+    <p style="font-size:14px;">תוכן ארוך (URL/קוד) כבר לא בורח מהכרטיס. כל העמודות נגללות רק מאונך.</p>
+  </div>
+  <div class="finding">
+    <h4>Issue 8 · כפתור הפילטר (⚡) מוסתר כברירת מחדל</h4>
+    <p style="font-size:14px;">להצגה: הגדרות workspace → "Show filter button". הפילטר עצמו ללא שינוי.</p>
+  </div>
+
+  <div class="finding todo">
+    <h4>הבאצ' הבא (4) — Issues 2, 3, 4, 5</h4>
+    <p style="font-size:14px;">מצב צפייה/עריכה (tap = קריאה-בלבד; long-press/double-tap = שינוי סטטוס) · חלון מידע (Save יוצא + כפתור "פתח רודמפ" בכותרת) · הסתרת/בידוד קשתות · תיקון כפתור <span class="en">More</span>. אלה גדולים — באים בנפרד.</p>
+  </div>
+
+  <h2 class="section-title">2. הבדיקה שלך</h2>
+  <div class="linkcard">
+    <div class="lc-title">פתח על ה-iPad (בלי debug — ה-HUD מוסתר עכשיו):</div>
+    <a href="https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1">https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1</a>
+  </div>
+  <div class="step"><span class="ck">0</span><div class="body">בחר נוד → גרור קשת מאחת הידיות. עוקב אחרי האצבע <em>חלק</em>?</div></div>
+  <div class="step"><span class="ck">1</span><div class="body">תסתכל על הנודים — לכל אחד <em>פס צבע מצב</em> בצד. גם בזום-אאוט רואים את הסטטוס?</div></div>
+  <div class="step"><span class="ck">6</span><div class="body">ה-HUD <em>לא</em> מופיע. (להפעיל: גלגל ההגדרות → "Show performance HUD".)</div></div>
+  <div class="step"><span class="ck">7</span><div class="body">עבור ל-Kanban, עמודת Pending — אין גלילה הצידה?</div></div>
+  <div class="step"><span class="ck">8</span><div class="body">כפתור הברק ⚡ <em>נעלם</em>. (להחזיר: הגדרות → "Show filter button".)</div></div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>7 בדיקות חדשות (<span class="en">sprint5_fixup.spec.ts</span>) עוברות על שני המנועים. <span id="regress">החבילה המלאה עברה: <em>686 בדיקות (343 לכל מנוע) — אפס כשלים</em>.</span></p>
+  </div>
+
+  <h2 class="section-title">3. שתי שאלות — לפני Sprint 6</h2>
+
+  <div class="insight-block">
+    <h3>שאלה 1 · טיפול הסטטוס</h3>
+    <p>מימשתי <em>פס בצד</em> (המומלץ). ב-explainer יש 4 אפשרויות — אילו תרצה בסוף?</p>
+    <ul style="margin-top:6px;">
+      <li><strong>נקודה</strong> (הקודם, מוגדל) · <strong>פס בצד</strong> (עכשיו) · <strong>מסגרת מלאה</strong> · <strong>מילוי מלא</strong> (כל הנוד בצבע המצב).</li>
+    </ul>
+    <p style="margin-top:6px;">+ אם שיחקת עם ה-Auto-Arrange explainer — אילו <em>מצבי-סידור</em> מדברים אליך (לקראת Bet 4)?</p>
+  </div>
+
+  <div class="insight-block">
+    <h3>שאלה 2 · מה ב-Sprint 6</h3>
+    <p>אחרי שתאמת את ה-5 — מה הבא? (אני אשלב את 4 הנושאים שנשארו מ-Sprint 5 לתוך הבחירה.)</p>
+    <ul style="margin-top:6px;">
+      <li><strong>השלמת Sprint 5</strong> — מצב צפייה/עריכה + חלון מידע + קשתות + More (האינטראקציה היומיומית).</li>
+      <li><strong>Auto-arrange (Bet 4)</strong> — סידור אוטומטי; בנית explainer, ממתין לבחירת מצבים.</li>
+      <li><strong>יצירת קנבס-אב (FR-1) + שינוי שם ל-vault (FR-5)</strong> — אמרת שהכי רלוונטי.</li>
+      <li><strong>UX ייבוא/workspace</strong> — התחל-ריק + 3 אפשרויות ייבוא.</li>
+    </ul>
+    <p style="margin-top:6px;">תבחר (אפשר לשלב), ונצא לדרך. <em>Voice (Bet 2)</em> — נשאר בצד כמו שאמרת. <em>חזרה מרווחת (Bet 5)</em> — חייב לך explainer לפני שתחליט.</p>
+  </div>
+
+  <div class="recap-row"><span class="tag2">✓</span><span>גרירת קשת ב-60fps · פס סטטוס קריא · HUD/פילטר/Pending מתוקנים.</span></div>
+  <div class="recap-row"><span class="tag2" style="color:var(--amber);background:var(--amber-soft)">○</span><span>הבאצ' הבא: מצב צפייה/עריכה, חלון מידע, קשתות, More.</span></div>
+  <div class="recap-row"><span class="tag2" style="color:var(--amber);background:var(--amber-soft)">○</span><span>פתוח: בחירת טיפול-סטטוס + scope ל-Sprint 6.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 5 complete — pending iPad verification</h3>
+    <p>פתח את הקישור, עבור על 5 הבדיקות. ענה על שתי השאלות (טיפול-סטטוס + scope). לא מתחיל אף Bet — ולא את הבאצ' הבא — לפני שתאמת ותבחר.</p>
+    <p style="margin-top: 10px; font-size: 13.5px; color: var(--ink-soft);">הערה: בחרתי לשלוח 5 נקיים במקום 9 חפוזים. הארבעה שנשארו מגיע להם מימוש זהיר — הם באים בשלמותם בבאצ' הבא.</p>
+  </div>
+
+</body>
+</html>

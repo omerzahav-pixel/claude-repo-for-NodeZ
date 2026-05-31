@@ -31,7 +31,8 @@
   // ─── State ─────────────────────────────────────────────────────────────
   let layer = null;       // DOM container for the 4 handles
   let handles = [];       // DOM elements
-  let draftLine = null;   // SVG <line> in #cv during drag
+  let draftLine = null;   // SVG <line> in the dedicated draft overlay during drag
+  let draftSvg = null;    // Sprint 5 · dedicated screen-space SVG for the draft line
   let draftFromId = null;
   let activePointerId = null;
   let lastSeenSelId = null;
@@ -95,6 +96,22 @@
     return layer;
   }
 
+  /* Sprint 5 Issue 0 · a dedicated, lightweight SVG holding ONLY the in-progress
+     draft edge. Updating a line inside #cv forced iOS to re-rasterise the entire
+     88-node vector layer on every pointermove (~5 fps); a standalone 1-line SVG
+     repaints in O(1). */
+  function ensureDraftSvg() {
+    if (draftSvg && document.body.contains(draftSvg)) return draftSvg;
+    draftSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    draftSvg.id = 'draftEdgeSvg';
+    draftSvg.setAttribute('aria-hidden', 'true');
+    draftSvg.style.cssText =
+      'position:fixed;left:0;top:0;width:100vw;height:100vh;' +
+      'pointer-events:none;z-index:5;overflow:visible';
+    document.body.appendChild(draftSvg);
+    return draftSvg;
+  }
+
   function clearHandles() {
     for (const h of handles) {
       try { h.remove(); } catch (e) {}
@@ -151,20 +168,23 @@
       activePointerId = e.pointerId;
       try { el.setPointerCapture(e.pointerId); } catch (_) {}
 
-      const cv = document.getElementById('cv');
-      if (!cv) return;
+      /* Sprint 5 Issue 0 · draw the draft edge in a dedicated SCREEN-space SVG
+         overlay, NOT inside #cv (which re-rasterises 88 nodes every move). The
+         view doesn't change during an edge-draw, so screen px are stable. */
+      const svg = ensureDraftSvg();
       const anchor = anchorWorld(fromNode, side);
+      const aS = worldToScreen(anchor.x, anchor.y);
       draftLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      draftLine.setAttribute('x1', anchor.x);
-      draftLine.setAttribute('y1', anchor.y);
-      draftLine.setAttribute('x2', anchor.x);
-      draftLine.setAttribute('y2', anchor.y);
+      draftLine.setAttribute('x1', aS.x);
+      draftLine.setAttribute('y1', aS.y);
+      draftLine.setAttribute('x2', aS.x);
+      draftLine.setAttribute('y2', aS.y);
       draftLine.setAttribute('stroke', 'var(--hot,#FF7A45)');
       draftLine.setAttribute('stroke-width', '2');
       draftLine.setAttribute('stroke-dasharray', '5,4');
       draftLine.setAttribute('pointer-events', 'none');
       draftLine.setAttribute('data-edge-draft', '1');
-      cv.appendChild(draftLine);
+      svg.appendChild(draftLine);
 
       document.addEventListener('pointermove', onDraftMove, true);
       document.addEventListener('pointerup',   onDraftEnd,  true);
@@ -174,9 +194,9 @@
 
   function onDraftMove(e) {
     if (!draftLine || e.pointerId !== activePointerId) return;
-    const w = screenToWorld(e.clientX, e.clientY);
-    draftLine.setAttribute('x2', w.x);
-    draftLine.setAttribute('y2', w.y);
+    // Screen-space — never touches #cv, so no full-layer re-raster (O(1) repaint).
+    draftLine.setAttribute('x2', e.clientX);
+    draftLine.setAttribute('y2', e.clientY);
   }
 
   function onDraftEnd(e) {

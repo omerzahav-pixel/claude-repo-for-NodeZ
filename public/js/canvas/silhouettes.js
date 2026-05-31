@@ -71,8 +71,18 @@
     const halo = window.FreshnessHalo
       ? window.FreshnessHalo.haloSvg(node, dot.x, dot.y, 7, c)
       : '';
-    const statusDot = `<circle cx="${dot.x}" cy="${dot.y}" r="3.5" fill="${c}"/>`;
-    return groupOpen + paths + (extraGlyphs || '') + halo + statusDot + '</g>';
+    /* Sprint 5 Issue 1 — status legibility from afar. The silhouette body is a
+       dark surface that nearly matches the background at zoom-out, and a tiny
+       3.5-px dot is unreadable far away. Add a status-coloured bar on the inline-
+       start edge (left in LTR, right in RTL) — a solid stripe that survives
+       zoom-out — and enlarge the dot. Cheap rects, no filter. (This is the
+       recommended default per the explainer; the user may pick fill/border.) */
+    const _barW = 5;
+    const statusBar = ctx.rtl
+      ? `<rect class="es-status-bar" x="${node.x + w - _barW}" y="${node.y - h}" width="${_barW}" height="${h*2}" rx="2" fill="${c}"/>`
+      : `<rect class="es-status-bar" x="${node.x - w}" y="${node.y - h}" width="${_barW}" height="${h*2}" rx="2" fill="${c}"/>`;
+    const statusDot = `<circle cx="${dot.x}" cy="${dot.y}" r="5" fill="${c}"/>`;
+    return groupOpen + paths + statusBar + (extraGlyphs || '') + halo + statusDot + '</g>';
   }
 
   // ── 1. project — wedge card + drill chip (Phase 2.9 Fix 2: rim removed).
