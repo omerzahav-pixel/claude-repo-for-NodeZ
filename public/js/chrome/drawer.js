@@ -217,54 +217,17 @@
      render (no dedupe set → no dedup, but no crash either). */
   function renderNode(id, tree, indent) { return renderNodeOnce(id, tree, indent, null); }
 
-  /* Sprint 3.4 Issue 2 — three-level hierarchy: canvas → zone → node.
-     Zones rendered as sub-rows with color chip + name + count + caret.
-     Expanded zones reveal their nodes. Unzoned nodes appear under a
-     synthetic "Unzoned" group ONLY when at least one zone exists on the
-     canvas (otherwise the flat node list reads cleaner). Zero-node zones
-     still render so the user can navigate to them. */
+  /* Sprint 8 (Issue 2) — the drawer now lists the chosen canvas's nodes FLAT.
+     The old canvas → zone → node hierarchy (collapsible zone sub-rows + an
+     "Unzoned" bucket) was the "show me what's in each zone" side UI the user
+     asked to drop. Zones still exist as regions ON the canvas; the side tree
+     just answers "what's in this canvas". One row per node, in canvas order. */
   function renderZonesAndNodes(canvasId, byId, indent) {
     const c = byId[canvasId];
     if (!c) return '';
-    const zones = c.zones || [];
     const nodes = c.nodes || [];
-    const openZones = openZonesByCanvas[canvasId] || new Set();
     let out = '';
-    if (zones.length === 0) {
-      // Flat list of nodes — no Unzoned header, that would be noise.
-      for (const n of nodes) {
-        out += renderNodeRow(n, indent);
-      }
-      return out;
-    }
-    for (const z of zones) {
-      const inZone = nodes.filter(n => n.zone === z.id);
-      const isOpen = openZones.has(z.id);
-      const caret = '<span class="caret">' + (isOpen ? '▾' : '▸') + '</span>';
-      const dot = '<span class="zone-dot" style="background:' + escAttr(z.color || '#777') + '"></span>';
-      out += '<div class="dr-row dr-zone-row" data-zid="' + escAttr(z.id) + '" style="padding-inline-start:' + (indent * 14 + 6) + 'px">' +
-        caret + dot + '<span class="dr-name">' + escHtml(z.name || 'Zone') + '</span>' +
-        '<span class="count">' + inZone.length + '</span>' +
-      '</div>';
-      if (isOpen) {
-        for (const n of inZone) out += renderNodeRow(n, indent + 1);
-      }
-    }
-    // Unzoned bucket — only if there ARE unzoned nodes alongside zones.
-    const unzoned = nodes.filter(n => !n.zone || !zones.some(z => z.id === n.zone));
-    if (unzoned.length) {
-      const key = '__unzoned__';
-      const isOpen = openZones.has(key);
-      const caret = '<span class="caret">' + (isOpen ? '▾' : '▸') + '</span>';
-      const dot = '<span class="zone-dot zone-dot-empty"></span>';
-      out += '<div class="dr-row dr-zone-row" data-zid="' + key + '" style="padding-inline-start:' + (indent * 14 + 6) + 'px">' +
-        caret + dot + '<span class="dr-name">Unzoned</span>' +
-        '<span class="count">' + unzoned.length + '</span>' +
-      '</div>';
-      if (isOpen) {
-        for (const n of unzoned) out += renderNodeRow(n, indent + 1);
-      }
-    }
+    for (const n of nodes) out += renderNodeRow(n, indent);
     return out;
   }
   function renderNodeRow(n, indent) {

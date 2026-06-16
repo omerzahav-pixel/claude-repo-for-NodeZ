@@ -79,8 +79,8 @@
 /* Phase 6 · version + error-boundary glue. EDGESPACE_VERSION bumps on every
    user-facing release; EDGESPACE_BUILD is wired to git short SHA at deploy
    time (TODO: vite plugin). For now bumped manually on each phase. */
-const EDGESPACE_VERSION='2.1.0';
-const EDGESPACE_BUILD='phase-6';
+const EDGESPACE_VERSION='8.0.0';
+const EDGESPACE_BUILD='phase8';
 window.EDGESPACE_VERSION=EDGESPACE_VERSION;window.EDGESPACE_BUILD=EDGESPACE_BUILD;
 (function(){const tag=document.getElementById('versionTag');if(tag)tag.textContent='v'+EDGESPACE_VERSION+' · '+EDGESPACE_BUILD})();
 /* Boot-time error boundary. If app.js fails to parse / execute the inline
@@ -780,13 +780,18 @@ document.addEventListener('pointerdown',e=>{
   if(_ep&&_ep.classList.contains('on')&&!_ep.contains(e.target))_ep.classList.remove('on');
 },true);
 function urlDomain(u){try{const p=new URL(u);const h=p.hostname.replace('www.','');if(h.includes('tradingview'))return 'tradingview';if(h.includes('github'))return 'github';if(h.includes('arxiv'))return 'arxiv';if(h.includes('notion'))return 'notion';if(h.includes('youtube'))return 'youtube';if(h.includes('x.com')||h.includes('twitter'))return 'x';return h.split('.')[0]}catch(e){return 'link'}}
-function renderSB(){const body=document.getElementById('sbbody');if(!body)return;const q=(document.getElementById('sbq')?.value||'').toLowerCase();const groups={};for(const n of ns()){if(q&&!((n.label||'')+(n.notes||'')+(n.tags||'')).toLowerCase().includes(q))continue;const zid=n.zone;if(!groups[zid])groups[zid]=[];groups[zid].push(n)}
-  let h='';for(const z of zs()){const items=groups[z.id]||[];if(!items.length&&q)continue;const col=S.sbCollapse?.[S.current+':'+z.id];h+=`<div class="zhdr" onclick="toggleZoneCollapse('${z.id}')"><span style="color:${z.color}">${esc(z.name)}</span><span class="ct">${items.length}${col?' ▸':' ▾'}</span></div>`;if(!col)for(const n of items){const rtl=/[\u0590-\u05FF]/.test(n.label||'')?' rtl':'';const dot=statusDotSvg(n.status,n.shape);const desc=(n.notes||n.rationale||'').slice(0,50);
-      // D5 · Phase 1.6 — run the preview snippet through mdProcess so
-      // **bold**, *italic*, `code` render as HTML in the sidebar. Input is
-      // already HTML-escaped via esc(), so the processor stays XSS-safe.
-      const descHtml=desc?mdProcess(esc(desc)):'';
-      const ur=n.url?`<a class="urp" href="${esc(n.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${urlDomain(n.url)}</a>`:'';h+=`<div class="item${rtl}" onclick="focusNode(${n.id})">${dot}<div class="txt"><div class="lbl">${esc(n.label)}</div>${descHtml?`<div class="desc">${descHtml}</div>`:''}${ur}</div></div>`}}
+function renderSB(){const body=document.getElementById('sbbody');if(!body)return;const q=(document.getElementById('sbq')?.value||'').toLowerCase();
+  /* Sprint 8 (Issue 2) — flat list of the CURRENT canvas's nodes. The old
+     per-zone grouping (collapsible .zhdr sections, one per zone) was the
+     "what's in each zone" side UI the user asked to drop. Zones stay as
+     regions on the canvas; this list just shows what's in the chosen canvas. */
+  let h='';for(const n of ns()){if(q&&!((n.label||'')+(n.notes||'')+(n.tags||'')).toLowerCase().includes(q))continue;
+    const rtl=/[֐-׿]/.test(n.label||'')?' rtl':'';const dot=statusDotSvg(n.status,n.shape);const desc=(n.notes||n.rationale||'').slice(0,50);
+    // Run the preview snippet through mdProcess so **bold**, *italic*, `code`
+    // render as HTML. Input is already HTML-escaped via esc(), so XSS-safe.
+    const descHtml=desc?mdProcess(esc(desc)):'';
+    const ur=n.url?`<a class="urp" href="${esc(n.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗ ${urlDomain(n.url)}</a>`:'';
+    h+=`<div class="item${rtl}" onclick="focusNode(${n.id})">${dot}<div class="txt"><div class="lbl">${esc(n.label)}</div>${descHtml?`<div class="desc">${descHtml}</div>`:''}${ur}</div></div>`}
   body.innerHTML=h||'<div style="padding:12px;color:var(--muted);font-size:11px">No nodes yet</div>'}
 function toggleZoneCollapse(zid){if(!S.sbCollapse)S.sbCollapse={};const k=S.current+':'+zid;S.sbCollapse[k]=!S.sbCollapse[k];sv();renderSB()}
 function statusDotSvg(st,sh){const c=SC[st]||SC.idea;if(sh==='project'){const pts=[];for(let i=0;i<10;i++){const ang=-Math.PI/2+i*Math.PI/5;const r=i%2===0?5:2.5;pts.push((5+r*Math.cos(ang))+','+(5+r*Math.sin(ang)))}return `<svg class="dot" viewBox="0 0 10 10"><polygon points="${pts.join(' ')}" fill="${c}"/></svg>`}

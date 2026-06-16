@@ -32,8 +32,15 @@ if ("serviceWorker" in navigator && !(window as any)._swPrePaintRegistered) {
         const sw = reg.installing;
         if (!sw) return;
         sw.addEventListener("statechange", () => {
-          if (sw.state === "installed" && navigator.serviceWorker.controller) {
+          // Sprint 8 (Issue 1) · this branch used to only LOG — it never
+          // reloaded, so the fallback registration path left users on the stale
+          // bundle. Reload once on a genuine update (new SW installed while an
+          // old one controls); guarded so it can't loop or double-fire with the
+          // pre-paint handler in index.html.
+          if (sw.state === "installed" && navigator.serviceWorker.controller && !(window as any)._swRefreshing) {
+            (window as any)._swRefreshing = true;
             (window as any).dbg?.("PWA", "new SW installed · reloading to pick it up");
+            window.location.reload();
           }
         });
       });

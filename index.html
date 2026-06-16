@@ -6,7 +6,7 @@
 <!-- Sprint 4.3 Issue 0 · visible build stamp. Bump every deploy. The perf HUD
      surfaces this as its top `build` line so the user can confirm at a glance
      that the iPad is running the build under test. -->
-<meta name="edgespace-build" content="7.0.0 · 2026-05-31">
+<meta name="edgespace-build" content="8.0.0 · 2026-06-16">
 <!-- Phase 1 (Pass 5 §06) · pre-paint service worker registration.
      Gated by the --lifecycle-v2 flag, read directly from localStorage so
      this script can run BEFORE flags.js. The controllerchange reload is
@@ -16,17 +16,29 @@
 <script>
 (function () {
   if (!('serviceWorker' in navigator)) return;
-  var on = false;
-  try { var f = JSON.parse(localStorage.getItem('edgespace-flags') || '{}'); on = !!f['lifecycle-v2']; } catch (e) {}
-  if (!on) return;
+  // Sprint 8 (Issue 1) · register the SW pre-paint on EVERY visit. This was
+  // gated on --lifecycle-v2, but that flag's default-true is applied later by
+  // flags.js, so this raw localStorage read saw `undefined` and bailed — most
+  // users got NO auto-reload on deploy and could be stranded on a stale/mixed
+  // bundle through a version transition (orange error bar, KaTeX not rendering).
+  // Reload ONLY on a genuine UPDATE: a new SW reaching `installed` while an old
+  // one is still the controller. A first-ever install (no prior controller)
+  // does NOT reload, so headless test runs never flake into a reload loop.
   try {
-    navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' });
-    window._swPrePaintRegistered = true;
-    navigator.serviceWorker.addEventListener('controllerchange', function () {
-      // New worker. Reload IS safe here — content is unchanged shell.
-      location.reload();
+    navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' }).then(function (reg) {
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function () {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller && !window._swRefreshing) {
+            window._swRefreshing = true;
+            location.reload();
+          }
+        });
+      });
     });
-  } catch (e) { /* swallow — fallback path will retry */ }
+    window._swPrePaintRegistered = true;
+  } catch (e) { /* swallow — bootstrap.ts fallback will retry */ }
 })();
 </script>
 <title>EdgeSpace — Knowledge Canvas</title>

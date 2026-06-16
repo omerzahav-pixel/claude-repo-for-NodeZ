@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint 8 — Web-Verification Fixes · דוח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f3ec; --ink: #1a2238; --ink-soft: #4a5468; --accent: #c2410c;
+    --accent-soft: #fed7aa; --green: #15803d; --green-soft: #bbf7d0;
+    --amber: #b45309; --amber-soft: #fde68a; --blue: #1e40af; --blue-soft: #dbeafe;
+    --purple: #6b21a8; --purple-soft: #e9d5ff; --red: #b91c1c; --red-soft: #fecaca;
+    --rule: #d6cfc2; --code-bg: #ede5d5; --code-ink: #7c2d12; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Assistant', sans-serif; font-size: 17px; line-height: 1.85; direction: rtl; text-align: right; }
+  body { max-width: 820px; margin: 0 auto; padding: 32px 22px 64px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h1 { font-family: 'Frank Ruhl Libre', serif; font-weight: 900; font-size: 32px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin-bottom: 20px; }
+  .buildbar { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--ink); color:#f7f3ec; padding:6px 14px; border-radius:6px; direction:ltr; margin-bottom:24px; }
+  .section-title { font-family: 'Frank Ruhl Libre', serif; font-weight: 700; font-size: 22px; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+  .en { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--code-bg); color: var(--code-ink); padding: 1px 7px; border-radius: 4px; direction: ltr; unicode-bidi: isolate; display: inline-block; vertical-align: 1px; font-weight: 500; }
+  em { font-style: normal; background: var(--accent-soft); padding: 0 4px; border-radius: 3px; font-weight: 600; }
+  .insight { background: linear-gradient(180deg, #fff7ed 0%, var(--card) 100%); border: 2px solid var(--accent); border-radius: 8px; padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(194,65,12,0.08); }
+  .insight h2 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 22px; margin-bottom: 10px; }
+  .insight p { margin-bottom: 8px; }
+  .warn { background: var(--amber-soft); border-right: 4px solid var(--amber); padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14.5px; }
+  .warn strong { color: var(--amber); }
+  .confirmed { background: var(--green-soft); border-right: 4px solid var(--green); padding: 18px 22px; border-radius: 6px; margin: 20px 0; }
+  .confirmed h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--green); font-size: 19px; margin-bottom: 10px; }
+  .finding { background: var(--card); border-radius: 8px; padding: 14px 18px; margin: 10px 0; border-right: 4px solid var(--green); }
+  .finding h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 16px; margin-bottom: 4px; }
+  .num { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 10px 0; }
+  .num h4 { font-family: 'Frank Ruhl Libre', serif; font-size: 16px; margin-bottom: 6px; color: var(--accent); }
+  .linkcard { background: var(--card); border:1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .linkcard .lc-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .linkcard a { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--blue); direction: ltr; display:block; word-break: break-all; background: var(--blue-soft); padding: 8px 10px; border-radius: 5px; text-decoration: none; }
+  .step { background: var(--card); border-radius: 8px; padding: 12px 16px; margin: 7px 0; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; border-right: 3px solid var(--blue); }
+  .step .ck { font-size: 15px; font-weight: 700; color: var(--blue); }
+  .step .body { font-size: 14px; }
+  .recap-row { display: flex; gap: 12px; align-items: baseline; padding: 7px 0; font-size: 15px; }
+  .recap-row .tag2 { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; direction: ltr; }
+  .closing { margin-top: 32px; padding: 20px 22px; background: var(--card); border-radius: 6px; }
+  .closing h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 18px; margin-bottom: 8px; color: var(--accent); }
+  ul { padding-right: 22px; } li { margin-bottom: 6px; font-size: 14.5px; }
+  ol { padding-right: 22px; } ol li { margin-bottom: 6px; font-size: 14.5px; }
+  .shot { margin: 18px 0; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: #0f0f0f; box-shadow: 0 4px 16px rgba(0,0,0,0.12); max-width: 320px; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption { background: var(--card); color: var(--ink-soft); font-size: 13px; padding: 10px 14px; border-top: 1px solid var(--rule); direction: rtl; text-align: right; }
+  .shot figcaption strong { color: var(--ink); }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">SPRINT 8 · WEB-VERIFICATION FIXES</div>
+  <h1>שני תיקונים מהבדיקה שלך</h1>
+  <p class="subtitle">הסרגל הכתום + KaTeX היה מעבר של ה-service-worker (לא באג בקוד). והסרתי את קיבוץ-לפי-זון מהמגירה.</p>
+  <div class="buildbar">build 8.0.0 · 2026-06-16</div>
+
+  <div class="insight">
+    <h2>1 · הסרגל הכתום + "KaTeX לא עובר" — זה היה ה-Service Worker</h2>
+    <p>בדקתי את הגרסה החיה (<span class="en">nodez-2iz.pages.dev</span>) <em>ובדפדפן נקי הכול עובד</em> — KaTeX ממיר, אין סרגל שגיאה, אפס שגיאות-קונסול. גם מבחן-עומס מקומי עם נתונים קשים (כותרות ריקות, צורות לא-מוכרות, תת-קנבס שבור, עברית, markdown) — <span class="en">render()</span> לא נופל. כלומר <strong>הקוד שנפרס תקין</strong>.</p>
+    <p>השורש: <em>מעבר ה-service-worker</em>. ה-SW הישן (phase6.1) הגיש לך עותק <em>מעורבב/ישן</em> של <span class="en">app.js</span> פעם אחרונה במעבר ל-phase7. הסיבה שלא קיבלת רענון-אוטומטי: ה-reload-on-update היה <em>מאחורי דגל</em> (<span class="en">lifecycle-v2</span>), אבל ברירת-המחדל שלו (true) נקבעת ב-<span class="en">flags.js</span> שרץ <em>אחרי</em> הסקריפט שבודק — אז הבדיקה ראתה <span class="en">undefined</span> ונסוגה. מסלול-הגיבוי רק <em>רשם ללוג</em> "reloading" אבל מעולם לא קרא ל-<span class="en">location.reload()</span>. תוצאה: רוב המשתמשים לא רועננו אוטומטית ונתקעו על באנדל ישן.</p>
+    <p><strong>התיקון:</strong> ה-SW נרשם עכשיו <em>לכל משתמש</em> לפני-צביעה, ומרענן <em>פעם אחת</em> רק במעבר-גרסה אמיתי (SW חדש שהותקן בזמן שישן עוד שולט — התקנה-ראשונה לא מרעננת, כדי שבדיקות לא ייכנסו ללולאה). גרסת ה-cache עלתה ל-<span class="en">phase8</span> כדי לטאטא את הישן.</p>
+    <div class="warn"><strong>שחזור עכשיו (פעם אחת):</strong> כי התיקון נכנס לתוקף רק אחרי שה-SW החדש משתלט, עשה <em>רענון קשה אחד</em> (<span class="en">Ctrl/Cmd+Shift+R</span>), או ב-Safari iPad: סגור את הלשונית ופתח מחדש. אחרי זה — כל deploy עתידי ירענן <em>אוטומטית</em>, ולא תיתקע שוב. אם הגרסה בכותרת התחתית מראה <span class="en">v8.0.0 · phase8</span> — אתה על הבנייה הנכונה.</div>
+  </div>
+
+  <h2 class="section-title">2 · הסרת "מה יש בכל זון" מהצד</h2>
+  <div class="finding">
+    <h4>המגירה/הסרגל מציגים עכשיו את תוכן הקנבס <em>שטוח</em></h4>
+    <p style="font-size:14px;">המגירה הייתה היררכיה תלת-שכבתית: <span class="en">canvas → zone → node</span> (שורות-זון מתקפלות + דלי "Unzoned"). זה היה ה"זון בצד שמראה מה בכל זון" שביקשת להסיר. עכשיו זה <span class="en">canvas → nodes</span> — רשימה שטוחה של מה שבקנבס הנבחר, בלי קיבוץ. <em>הזונים נשארים אזורים על הקנבס עצמו</em> — רק תצוגת-הצד השתנתה. (תוקן גם בסרגל הדסקטופ <span class="en">#sb</span> וגם במגירת ה-iPad.)</p>
+    <figure class="shot">
+      <img alt="המגירה מציגה את הקנבס Vault ותחתיו רשימה שטוחה של חמישה נודים, בלי שורות-זון" src="{{IMG_DRAWER}}">
+      <figcaption><strong>Issue 2 ·</strong> הקנבס <span class="en">Vault</span> עם 5 נודים <em>שטוחים</em> — למרות שלקנבס יש זונים (Research / Build), אין שורות-זון ואין דלי "Unzoned". רק "מה יש בקנבס".</figcaption>
+    </figure>
+  </div>
+
+  <h2 class="section-title">3. הבדיקה שלך</h2>
+  <div class="linkcard">
+    <div class="lc-title">פתח על ה-iPad (אחרי רענון קשה אחד):</div>
+    <a href="https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1">https://nodez-2iz.pages.dev/?flags=nav-v2,palette,views-v2,toolbar-migrated,canvas-tiles,cull-v1</a>
+  </div>
+  <div class="step"><span class="ck">1</span><div class="body">אין יותר סרגל שגיאה כתום? הנוסחאות מומרות (לא טקסט גולמי)? הכותרת התחתית מראה <span class="en">v8.0.0 · phase8</span>?</div></div>
+  <div class="step"><span class="ck">2</span><div class="body">פתח את המגירה (☰ בספיין). היא מראה את נודי-הקנבס <em>שטוח</em>, בלי שורות-זון מתקפלות?</div></div>
+  <div class="step"><span class="ck">2</span><div class="body">הזונים עדיין מופיעים כ<em>אזורים על הקנבס</em> (לא נעלמו — רק תצוגת-הצד השתנתה)?</div></div>
+
+  <div class="confirmed">
+    <h3>✓ בדיקות</h3>
+    <p>3 בדיקות Sprint 8 חדשות (<span class="en">sprint8_fixup.spec.ts</span>) + עדכון 3 בדיקות-מגירה (מ-"שורות-זון" ל-"רשימה שטוחה"). <span id="regress">{{REGRESSION}}</span></p>
+  </div>
+
+  <div class="recap-row"><span class="tag2">✓</span><span>השורש של הסרגל-הכתום אובחן: מעבר SW (לא באג קוד) — הקוד החי תקין בדפדפן נקי.</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>SW נרשם לכל משתמש + רענון-אוטומטי במעבר-גרסה (כבר לא תיתקע על באנדל ישן).</span></div>
+  <div class="recap-row"><span class="tag2">✓</span><span>המגירה/הסרגל מציגים את הקנבס שטוח — בלי קיבוץ-לפי-זון.</span></div>
+
+  <div class="closing">
+    <h3>Sprint 8 complete — pending verification</h3>
+    <p>עשה <em>רענון קשה אחד</em> ובדוק: (1) אין סרגל כתום + נוסחאות מומרות + גרסה <span class="en">8.0.0</span>, (2) המגירה שטוחה. תגיד לי אם הסרגל-הכתום נעלם על ה-iPad האמיתי, ואם תצוגת-הקנבס עכשיו כמו שרצית. עדיין שמורים לספרינט הבא: סילואטות, בורר-רדיאלי, workspace חדש, Reset.</p>
+  </div>
+
+</body>
+</html>

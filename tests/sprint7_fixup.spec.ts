@@ -26,11 +26,12 @@ async function open(page: Page, flags: Record<string, boolean> = {}) {
 }
 
 test.describe("Sprint 7 · node anatomy", () => {
-  test("S7.A build stamp is 7.0.0", async ({ page }) => {
+  test("S7.A build stamp is a semantic version", async ({ page }) => {
     await open(page, { "perf-hud": true });
     await page.waitForTimeout(300);
     const meta = await page.evaluate(() => document.querySelector('meta[name="edgespace-build"]')?.getAttribute("content"));
-    expect(meta).toContain("7.0.0");
+    // Version moves every sprint (8.0.0 now) — assert the shape, not a literal.
+    expect(meta).toMatch(/\d+\.\d+\.\d+/);
   });
 
   test("S7.1 title + body render INSIDE the card; NO label below the node", async ({ page }) => {

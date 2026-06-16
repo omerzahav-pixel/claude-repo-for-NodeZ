@@ -16,7 +16,7 @@
  * shell assets.
  * ============================================================================= */
 
-const VERSION = "edgespace-v2.phase7";
+const VERSION = "edgespace-v2.phase8";
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 const CDN = `${VERSION}-cdn`;

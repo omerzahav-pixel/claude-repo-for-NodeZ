@@ -60,8 +60,10 @@ test.describe("Sprint 3.4 · Issue 1 — breadcrumb hidden under nav-v2", () => 
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-test.describe("Sprint 3.4 · Issue 2 — drawer zones + nodes hierarchy", () => {
-  test("S3_4.I2.A Zone rows render under active canvas (with zones present)", async ({ page }) => {
+test.describe("Sprint 3.4 · Issue 2 — drawer lists canvas nodes FLAT (no zone grouping)", () => {
+  // Sprint 8 (Issue 2): the drawer no longer groups the active canvas by zone.
+  // It lists the canvas's nodes flat — zones stay as regions on the canvas only.
+  test("S3_4.I2.A Active canvas nodes render as flat node rows, with NO zone rows", async ({ page }) => {
     await open(page, { "nav-v2": true });
     await page.evaluate(() => {
       const E = (window as any).__E2E;
@@ -74,38 +76,38 @@ test.describe("Sprint 3.4 · Issue 2 — drawer zones + nodes hierarchy", () => 
       if ((window as any).Drawer) (window as any).Drawer.refresh();
     });
     await page.waitForTimeout(400);
-    const probe = await page.evaluate(() => {
-      const zoneRows = Array.from(document.querySelectorAll("#drawer .dr-zone-row")).map(r => r.getAttribute("data-zid"));
-      return zoneRows;
-    });
-    expect(probe).toContain("z-a");
-    expect(probe).toContain("z-b");
+    const probe = await page.evaluate(() => ({
+      zoneRows: document.querySelectorAll("#drawer .dr-zone-row").length,
+      nodeIds: Array.from(document.querySelectorAll("#drawer .dr-node-row")).map(r => r.getAttribute("data-nid")),
+    }));
+    expect(probe.zoneRows).toBe(0);          // zone grouping removed
+    expect(probe.nodeIds).toContain("5511"); // both nodes listed flat...
+    expect(probe.nodeIds).toContain("5512"); // ...regardless of their zone
   });
 
-  test("S3_4.I2.B Tap zone row calls window.focusZone(zid)", async ({ page }) => {
+  test("S3_4.I2.B Tap node row calls window.focusNode(id)", async ({ page }) => {
     await open(page, { "nav-v2": true });
     await page.evaluate(() => {
       const E = (window as any).__E2E;
-      const c = E.current();
-      c.zones.push({ id: "z-x", name: "Z", x: 0, y: 0, w: 200, h: 200, color: "#FF7A45" });
+      const today = new Date().toISOString();
+      E.addNodeRaw({ id: 7701, label: "target", shape: "idea", status: "idea", x: 0, y: 0, zone: null, created: today, modified: today });
       if ((window as any).Drawer) (window as any).Drawer.refresh();
-      (window as any).__focusZoneCalls = 0;
-      const orig = (window as any).focusZone;
-      (window as any).focusZone = function (id: string) { (window as any).__focusZoneCalls++; return orig(id); };
+      (window as any).__focusNodeCalls = 0;
+      const orig = (window as any).focusNode;
+      (window as any).focusNode = function (id: number) { (window as any).__focusNodeCalls++; return orig(id); };
     });
     await page.waitForTimeout(400);
-    await page.locator('#drawer .dr-zone-row[data-zid="z-x"] .dr-name').click();
+    await page.locator('#drawer .dr-node-row[data-nid="7701"] .dr-name').click();
     await page.waitForTimeout(150);
-    const n = await page.evaluate(() => (window as any).__focusZoneCalls);
+    const n = await page.evaluate(() => (window as any).__focusNodeCalls);
     expect(n).toBeGreaterThan(0);
   });
 
-  test("S3_4.I2.C Unzoned bucket only when zones AND unzoned nodes coexist", async ({ page }) => {
+  test("S3_4.I2.C No zone rows / Unzoned bucket even when zones and unzoned nodes coexist", async ({ page }) => {
     await open(page, { "nav-v2": true });
     await page.evaluate(() => {
       const E = (window as any).__E2E;
       const c = E.current();
-      // 1 zone, 1 zoned node, 1 unzoned node → bucket should render.
       c.zones.push({ id: "z1", name: "Z1", x: 0, y: 0, w: 100, h: 100, color: "#FF7A45" });
       const today = new Date().toISOString();
       E.addNodeRaw({ id: 6611, label: "in zone", shape: "idea", status: "idea", x: 10, y: 10, zone: "z1", created: today, modified: today });
@@ -113,10 +115,12 @@ test.describe("Sprint 3.4 · Issue 2 — drawer zones + nodes hierarchy", () => 
       if ((window as any).Drawer) (window as any).Drawer.refresh();
     });
     await page.waitForTimeout(400);
-    const has = await page.evaluate(() =>
-      !!document.querySelector('#drawer .dr-zone-row[data-zid="__unzoned__"]')
-    );
-    expect(has).toBe(true);
+    const probe = await page.evaluate(() => ({
+      anyZoneRow: !!document.querySelector('#drawer .dr-zone-row'),
+      nodeRows: document.querySelectorAll('#drawer .dr-node-row').length,
+    }));
+    expect(probe.anyZoneRow).toBe(false);             // no zone rows, no Unzoned bucket
+    expect(probe.nodeRows).toBeGreaterThanOrEqual(2); // both nodes listed flat
   });
 });
 
