@@ -9,10 +9,10 @@
 <meta name="edgespace-build" content="8.0.0 · 2026-06-16">
 <!-- Phase 1 (Pass 5 §06) · pre-paint service worker registration.
      Gated by the --lifecycle-v2 flag, read directly from localStorage so
-     this script can run BEFORE flags.js. The controllerchange reload is
-     the "no two-load update dance" pattern — when a new SW takes control,
-     the page reloads once cleanly. Defaults OFF; the existing bootstrap.ts
-     post-load registration is the fallback. -->
+     Sprint 8 (Issue 1): runs UNGATED on every visit (was behind --lifecycle-v2,
+     whose default-true is set by flags.js too late for this pre-flags script to
+     see). Reloads once on a genuine update so a deploy is never half-applied;
+     bootstrap.ts is the post-load fallback. -->
 <script>
 (function () {
   if (!('serviceWorker' in navigator)) return;
