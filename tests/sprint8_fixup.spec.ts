@@ -30,10 +30,11 @@ async function open(page: Page, flags: Record<string, boolean> = {}) {
 }
 
 test.describe("Sprint 8 · web-verification fixes", () => {
-  test("S8.A build stamp is 8.0.0", async ({ page }) => {
+  test("S8.A build stamp is an 8.x release", async ({ page }) => {
     await open(page);
     const meta = await page.evaluate(() => document.querySelector('meta[name="edgespace-build"]')?.getAttribute("content"));
-    expect(meta).toContain("8.0.0");
+    // Patch bumps within the sprint (8.0.1 now) — assert the major, not a literal.
+    expect(meta).toMatch(/8\.\d+\.\d+/);
   });
 
   // Issue 1 — the pre-paint SW registration is no longer gated on --lifecycle-v2,
@@ -71,5 +72,39 @@ test.describe("Sprint 8 · web-verification fixes", () => {
     expect(probe.present).toBe(true);
     expect(probe.zhdr).toBe(0);            // no per-zone grouping headers
     expect(probe.items).toBeGreaterThanOrEqual(2); // both nodes listed flat
+  });
+
+  // The headline KaTeX bug: a formula NODE rendered INVISIBLE because the .fnode
+  // container collapsed to width:0 (Sprint 6 `max-width:100%` resolving against
+  // its ~0px positioned ancestor → overflow:hidden clipped the formula to
+  // nothing). Guard: the .fnode box must have real width and the .katex must be
+  // visibly rendered inside it. This failed on BOTH engines before the fix.
+  test("S8.3 formula NODE renders visibly — .fnode is not collapsed to width:0", async ({ page }) => {
+    await open(page);
+    await page.waitForFunction(() => !!(window as any).katex, null, { timeout: 15_000 });
+    await page.evaluate(() => {
+      const E = (window as any).__E2E; const c = E.current();
+      c.nodes = [{ id: 8301, x: 0, y: 0, shape: "formula", status: "idea", label: "Sharpe", latex: "\\frac{E[R]}{\\sigma}", zone: null }];
+      c.edges = [];
+      const v = E.view(); v.x = 0; v.y = 0; v.k = 1.5;
+      (window as any).render();
+    });
+    await page.waitForTimeout(400);
+    const r = await page.evaluate(() => {
+      const ov = document.getElementById("canvasOverlay");
+      const fnode = ov?.querySelector('.fnode[data-latex]') as HTMLElement | null;
+      if (!fnode) return { found: false, fnodeW: 0, katexVisible: false };
+      const fr = fnode.getBoundingClientRect();
+      const k = fnode.querySelector(".katex");
+      const kr = k?.getBoundingClientRect();
+      return {
+        found: true,
+        fnodeW: Math.round(fr.width),
+        katexVisible: !!kr && kr.width > 0 && kr.height > 0,
+      };
+    });
+    expect(r.found).toBe(true);
+    expect(r.fnodeW).toBeGreaterThan(20);   // box not collapsed to ~0
+    expect(r.katexVisible).toBe(true);      // formula actually painted, with size
   });
 });

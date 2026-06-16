@@ -79,7 +79,7 @@
 /* Phase 6 · version + error-boundary glue. EDGESPACE_VERSION bumps on every
    user-facing release; EDGESPACE_BUILD is wired to git short SHA at deploy
    time (TODO: vite plugin). For now bumped manually on each phase. */
-const EDGESPACE_VERSION='8.0.0';
+const EDGESPACE_VERSION='8.0.1';
 const EDGESPACE_BUILD='phase8';
 window.EDGESPACE_VERSION=EDGESPACE_VERSION;window.EDGESPACE_BUILD=EDGESPACE_BUILD;
 (function(){const tag=document.getElementById('versionTag');if(tag)tag.textContent='v'+EDGESPACE_VERSION+' · '+EDGESPACE_BUILD})();

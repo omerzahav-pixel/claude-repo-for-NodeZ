@@ -285,8 +285,15 @@ body.he #toast{right:auto;left:16px;align-items:flex-start;font-family:'Assistan
 /* Sprint 6 Issue 3 — contain the formula: rendered math (or raw LaTeX) is
    clipped to the card and can never run off-screen. The full formula is in the
    info-panel (edit). */
-#canvasOverlay .fnode{display:flex;align-items:center;justify-content:center;color:var(--text);font-size:13px;text-align:center;overflow:hidden;max-width:100%}
-#canvasOverlay .fnode .katex{max-width:100%;overflow:hidden}
+/* Sprint 8 follow-up — the formula NODE was rendering INVISIBLE. `max-width:100%`
+   (added in Sprint 6 for containment) resolves against the .fnode's positioned
+   ancestor .nslice, which is ~0px wide, so it clamped the box to width:0 and
+   overflow:hidden clipped the formula to nothing. The .fnode already carries an
+   explicit inline width (fw*2-20) + overflow:hidden, which contains a too-wide
+   formula without collapsing it. (Note bodies never had this rule, which is why
+   inline $…$ math kept working while formula nodes went blank.) */
+#canvasOverlay .fnode{display:flex;align-items:center;justify-content:center;color:var(--text);font-size:13px;text-align:center;overflow:hidden}
+#canvasOverlay .fnode .katex{overflow:hidden}
 #canvasOverlay .fnode .katex{color:var(--text)}
 /* D5 · Phase 1.6 — note body migrated from <foreignObject> to overlay div.
    iOS WebKit refuses to paint rich HTML inside foreignObject, so the body
