@@ -54,7 +54,7 @@ test.describe("Sprint 6 · node containment + More", () => {
     expect(r.mask).toContain("gradient");
   });
 
-  test("S6.3b formula body is contained (overflow hidden, max-width)", async ({ page }) => {
+  test("S6.3b formula body is contained via overflow:hidden (no collapsing max-width)", async ({ page }) => {
     await open(page);
     const r = await page.evaluate(() => {
       const ov = document.getElementById("canvasOverlay")!;
@@ -66,8 +66,11 @@ test.describe("Sprint 6 · node containment + More", () => {
       ov.removeChild(f);
       return out;
     });
+    // Sprint 8: containment is overflow:hidden on the .fnode's own inline width.
+    // The old `max-width:100%` was REMOVED — it resolved against the ~0px .nslice
+    // ancestor and collapsed the formula box to width:0 (the invisible-formula bug).
     expect(r.overflow).toBe("hidden");
-    expect(r.maxw).toMatch(/100%|px/);
+    expect(r.maxw).toBe("none");
   });
 
   test("S6.6 toggleMore opens the More menu (centred) instead of doing nothing", async ({ page }) => {
